@@ -93,6 +93,7 @@ argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` ch
 ## Phases
 
 1. **Foundation** — monorepo, Hono + Drizzle + Postgres, React + Vite SPA, `docker-compose.dev.yml`, single-image Dockerfile, `/healthz`, i18n, mobile-first layout, Prettier + ESLint + Husky pre-commit hook. _`docker compose up` serves API + SPA with migrations applied._
+   Order: Drizzle → front stack (Tailwind, shadcn/ui, Router, TanStack Query, i18n, layout) → Playwright smoke test → **v0.1 release**: image `shiyamii/cookit` (amd64) pushed to Docker Hub only from a version tag or a release branch, with automated versioning including release candidates (tool to choose then: semantic-release, release-please…).
 2. **Markdown parser + scaling** (pure module, no UI) with canonical serializer and round-trip tests.
 3. **Accounts & invitations** — Better Auth, admin bootstrap, invites, admin pages, rate limiting.
    3b. **2FA & passkeys.**
@@ -124,7 +125,14 @@ bun run build                                      # build web, then bundle serv
 bun run start                                      # run the built server under Node
 ```
 
-Not set up yet: `drizzle-kit` migrations (first schema), Playwright (`bunx playwright test`).
+```sh
+bun run db:generate   # after editing apps/server/src/db/schema.ts: create a migration in apps/server/drizzle/
+bun run db:migrate    # apply migrations manually (the server also applies them on startup)
+```
+
+Migrations live in `apps/server/drizzle/` (committed, generated: never edit an applied migration, never format it). The server applies pending migrations at startup before listening and exits if that fails.
+
+Not set up yet: Playwright (`bunx playwright test`).
 
 CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, tests and build, then builds the Docker image and smoke-tests it against Postgres (`/healthz`, API, SPA fallback).
 

@@ -10,4 +10,7 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Shared package exports TypeScript sources** (`./src/index.ts`): consumed directly by Vite, tsx and the server bundler, no separate build step.
 - **ESLint `no-restricted-globals` / `no-restricted-imports` on `Bun`**: enforces "no Bun APIs in shipped code" (tests and `scripts/` excluded).
 - **Docker image smoke test in CI** (build, run with Postgres, curl `/healthz`, API and SPA fallback): checks the real Node image, until Playwright tests exist.
-- **Drizzle migrations deferred**: no tables yet; the migration-on-startup flow will be added with the first schema.
+- **Empty custom `0000_init` migration**: validates the whole migration pipeline without inventing tables before their phase.
+- **Migrations on startup with the `drizzle-orm` migrator** (not drizzle-kit, which is a dev dependency): dedicated single connection, process exits on failure so the container is restarted instead of serving without a schema.
+- **`drizzle.config.ts` loads `.env` with `process.loadEnvFile`** (Node built-in): no dotenv dependency.
+- **`apps/server/drizzle/` excluded from Prettier**: generated files, reformatting them would break the hook after each `db:generate`.

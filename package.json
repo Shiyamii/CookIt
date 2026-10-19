@@ -12,6 +12,8 @@
     "start": "bun run --filter '@cookit/server' start",
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
+    "db:generate": "bun run --filter '@cookit/server' db:generate",
+    "db:migrate": "bun run --filter '@cookit/server' db:migrate",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

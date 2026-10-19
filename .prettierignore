@@ -3,3 +3,4 @@ dist/
 apps/server/public/
 coverage/
 bun.lock
+apps/server/drizzle/

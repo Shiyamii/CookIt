@@ -1,7 +1,11 @@
 import { serve } from '@hono/node-server';
 import { app } from './app';
-import { client } from './db';
+import { client, runMigrations } from './db';
 import { env } from './env';
+
+// Apply pending migrations before accepting traffic; a failure stops the process.
+await runMigrations();
+console.log('Database migrations applied');
 
 const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
   console.log(`CookIt server listening on port ${info.port}`);

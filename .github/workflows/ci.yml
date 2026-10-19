@@ -61,6 +61,14 @@ jobs:
           curl -fsS http://localhost:3000/api/v1/meta
           curl -fsS http://localhost:3000/ | grep -q '<div id="root">'
           curl -fsS http://localhost:3000/some/client/route | grep -q '<div id="root">'
+      - name: Check migrations were applied
+        env:
+          PGPASSWORD: cookit
+        run: |
+          applied=$(psql -h localhost -U cookit -d cookit -tAc "select count(*) from drizzle.__drizzle_migrations")
+          expected=$(ls apps/server/drizzle/*.sql | wc -l)
+          echo "applied=$applied expected=$expected"
+          test "$applied" = "$expected"
       - name: Container logs
         if: always()
         run: docker logs cookit
