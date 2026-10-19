@@ -16,24 +16,24 @@ Guidance for Claude Code working in this repository. The full functional spec (i
 
 ## Stack (imposed)
 
-| Area | Tool |
-|---|---|
-| Tooling | **Bun**: package manager, workspaces, scripts, build, unit tests (`bun test`). **Not the production runtime.** |
-| Runtime | **Node.js LTS** |
-| Frontend | React + TypeScript **SPA**, Vite, React Router, TanStack Query |
-| UI | shadcn/ui (Radix) + Tailwind CSS, `lucide-react` icons, mobile first |
-| Backend | **Hono** on Node (`@hono/node-server`), TypeScript, **Zod** for input validation |
-| Database | **PostgreSQL** (separate Coolify container). No SQLite, no state in files. |
-| ORM / migrations | **Drizzle ORM** + drizzle-kit (Postgres driver `postgres` or `pg`) |
-| Auth | **Better Auth** (Drizzle adapter, Hono integration), plugins `twoFactor` (TOTP + backup codes) and `passkey` (WebAuthn); cookie sessions (httpOnly, secure, sameSite=lax); argon2id via `@node-rs/argon2` (fallback: Better Auth's default scrypt) |
-| Push | `web-push` + VAPID keys, service worker |
-| PWA | `vite-plugin-pwa` (Workbox) |
-| Markdown | `unified` / `remark` with custom parsing, **raw HTML forbidden** |
-| i18n | `react-i18next`, languages `fr` and `en` |
-| Editor | CodeMirror 6 (markdown editor) |
-| Tests | `bun test` for pure logic; **Playwright** end-to-end against the built image running under Node |
-| Code quality | **Prettier** (formatting), **ESLint** (flat config, TypeScript + React rules), **Husky** pre-commit hook running Prettier, ESLint and the unit tests |
-| Container | Single multi-stage Dockerfile: build with `oven/bun`, final image `node:<LTS>-slim` (Debian/glibc, **not Alpine**) |
+| Area             | Tool                                                                                                                                                                                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tooling          | **Bun**: package manager, workspaces, scripts, build, unit tests (`bun test`). **Not the production runtime.**                                                                                                                                     |
+| Runtime          | **Node.js LTS**                                                                                                                                                                                                                                    |
+| Frontend         | React + TypeScript **SPA**, Vite, React Router, TanStack Query                                                                                                                                                                                     |
+| UI               | shadcn/ui (Radix) + Tailwind CSS, `lucide-react` icons, mobile first                                                                                                                                                                               |
+| Backend          | **Hono** on Node (`@hono/node-server`), TypeScript, **Zod** for input validation                                                                                                                                                                   |
+| Database         | **PostgreSQL** (separate Coolify container). No SQLite, no state in files.                                                                                                                                                                         |
+| ORM / migrations | **Drizzle ORM** + drizzle-kit (Postgres driver `postgres` or `pg`)                                                                                                                                                                                 |
+| Auth             | **Better Auth** (Drizzle adapter, Hono integration), plugins `twoFactor` (TOTP + backup codes) and `passkey` (WebAuthn); cookie sessions (httpOnly, secure, sameSite=lax); argon2id via `@node-rs/argon2` (fallback: Better Auth's default scrypt) |
+| Push             | `web-push` + VAPID keys, service worker                                                                                                                                                                                                            |
+| PWA              | `vite-plugin-pwa` (Workbox)                                                                                                                                                                                                                        |
+| Markdown         | `unified` / `remark` with custom parsing, **raw HTML forbidden**                                                                                                                                                                                   |
+| i18n             | `react-i18next`, languages `fr` and `en`                                                                                                                                                                                                           |
+| Editor           | CodeMirror 6 (markdown editor)                                                                                                                                                                                                                     |
+| Tests            | `bun test` for pure logic; **Playwright** end-to-end against the built image running under Node                                                                                                                                                    |
+| Code quality     | **Prettier** (formatting), **ESLint** (flat config, TypeScript + React rules), **Husky** pre-commit hook running Prettier, ESLint and the unit tests                                                                                               |
+| Container        | Single multi-stage Dockerfile: build with `oven/bun`, final image `node:<LTS>-slim` (Debian/glibc, **not Alpine**)                                                                                                                                 |
 
 ### Bun vs Node — critical
 
@@ -92,7 +92,7 @@ argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` ch
 
 ## Phases
 
-1. **Foundation** — monorepo, Hono + Drizzle + Postgres, React + Vite SPA, `docker-compose.dev.yml`, single-image Dockerfile, `/healthz`, i18n, mobile-first layout, Prettier + ESLint + Husky pre-commit hook. *`docker compose up` serves API + SPA with migrations applied.*
+1. **Foundation** — monorepo, Hono + Drizzle + Postgres, React + Vite SPA, `docker-compose.dev.yml`, single-image Dockerfile, `/healthz`, i18n, mobile-first layout, Prettier + ESLint + Husky pre-commit hook. _`docker compose up` serves API + SPA with migrations applied._
 2. **Markdown parser + scaling** (pure module, no UI) with canonical serializer and round-trip tests.
 3. **Accounts & invitations** — Better Auth, admin bootstrap, invites, admin pages, rate limiting.
    3b. **2FA & passkeys.**
@@ -109,15 +109,23 @@ argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` ch
 
 ## Commands
 
-The project is not scaffolded yet. Once phase 1 lands, keep this section updated with the actual scripts. Expected:
+Keep this section in sync with the root `package.json` scripts.
 
 ```sh
-bun install                                   # install all workspaces
-docker compose -f docker-compose.dev.yml up   # app + Postgres
-bun test                                      # unit tests (pure logic)
-bun run build                                 # build web + server
-bunx drizzle-kit generate                     # generate migrations
-bunx playwright test                          # e2e against the built image
-bun run lint                                  # ESLint
-bun run format                                # Prettier (write); format:check to verify
+bun install                                        # install all workspaces (+ Husky hook)
+docker compose -f docker-compose.dev.yml up -d db  # Postgres only, for local dev
+bun run dev                                        # server (tsx watch, :3000) + web (Vite, proxies /api)
+docker compose -f docker-compose.dev.yml up --build  # full stack from the production image
+bun test                                           # unit tests (pure logic)
+bun run typecheck                                  # tsc in every workspace
+bun run lint                                       # ESLint
+bun run format                                     # Prettier (write); format:check to verify
+bun run build                                      # build web, then bundle server for Node
+bun run start                                      # run the built server under Node
 ```
+
+Not set up yet: `drizzle-kit` migrations (first schema), Playwright (`bunx playwright test`).
+
+CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, tests and build, then builds the Docker image and smoke-tests it against Postgres (`/healthz`, API, SPA fallback).
+
+Decisions taken outside the plan are logged in `DECISIONS.md`.

@@ -36,10 +36,12 @@ format: 1
 ---
 
 ### For the pasta
+
 - 400 g spaghetti
 - 1 pinch of salt
 
 ### For the sauce
+
 - 150 g lardons
 - 4 eggs
 - 50 g pecorino
@@ -47,11 +49,13 @@ format: 1
 ---
 
 ### Pasta
+
 1. Bring the water to a boil.
-2. Cook the pasta [10 min](timer:10m "pasta").
+2. Cook the pasta [10 min](timer:10m 'pasta').
 
 ### Sauce
-1. Brown the lardons [5 min](timer:5m "lardons") with [2 tbsp](q:) of oil.
+
+1. Brown the lardons [5 min](timer:5m 'lardons') with [2 tbsp](q:) of oil.
 2. Off the heat, mix with the beaten eggs and pecorino.
 ```
 
@@ -88,18 +92,29 @@ The server serves both the API (`/api/v1/*`) and the SPA from a single origin an
 
 ### Run
 
+Development, with hot reload:
+
 ```sh
 bun install
-docker compose -f docker-compose.dev.yml up
+cp apps/server/.env.example apps/server/.env
+docker compose -f docker-compose.dev.yml up -d db   # PostgreSQL
+bun run dev                                         # API on :3000, web on Vite's dev server
 ```
 
-The app is then available on the port defined in `docker-compose.dev.yml`. Migrations run automatically on startup.
+Full stack from the production image (app + PostgreSQL), on http://localhost:3000:
 
-### Tests
+```sh
+docker compose -f docker-compose.dev.yml up --build
+```
+
+### Checks
 
 ```sh
 bun test              # unit tests
-bunx playwright test  # end-to-end tests against the built image
+bun run typecheck     # TypeScript
+bun run lint          # ESLint
+bun run format:check  # Prettier
+bun run build         # production build
 ```
 
 A Husky pre-commit hook runs Prettier, ESLint and the unit tests; it is installed automatically by `bun install`.
@@ -110,16 +125,16 @@ There is no default account. Set `ADMIN_EMAIL`; on first start, a one-time setup
 
 ## Configuration
 
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `ORIGIN` | Public HTTPS URL of the app (used for CSRF checks and secure cookies) |
-| `BETTER_AUTH_SECRET` | Secret used by Better Auth |
-| `ADMIN_EMAIL` | Email of the initial admin account |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keys |
-| `VAPID_SUBJECT` | Contact for the push service (e.g. `mailto:you@example.com`) |
-| `WEBAUTHN_RP_ID` | Public domain, without scheme (changing it invalidates existing passkeys) |
-| `WEBAUTHN_RP_NAME` | Display name shown when registering a passkey |
+| Variable                                 | Description                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------- |
+| `DATABASE_URL`                           | PostgreSQL connection string                                              |
+| `ORIGIN`                                 | Public HTTPS URL of the app (used for CSRF checks and secure cookies)     |
+| `BETTER_AUTH_SECRET`                     | Secret used by Better Auth                                                |
+| `ADMIN_EMAIL`                            | Email of the initial admin account                                        |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keys                                                             |
+| `VAPID_SUBJECT`                          | Contact for the push service (e.g. `mailto:you@example.com`)              |
+| `WEBAUTHN_RP_ID`                         | Public domain, without scheme (changing it invalidates existing passkeys) |
+| `WEBAUTHN_RP_NAME`                       | Display name shown when registering a passkey                             |
 
 Generate VAPID keys with:
 

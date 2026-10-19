@@ -28,6 +28,7 @@ Review the current diff (`git diff` plus `git diff --staged`) unless you were gi
 ## Report
 
 For each finding:
+
 - severity (critical / high / medium / low),
 - `file:line`,
 - the concrete attack scenario (who does what, and what they get),

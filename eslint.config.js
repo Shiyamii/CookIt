@@ -1,0 +1,42 @@
+import js from '@eslint/js';
+import prettier from 'eslint-config-prettier';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+
+export default defineConfig([
+  globalIgnores(['**/node_modules/', '**/dist/', 'apps/server/public/', 'coverage/']),
+  js.configs.recommended,
+  tseslint.configs.recommended,
+  {
+    files: ['apps/web/**/*.{ts,tsx}'],
+    extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
+    languageOptions: { globals: globals.browser },
+  },
+  {
+    files: ['apps/server/**/*.ts', 'packages/**/*.ts', '*.{js,ts}'],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    // Shipped code runs under Node: Bun APIs are only allowed in tooling scripts and tests.
+    files: ['apps/**/*.{ts,tsx}', 'packages/**/*.ts'],
+    ignores: ['**/scripts/**', '**/*.test.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: 'Bun', message: 'Bun APIs are not available in production (Node runtime).' },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { regex: '^bun(:|$)', message: 'Bun modules are not available in production.' },
+          ],
+        },
+      ],
+    },
+  },
+  prettier,
+]);

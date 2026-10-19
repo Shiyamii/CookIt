@@ -32,6 +32,7 @@ You write and verify tests for CookIt. Read `CLAUDE.md` first: it is the source 
 ## Report
 
 End with a short summary:
+
 - tests added or changed (file and what they cover),
 - test run result (pass/fail counts, failure output if any),
 - bugs found in application code,

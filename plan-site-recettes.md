@@ -19,22 +19,22 @@ Hors périmètre pour l'instant : appli native (Capacitor, Android seulement, pl
 
 ## 2. Stack imposée
 
-| Élément | Choix |
-|---|---|
-| Outillage | **Bun** pour le gestionnaire de paquets, les workspaces, les scripts, le build et les tests unitaires (`bun test`). **Bun n'est pas le runtime de production** : l'app tourne sous Node.js. |
-| Front | **React** + TypeScript, **SPA** (Vite, lancé avec Bun), React Router, TanStack Query pour l'état serveur |
-| Back | **Hono** sur **Node.js** (LTS, `@hono/node-server`) + TypeScript, validation des entrées avec **Zod** ; pilote Postgres Node (`postgres` ou `pg`) avec Drizzle |
-| UI | **shadcn/ui** (Radix) + **Tailwind CSS**, icônes `lucide-react`, mobile first |
-| Base de données | **PostgreSQL** (conteneur séparé géré par Coolify) |
-| ORM / migrations | **Drizzle ORM** + drizzle-kit |
-| Auth | **Better Auth** (adaptateur Drizzle, intégration Hono) avec les plugins `twoFactor` (TOTP + codes de secours) et `passkey` (WebAuthn) ; sessions par cookie (httpOnly, secure, sameSite=lax) ; hash des mots de passe en **argon2id via `@node-rs/argon2`** (binaires précompilés, fonction de hachage personnalisée branchée sur Better Auth ; à défaut, le hash scrypt par défaut de Better Auth est acceptable) |
-| Push | bibliothèque `web-push` + clés VAPID, service worker |
-| PWA | `vite-plugin-pwa` (Workbox) |
-| Markdown | `unified` / `remark` avec parsing personnalisé (voir §4), **HTML brut interdit** |
-| i18n | `react-i18next` (ou `i18next` + détection de langue), langues `fr` et `en` |
-| Tests | `bun test` pour les tests unitaires (parser, mise à l'échelle, logique pure), Playwright pour le parcours critique de bout en bout, **lancé contre l'image construite qui tourne sous Node** (c'est ce test qui garantit que ce qui est déployé fonctionne, puisque les tests unitaires tournent sous Bun et la prod sous Node) |
-| Qualité du code | **Prettier** (formatage), **ESLint** (config « flat », règles TypeScript et React), **Husky** : hook pre-commit qui lance Prettier, ESLint et les tests unitaires (`bun test`) ; un commit est refusé si l'un d'eux échoue |
-| Conteneur | **Une seule image** Dockerfile multi-stage : étapes d'installation et de build avec `oven/bun`, **image finale `node:<LTS>-slim`** (Debian, glibc, pas Alpine, pour les binaires précompilés) ne contenant que le build et les dépendances de production : Hono sert l'API (`/api/*`) **et** les fichiers statiques de la SPA |
+| Élément          | Choix                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Outillage        | **Bun** pour le gestionnaire de paquets, les workspaces, les scripts, le build et les tests unitaires (`bun test`). **Bun n'est pas le runtime de production** : l'app tourne sous Node.js.                                                                                                                                                                                                                        |
+| Front            | **React** + TypeScript, **SPA** (Vite, lancé avec Bun), React Router, TanStack Query pour l'état serveur                                                                                                                                                                                                                                                                                                           |
+| Back             | **Hono** sur **Node.js** (LTS, `@hono/node-server`) + TypeScript, validation des entrées avec **Zod** ; pilote Postgres Node (`postgres` ou `pg`) avec Drizzle                                                                                                                                                                                                                                                     |
+| UI               | **shadcn/ui** (Radix) + **Tailwind CSS**, icônes `lucide-react`, mobile first                                                                                                                                                                                                                                                                                                                                      |
+| Base de données  | **PostgreSQL** (conteneur séparé géré par Coolify)                                                                                                                                                                                                                                                                                                                                                                 |
+| ORM / migrations | **Drizzle ORM** + drizzle-kit                                                                                                                                                                                                                                                                                                                                                                                      |
+| Auth             | **Better Auth** (adaptateur Drizzle, intégration Hono) avec les plugins `twoFactor` (TOTP + codes de secours) et `passkey` (WebAuthn) ; sessions par cookie (httpOnly, secure, sameSite=lax) ; hash des mots de passe en **argon2id via `@node-rs/argon2`** (binaires précompilés, fonction de hachage personnalisée branchée sur Better Auth ; à défaut, le hash scrypt par défaut de Better Auth est acceptable) |
+| Push             | bibliothèque `web-push` + clés VAPID, service worker                                                                                                                                                                                                                                                                                                                                                               |
+| PWA              | `vite-plugin-pwa` (Workbox)                                                                                                                                                                                                                                                                                                                                                                                        |
+| Markdown         | `unified` / `remark` avec parsing personnalisé (voir §4), **HTML brut interdit**                                                                                                                                                                                                                                                                                                                                   |
+| i18n             | `react-i18next` (ou `i18next` + détection de langue), langues `fr` et `en`                                                                                                                                                                                                                                                                                                                                         |
+| Tests            | `bun test` pour les tests unitaires (parser, mise à l'échelle, logique pure), Playwright pour le parcours critique de bout en bout, **lancé contre l'image construite qui tourne sous Node** (c'est ce test qui garantit que ce qui est déployé fonctionne, puisque les tests unitaires tournent sous Bun et la prod sous Node)                                                                                    |
+| Qualité du code  | **Prettier** (formatage), **ESLint** (config « flat », règles TypeScript et React), **Husky** : hook pre-commit qui lance Prettier, ESLint et les tests unitaires (`bun test`) ; un commit est refusé si l'un d'eux échoue                                                                                                                                                                                         |
+| Conteneur        | **Une seule image** Dockerfile multi-stage : étapes d'installation et de build avec `oven/bun`, **image finale `node:<LTS>-slim`** (Debian, glibc, pas Alpine, pour les binaires précompilés) ne contenant que le build et les dépendances de production : Hono sert l'API (`/api/*`) **et** les fichiers statiques de la SPA                                                                                      |
 
 Pas de SQLite, pas de stockage de l'état dans des fichiers : tout l'état est dans Postgres, pour qu'une sauvegarde de la base (par exemple le backup de Coolify) suffise sans script maison.
 
@@ -91,10 +91,12 @@ format: 1
 ---
 
 ### Pour les pâtes
+
 - 400 g spaghetti
 - 1 pincée de sel
 
 ### Pour la sauce
+
 - 150 g lardons
 - 4 œufs
 - 50 g pecorino
@@ -102,11 +104,13 @@ format: 1
 ---
 
 ### Les pâtes
+
 1. Porter l'eau à ébullition.
-2. Cuire les pâtes [10 min](timer:10m "pâtes").
+2. Cuire les pâtes [10 min](timer:10m 'pâtes').
 
 ### La sauce
-1. Faire revenir les lardons [5 min](timer:5m "lardons") avec [2 c. à soupe](q:) d'huile.
+
+1. Faire revenir les lardons [5 min](timer:5m 'lardons') avec [2 c. à soupe](q:) d'huile.
 2. Hors du feu, mélanger avec les œufs battus et le pecorino.
 ```
 
@@ -131,7 +135,7 @@ Mise à l'échelle : `facteur = portions_voulues / portions_recette`, arrondi li
 
 Les tags ne sont pas du texte libre : ce sont des **valeurs d'une liste commune**, rangées en **catégories** (groupes), avec des libellés traduits stockés en JSON (`labels`) sur la catégorie et sur le tag. Une recette ne référence que des identifiants neutres (`recipe_tags`), donc les tags sont les mêmes quelle que soit la langue de la traduction affichée, et ne font pas partie de la « cohérence entre traductions ».
 
-- **Catégories de départ** (créées par un script de départ, modifiables ensuite par l'admin), par exemple : *Type de plat* (entrée, plat principal, accompagnement, dessert, boisson, sauce, petit-déjeuner, apéritif), *Régime* (végétarien, végétalien, sans gluten, sans lactose), *Cuisine* (française, italienne, asiatique, etc.). Libellés fournis en français et en anglais dans le champ `labels`.
+- **Catégories de départ** (créées par un script de départ, modifiables ensuite par l'admin), par exemple : _Type de plat_ (entrée, plat principal, accompagnement, dessert, boisson, sauce, petit-déjeuner, apéritif), _Régime_ (végétarien, végétalien, sans gluten, sans lactose), _Cuisine_ (française, italienne, asiatique, etc.). Libellés fournis en français et en anglais dans le champ `labels`.
 - **Gestion par l'admin** : page « Catégories et tags » (créer, renommer, traduire, réordonner, déplacer un tag d'une catégorie à une autre, supprimer). Supprimer un tag utilisé par des recettes demande confirmation, avec le nombre de recettes touchées, ou propose de le **fusionner** dans un autre tag. Les utilisateurs ne créent pas de tags.
 - **Choix d'un tag** : dans l'éditeur visuel, un sélecteur par catégorie (choix unique ou multiple selon `multiple`). Libellé lu dans `labels` selon la langue de l'interface, avec repli sur la langue de base puis sur l'identifiant. La comparaison par libellé de la validation à l'import parcourt toutes les valeurs de `labels`. Filtres de la galerie et de la recherche par catégorie puis par tag.
 - **Tags absents du markdown éditable** : l'éditeur markdown (et donc le texte envoyé dans le prompt de traduction) **ne contient pas la ligne `tags:`** ; les tags ne se modifient que par l'interface. À la sauvegarde depuis l'éditeur markdown, les tags de la recette ne changent pas.
@@ -147,6 +151,7 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 ## 5. Fonctionnalités détaillées
 
 ### 5.1 Comptes et invitations
+
 - **Premier démarrage** : création de l'admin via variable d'environnement `ADMIN_EMAIL` + lien de configuration à usage unique écrit dans les logs, ou commande CLI documentée. Pas de compte par défaut.
 - Page admin **Invitations** : bouton « Créer une invitation » (un clic → lien copiable, expiration configurable, 7 jours par défaut), liste avec statut (en attente / utilisée / expirée / révoquée), révocation en un clic.
 - Page admin **Utilisateurs** : liste, désactiver / réactiver, supprimer (avec choix du sort de ses recettes), générer un lien de réinitialisation de mot de passe.
@@ -155,6 +160,7 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 - Limitation de débit sur login, inscription et réinitialisation.
 
 ### 5.1 bis Authentification renforcée (optionnelle pour chaque utilisateur)
+
 - **Double authentification (2FA) par application** (TOTP : Google Authenticator, Aegis, 2FAS, etc.) : activation dans les paramètres du compte avec QR code, vérification d'un premier code avant activation, **codes de secours** à usage unique affichés une seule fois, désactivation possible (en redemandant une preuve d'identité).
 - **Passkeys (WebAuthn)** : l'utilisateur peut enregistrer une ou plusieurs clés (téléphone, gestionnaire de mots de passe, clé physique), les nommer et les supprimer. Connexion sans saisie du mot de passe (y compris suggestion automatique dans le champ de login). Un compte garde toujours au moins une méthode de connexion valide.
 - Le `rpID` WebAuthn correspond au domaine public du site ; documenter qu'un changement de domaine invalide les passkeys existantes.
@@ -162,6 +168,7 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 - Procédure de récupération de compte documentée : codes de secours, sinon réinitialisation par un admin (le lien de réinitialisation désactive 2FA et passkeys après confirmation).
 
 ### 5.2 Recettes
+
 - CRUD avec **deux modes d'édition au choix**, basculables en un clic **sans perte** :
   - **Éditeur visuel** (par défaut, surtout sur mobile) : formulaire pour la partie 1 (titre, commentaire, portions, source, sélecteurs de tags par catégorie) ; pour les ingrédients, des groupes (ajout, renommage, suppression, réorganisation par glisser-déposer) contenant des lignes quantité / unité (avec suggestions) / nom ; pour les étapes, des groupes contenant des étapes réordonnables, avec un bouton « Ajouter un timer » (durée + nom, inséré à la position du curseur), les timers affichés comme pastilles modifiables dans le texte, et un bouton pour marquer une quantité qui suit les portions. Pas d'éditeur de texte riche lourd : une interface structurée suffit et est plus robuste.
   - **Éditeur markdown** (CodeMirror 6) avec coloration des séparateurs, des titres de groupe et des timers, et un panneau d'erreurs avec numéros de ligne. Si le texte est invalide, la bascule vers l'éditeur visuel est refusée avec une explication, jusqu'à correction.
@@ -188,6 +195,7 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 - **Sécurité de l'import par URL** : protection SSRF obligatoire (refuser localhost et plages privées RFC1918, IPv6 locales, redirections vers ces plages ; vérifier après résolution DNS), timeout, taille maximale. L'instance peut être hébergée sur un réseau privé : l'import ne doit jamais permettre d'atteindre des services internes.
 
 ### 5.3 Mode cuisine (cœur du produit)
+
 - Écran **une étape à la fois**, grands caractères, boutons précédent / suivant larges (usage avec les mains sales), ingrédients de la recette accessibles dans un tiroir avec cases à cocher.
 - Sélecteur de portions avant de lancer, appliqué à toute la session de cette recette.
 - **Wake Lock API** : écran allumé ; réacquérir le verrou au retour de la page au premier plan.
@@ -203,6 +211,7 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 - **Idée bonus (phase finale, optionnelle)** : planification à rebours (« je mange à 19h30 → voici quand lancer chaque recette »).
 
 ### 5.4 Notifications Web Push
+
 - Service worker, abonnement via `PushManager`, clés VAPID en variables d'environnement.
 - À la création d'un timer, le **serveur** programme l'envoi ; il n'y a jamais de `setTimeout` navigateur comme mécanisme de notification.
 - Scheduler serveur : boucle toutes les ~5 s qui sélectionne `status='running' AND ends_at <= now() AND notified_at IS NULL` avec `FOR UPDATE SKIP LOCKED`, envoie le push à tous les abonnements de l'utilisateur, marque `notified_at` et `status='done'`. Reprise correcte après redémarrage du conteneur (les timers en attente sont retrouvés en base).
@@ -212,11 +221,13 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 - Limite assumée : son système par défaut, pas d'alarme répétée (cela viendrait avec Capacitor Android, plus tard).
 
 ### 5.5 PWA et mobile
+
 - `manifest.webmanifest`, icônes, installable, thème clair/sombre.
 - Conception **mobile first**, cibles tactiles larges, utilisable à une main.
 - Cache hors-ligne des pages et des recettes déjà ouvertes (le mode cuisine doit rester utilisable si le réseau coupe en cuisine).
 
 ### 5.6 i18n
+
 - Interface fr / en, détection de la langue du navigateur, préférence enregistrée dans le profil.
 - Les unités et mots-clés du parser sont reconnus dans les deux langues.
 - **Traductions des recettes** : le contenu d'une recette n'est jamais traduit automatiquement. Une recette a une traduction par langue (`recipe_translations`), la langue de base étant celle de création. Sur la page d'une recette, un sélecteur de langue affiche les traductions existantes (repli sur la langue de base si celle de l'utilisateur n'existe pas) ; une action « Ajouter une traduction » ouvre un écran avec :
@@ -252,29 +263,29 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 Chaque phase se termine par des tests verts, un commit propre et un court README à jour.
 
 1. **Socle** : monorepo (`apps/web`, `apps/server`, `packages/shared`), TypeScript partout, Hono + Drizzle + Postgres, SPA React + Vite, `docker-compose.dev.yml`, Dockerfile image unique, `/healthz`, i18n fr/en en place, layout mobile first, Prettier + ESLint configurés à la racine, hook pre-commit Husky (Prettier, ESLint, tests unitaires) installé par `bun install`.
-   *Critère : `docker compose up` donne une app qui répond (API + SPA), migrations appliquées ; un commit avec une erreur de formatage, de lint ou un test unitaire en échec est refusé.*
+   _Critère : `docker compose up` donne une app qui répond (API + SPA), migrations appliquées ; un commit avec une erreur de formatage, de lint ou un test unitaire en échec est refusé._
 2. **Parser markdown + mise à l'échelle** (module pur, sans UI) : trois parties et séparateurs, métadonnées de la partie 1, groupes d'ingrédients, groupes d'étapes, timers `timer:`, quantités `q:`, fractions, arrondis, bilingue, **sérialiseur canonique** et tests de stabilité `parse → serialize → parse`.
-   *Critère : tests unitaires nombreux (cas limites : fractions, unités absentes, lignes non parsables, durées composées).*
+   _Critère : tests unitaires nombreux (cas limites : fractions, unités absentes, lignes non parsables, durées composées)._
 3. **Comptes et invitations** : intégration Better Auth (Drizzle + Hono), bootstrap admin, login/logout, sessions, invitations, pages admin utilisateurs/invitations, rate limiting.
-   *Critère : impossible de s'inscrire sans invitation valide ; une invitation utilisée ou révoquée ne marche plus.*
-3 bis. **2FA et passkeys** : plugins `twoFactor` et `passkey`, pages de paramètres de sécurité (activation TOTP + codes de secours, gestion des passkeys), flux de connexion adapté, procédure de récupération.
-   *Critère : connexion possible par mot de passe seul, mot de passe + TOTP, ou passkey seule ; un code de secours ne marche qu'une fois ; supprimer la dernière méthode de connexion est refusé.*
+   _Critère : impossible de s'inscrire sans invitation valide ; une invitation utilisée ou révoquée ne marche plus._
+   3 bis. **2FA et passkeys** : plugins `twoFactor` et `passkey`, pages de paramètres de sécurité (activation TOTP + codes de secours, gestion des passkeys), flux de connexion adapté, procédure de récupération.
+   _Critère : connexion possible par mot de passe seul, mot de passe + TOTP, ou passkey seule ; un code de secours ne marche qu'une fois ; supprimer la dernière méthode de connexion est refusé._
 4. **Recettes** : CRUD, éditeur visuel + éditeur markdown (CodeMirror) basculables sans perte, aperçu, visibilités, partage `unlisted`, galerie publique, « ajouter à ma bibliothèque », recherche.
-   *Critère : un utilisateur ne peut jamais lire/modifier la recette privée d'un autre (tests d'autorisation).*
-4 bis. **Catégories et tags** : tables, script de départ (FR/EN), page admin (créer, traduire, réordonner, déplacer, fusionner, supprimer avec confirmation), sélecteurs par catégorie dans l'éditeur visuel, filtres de la galerie et de la recherche.
-   *Critère : changer la langue de l'interface change les libellés sans toucher aux données ; supprimer un tag utilisé demande confirmation ; un utilisateur non admin ne peut ni créer ni modifier un tag.*
+   _Critère : un utilisateur ne peut jamais lire/modifier la recette privée d'un autre (tests d'autorisation)._
+   4 bis. **Catégories et tags** : tables, script de départ (FR/EN), page admin (créer, traduire, réordonner, déplacer, fusionner, supprimer avec confirmation), sélecteurs par catégorie dans l'éditeur visuel, filtres de la galerie et de la recherche.
+   _Critère : changer la langue de l'interface change les libellés sans toucher aux données ; supprimer un tag utilisé demande confirmation ; un utilisateur non admin ne peut ni créer ni modifier un tag._
 5. **Création et import / export** : page « Ajouter une recette » (création rapide sans corps, assistant interactif avec collage d'ingrédients/étapes et détection de durées, import markdown direct), `.md`, zip, export global, import par URL (JSON-LD) avec protection SSRF.
-   *Critère : une recette créée en mode rapide existe avec des parties 2 et 3 vides et se complète ensuite ; round-trip export → import sans perte (tags compris : reconnus, ignorés et ambigus) ; l'import d'URL vers une IP privée est refusé ; « 1h30 » et « 10 min » sont bien détectés en timers ; l'étape « Valider les tags » reconnaît un tag par identifiant et par libellé FR/EN, ignore un inconnu sans bloquer, et rien n'est appliqué sans validation.*
-5 bis. **Prompts IA : import et traduction** : générateur de prompts dans `packages/shared` (FR/EN), page « Importer avec une IA », écran « Ajouter une traduction », aperçu en direct avec erreurs et avertissements de cohérence entre traductions, sélecteur de langue sur les recettes.
-   *Critère : un exemple de sortie IA correcte est accepté ; une sortie avec une étape ou un timer manquant produit un avertissement lisible ; le prompt généré contient toujours un exemple valide pour la version courante du format (test automatisé qui parse l'exemple inclus dans le prompt).*
+   _Critère : une recette créée en mode rapide existe avec des parties 2 et 3 vides et se complète ensuite ; round-trip export → import sans perte (tags compris : reconnus, ignorés et ambigus) ; l'import d'URL vers une IP privée est refusé ; « 1h30 » et « 10 min » sont bien détectés en timers ; l'étape « Valider les tags » reconnaît un tag par identifiant et par libellé FR/EN, ignore un inconnu sans bloquer, et rien n'est appliqué sans validation._
+   5 bis. **Prompts IA : import et traduction** : générateur de prompts dans `packages/shared` (FR/EN), page « Importer avec une IA », écran « Ajouter une traduction », aperçu en direct avec erreurs et avertissements de cohérence entre traductions, sélecteur de langue sur les recettes.
+   _Critère : un exemple de sortie IA correcte est accepté ; une sortie avec une étape ou un timer manquant produit un avertissement lisible ; le prompt généré contient toujours un exemple valide pour la version courante du format (test automatisé qui parse l'exemple inclus dans le prompt)._
 6. **Mode cuisine mono-recette** : étapes, portions, ingrédients cochés, Wake Lock, timers calculés sur `ends_at`, état sauvegardé côté serveur par événements, copie locale.
-   *Critère : recharger la page ou changer d'appareil retrouve exactement l'étape et les timers.*
+   _Critère : recharger la page ou changer d'appareil retrouve exactement l'étape et les timers._
 7. **Multi-recettes** : session avec plusieurs recettes, cartes, barre de timers commune colorée et nommée.
-   *Critère : deux recettes avec chacune deux timers restent lisibles et corrects après rechargement.*
+   _Critère : deux recettes avec chacune deux timers restent lisibles et corrects après rechargement._
 8. **Web Push** : service worker, abonnement, scheduler serveur, nettoyage des abonnements morts, page d'aide iOS.
-   *Critère : un timer lancé puis page fermée envoie bien la notification à l'heure ; un redémarrage du conteneur n'en perd aucun.*
+   _Critère : un timer lancé puis page fermée envoie bien la notification à l'heure ; un redémarrage du conteneur n'en perd aucun._
 9. **PWA et finitions** : manifest, installation, cache hors-ligne, thème, accessibilité, passe mobile complète.
-   *Critère : Lighthouse PWA/accessibilité corrects, mode cuisine utilisable hors-ligne sur une recette déjà ouverte.*
+   _Critère : Lighthouse PWA/accessibilité corrects, mode cuisine utilisable hors-ligne sur une recette déjà ouverte._
 10. **Déploiement et doc** : README (installation Coolify pas à pas, variables, VAPID, sauvegarde/restauration Postgres), test Playwright du parcours « invitation → créer recette → cuisiner avec timers », revue sécurité du §7.
 11. **Optionnel** : SSE pour la synchro temps réel entre appareils, planification à rebours, groupes d'étapes affichés comme **pistes parallèles** (ex. pâtes et sauce menées en même temps dans une même recette), import Cooklang (`.cook`), Capacitor Android pour une vraie alarme, **IA intégrée** (appel d'une API de modèle ou d'un modèle local, configurable par l'admin, qui exécuterait les mêmes prompts que ceux proposés à la copie ; à ne faire qu'après avoir validé l'usage réel des prompts manuels).
 

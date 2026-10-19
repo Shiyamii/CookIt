@@ -1,0 +1,10 @@
+node_modules/
+dist/
+apps/server/public/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.claude/settings.local.json

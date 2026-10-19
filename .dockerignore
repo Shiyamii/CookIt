@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+apps/server/public
+.git
+.github
+.husky
+.claude
+**/.env
+**/*.log
