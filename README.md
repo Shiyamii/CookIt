@@ -145,3 +145,7 @@ Back up the PostgreSQL database, for example with Coolify's built-in backups. Us
 
 - iOS only delivers Web Push notifications when the app is installed on the home screen (iOS 16.4+).
 - Notifications use the system default sound; there is no repeating alarm.
+
+## License
+
+[MIT](LICENSE). Provided "as is", without warranty of any kind.
