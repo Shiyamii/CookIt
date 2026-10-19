@@ -1,21 +1,28 @@
-import { APP_NAME } from '@cookit/shared';
-import { useEffect, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createBrowserRouter } from 'react-router';
+import { RouterProvider } from 'react-router/dom';
+import { AppLayout } from '@/components/AppLayout';
+import { HomePage } from '@/pages/HomePage';
+import { NotFoundPage } from '@/pages/NotFoundPage';
 
-type ApiStatus = 'loading' | 'ok' | 'error';
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+});
+
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: '*', element: <NotFoundPage /> },
+    ],
+  },
+]);
 
 export function App() {
-  const [apiStatus, setApiStatus] = useState<ApiStatus>('loading');
-
-  useEffect(() => {
-    fetch('/api/v1/meta')
-      .then((res) => setApiStatus(res.ok ? 'ok' : 'error'))
-      .catch(() => setApiStatus('error'));
-  }, []);
-
   return (
-    <main>
-      <h1>{APP_NAME}</h1>
-      <p>API: {apiStatus}</p>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   );
 }

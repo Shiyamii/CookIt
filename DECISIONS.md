@@ -10,6 +10,13 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Shared package exports TypeScript sources** (`./src/index.ts`): consumed directly by Vite, tsx and the server bundler, no separate build step.
 - **ESLint `no-restricted-globals` / `no-restricted-imports` on `Bun`**: enforces "no Bun APIs in shipped code" (tests and `scripts/` excluded).
 - **Docker image smoke test in CI** (build, run with Postgres, curl `/healthz`, API and SPA fallback): checks the real Node image, until Playwright tests exist.
+- **All `apps/web` packages are `devDependencies`**: the SPA is fully bundled by Vite, so the production image (`bun install --production`) ships none of them (React, shadcn CLI, Tailwind…).
+- **shadcn/ui, `radix-nova` style (Nova preset), theme from tweakcn**: colors, radius and shadows in `apps/web/src/index.css`; components in `src/components/ui/` stay as generated (lint rule `react-refresh/only-export-components` off there).
+- **`cn` package** (by shadcn) instead of `clsx` + `tailwind-merge`: what the current shadcn CLI installs.
+- **Self-hosted font** (`@fontsource-variable/plus-jakarta-sans`): no Google Fonts request, simpler CSP, works offline. Serif/mono fonts of the theme fall back to system fonts until needed.
+- **Theme (light / dark / system) without a React provider**: small store in `src/lib/theme.ts` (`useSyncExternalStore`), saved in `localStorage`.
+- **i18n resources as typed TS objects** (`src/locales/en.ts` is the reference type, `fr.ts` must match): missing keys are compile errors. Language detection: saved choice (`localStorage`), then browser language; saving to the user profile comes with accounts.
+- **React Router in data mode** (`createBrowserRouter`), `RouterProvider` from `react-router/dom`.
 - **Empty custom `0000_init` migration**: validates the whole migration pipeline without inventing tables before their phase.
 - **Migrations on startup with the `drizzle-orm` migrator** (not drizzle-kit, which is a dev dependency): dedicated single connection, process exits on failure so the container is restarted instead of serving without a schema.
 - **`drizzle.config.ts` loads `.env` with `process.loadEnvFile`** (Node built-in): no dotenv dependency.

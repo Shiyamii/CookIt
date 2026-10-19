@@ -152,7 +152,11 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 
 ### 5.1 Comptes et invitations
 
-- **Premier démarrage** : création de l'admin via variable d'environnement `ADMIN_EMAIL` + lien de configuration à usage unique écrit dans les logs, ou commande CLI documentée. Pas de compte par défaut.
+- **Premier démarrage** : pas de compte par défaut. Au démarrage, s'il n'existe **aucun admin**, le serveur crée un lien de configuration à usage unique (`ORIGIN/setup?token=…`, valable 24 h) et l'écrit dans les logs ; l'email est pré-rempli avec `ADMIN_EMAIL`, le compte créé reçoit le rôle `admin`.
+  - Le lien est une **invitation avec le rôle admin** (table `invites`) : même logique que les invitations (token hashé, consommation atomique, expiration).
+  - Tant qu'aucun admin n'existe, chaque redémarrage génère un nouveau lien et invalide le précédent. Dès qu'un admin existe, plus de lien et `/setup` répond 404.
+  - `ORIGIN` est obligatoire (le serveur refuse de démarrer sans). Ce token dans les logs est une exception assumée à « aucune donnée sensible dans les logs » (usage unique, courte durée), notée dans `DECISIONS.md`.
+  - **Commande de secours** lancée depuis le terminal du conteneur, ex. `node dist/cli.js admin:reset-link <username>` : génère un lien de réinitialisation (perte du mot de passe ou de la 2FA de l'admin).
 - Page admin **Invitations** : bouton « Créer une invitation » (un clic → lien copiable, expiration configurable, 7 jours par défaut), liste avec statut (en attente / utilisée / expirée / révoquée), révocation en un clic.
 - Page admin **Utilisateurs** : liste, désactiver / réactiver, supprimer (avec choix du sort de ses recettes), générer un lien de réinitialisation de mot de passe.
 - Page admin **Catégories et tags** : voir §4.
