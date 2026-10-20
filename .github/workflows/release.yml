@@ -1,0 +1,85 @@
+name: Release
+
+# Releases only happen from these branches (never from main):
+#   next    -> release candidates, e.g. v0.2.0-rc.1 -> image shiyamii/cookit:0.2.0-rc.1
+#   release -> stable versions,     e.g. v0.2.0      -> images 0.2.0, 0.2, latest
+on:
+  push:
+    branches: [release, next]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Version and tag
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx --yes semantic-release@25.0.9
+      - name: Detect the new version
+        id: version
+        run: |
+          git fetch --tags --force
+          tag=$(git tag --points-at HEAD --list 'v*' | sort -V | tail -1)
+          if [ -n "$tag" ]; then
+            echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+            echo "New release: $tag"
+          else
+            echo "No release (no feat/fix commits since the last version)"
+          fi
+
+  publish:
+    name: Publish Docker image
+    needs: release
+    if: needs.release.outputs.version != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: shiyamii/cookit
+          # Prereleases (x.y.z-rc.n) only get their exact tag; stable versions also get x.y and latest.
+          tags: |
+            type=semver,pattern={{version}},value=v${{ needs.release.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.release.outputs.version }}
+          flavor: |
+            latest=${{ !contains(needs.release.outputs.version, '-') }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          build-args: APP_VERSION=${{ needs.release.outputs.version }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

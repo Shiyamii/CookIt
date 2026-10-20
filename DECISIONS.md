@@ -25,3 +25,9 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **E2E files named `*.e2e.ts`**: `bun test` would otherwise pick up `*.spec.ts` files.
 - **Chromium only, two projects (Pixel 7 mobile + desktop)**: mobile first without the cost of installing WebKit/Firefox; widen later if a browser-specific bug shows up.
 - **E2E not in the pre-commit hook**: needs the Docker image running and takes seconds; CI runs them on every push.
+- **semantic-release** (over release-please): tags and GitHub releases straight from branch pushes, native prerelease branches for `-rc.N`; uses the Conventional Commits already in use.
+- **semantic-release run with a pinned `npx` in CI** (not a project dependency): keeps ~300 packages out of `bun.lock`; only GitHub release notes, no npm publish, no changelog commit back to the branch.
+- **`v0.0.0` baseline tag on the first commit**: semantic-release would otherwise start at `1.0.0`.
+- **Release = `next` / `release` branches, never `main`**: publishing is a deliberate merge, not a side effect of every push.
+- **The release workflow reuses `ci.yml` (`workflow_call`)**: a version is only tagged after the same checks, image build and Playwright run as regular CI. The published image is rebuilt from the same commit (with `APP_VERSION`), using the GitHub Actions build cache.
+- **`APP_VERSION` build arg exposed by `/api/v1/meta`**: shows which version is deployed.

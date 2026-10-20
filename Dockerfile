@@ -20,7 +20,10 @@ FROM manifests AS prod-deps
 RUN bun install --frozen-lockfile --ignore-scripts --production
 
 FROM node:${NODE_VERSION}-slim AS runtime
+# Set by the release workflow (e.g. 0.1.0 or 0.2.0-rc.1); "dev" for local builds.
+ARG APP_VERSION=dev
 ENV NODE_ENV=production \
+    APP_VERSION=${APP_VERSION} \
     PORT=3000 \
     STATIC_DIR=./public
 WORKDIR /app

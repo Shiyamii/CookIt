@@ -103,7 +103,7 @@ argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` ch
 ## Phases
 
 1. **Foundation** — monorepo, Hono + Drizzle + Postgres, React + Vite SPA, `docker-compose.dev.yml`, single-image Dockerfile, `/healthz`, i18n, mobile-first layout, Prettier + ESLint + Husky pre-commit hook. _`docker compose up` serves API + SPA with migrations applied._
-   Order: Drizzle → front stack (Tailwind, shadcn/ui, Router, TanStack Query, i18n, layout) → Playwright smoke test → **v0.1 release**: image `shiyamii/cookit` (amd64) pushed to Docker Hub only from a version tag or a release branch, with automated versioning including release candidates (tool to choose then: semantic-release, release-please…).
+   Order: Drizzle → front stack (Tailwind, shadcn/ui, Router, TanStack Query, i18n, layout) → Playwright smoke test → **v0.1 release**: image `shiyamii/cookit` (amd64) pushed to Docker Hub only from a version tag or a release branch, with automated versioning including release candidates (semantic-release, see "Releases" below).
 2. **Markdown parser + scaling** (pure module, no UI) with canonical serializer and round-trip tests.
 3. **Accounts & invitations** — Better Auth, admin bootstrap, invites, admin pages, rate limiting.
    3b. **2FA & passkeys.**
@@ -150,5 +150,15 @@ bun run test:e2e                                        # Playwright (Chromium, 
 End-to-end tests live in `e2e/` and are named `*.e2e.ts` (so `bun test` ignores them). They target `E2E_BASE_URL` (default `http://localhost:3000`), i.e. the production image, never the Vite dev server. Prefer role-based locators (`getByRole`) and `data-testid` only when there is no accessible name. They are not run by the pre-commit hook (too slow); CI runs them.
 
 CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests and build, then builds the Docker image, starts it against Postgres, checks migrations were applied and runs the Playwright suite against it.
+
+## Releases
+
+- Versions come from **semantic-release** (`.releaserc.json`, run with a pinned `npx` in CI only) reading Conventional Commits: `feat:` → minor, `fix:`/`perf:` → patch, `BREAKING CHANGE:` → major; `chore:`, `docs:`, `test:`, `ci:`, `refactor:` don't release. **Always write commit messages in this format.**
+- `main`: development, CI only, never publishes.
+- `next`: push → release candidate `vX.Y.Z-rc.N` → image `shiyamii/cookit:X.Y.Z-rc.N`.
+- `release`: push → stable `vX.Y.Z` → images `X.Y.Z`, `X.Y`, `latest` (amd64).
+- `.github/workflows/release.yml`: reuses `ci.yml` (checks + image + Playwright), then semantic-release creates the tag and GitHub release, then the image is built with `APP_VERSION` and pushed to Docker Hub. Nothing is tagged or published if CI fails.
+- The running version is exposed by `GET /api/v1/meta` (`version`, `dev` for local builds).
+- Never create version tags by hand; `v0.0.0` on the first commit is the baseline so the first release is `0.1.0`.
 
 Decisions taken outside the plan are logged in `DECISIONS.md`.

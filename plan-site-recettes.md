@@ -244,7 +244,7 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 
 - Application déployée depuis l'**image Docker Hub** `shiyamii/cookit` (amd64) ; ressource **PostgreSQL** Coolify séparée dans le même projet.
 - **Publication de l'image** : uniquement depuis un **tag de version** ou une **branche de release**, jamais à chaque push sur `main`. Le test de l'image (comme en CI) passe avant toute publication.
-- **Versions automatiques** : un outil dédié (semantic-release, release-please ou équivalent, à choisir à ce moment-là) crée les tags / branches de release avec le bon numéro de version, y compris des **release candidates** (`-rc.N`). À mettre en place en même temps que la publication Docker Hub (v0.1).
+- **Versions automatiques** : **semantic-release** crée les tags / branches de release avec le bon numéro de version, y compris des **release candidates** (`-rc.N`) : branche `next` → RC, branche `release` → version stable, `main` ne publie jamais.
 - Variables d'environnement : `DATABASE_URL`, `ORIGIN` (URL publique en https), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `ADMIN_EMAIL`, `BETTER_AUTH_SECRET`, `WEBAUTHN_RP_ID` (domaine public, sans schéma), `WEBAUTHN_RP_NAME`. Documenter la génération des clés VAPID (`npx web-push generate-vapid-keys`).
 - Derrière Traefik (HTTPS géré par Coolify) : faire confiance aux en-têtes `X-Forwarded-*` uniquement venant du proxy, et vérifier que `ORIGIN` correspond au domaine public (utilisé pour la protection CSRF et les cookies `secure`).
 - Le build produit une image unique : build du front (Vite) copié dans l'image du serveur, Hono sert `/api/*` puis les fichiers statiques, avec fallback sur `index.html` pour les routes de la SPA.

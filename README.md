@@ -150,6 +150,18 @@ Generate VAPID keys with:
 npx web-push generate-vapid-keys
 ```
 
+## Releases
+
+Images are published to Docker Hub as [`shiyamii/cookit`](https://hub.docker.com/r/shiyamii/cookit) (linux/amd64). Versions are computed automatically by [semantic-release](https://semantic-release.org) from [Conventional Commits](https://www.conventionalcommits.org):
+
+| Branch    | Result                                                              |
+| --------- | ------------------------------------------------------------------- |
+| `main`    | development, CI only                                                |
+| `next`    | release candidate, e.g. `v0.2.0-rc.1` → image tag `0.2.0-rc.1`      |
+| `release` | stable release, e.g. `v0.2.0` → image tags `0.2.0`, `0.2`, `latest` |
+
+To release: merge `main` into `next` to publish a release candidate, then into `release` for the stable version. The full CI (including end-to-end tests against the image) must pass before anything is tagged or published.
+
 ## Deployment (Coolify)
 
 1. Create a **PostgreSQL** resource in your Coolify project.

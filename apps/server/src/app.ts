@@ -16,7 +16,9 @@ app.get('/healthz', async (c) => {
   }
 });
 
-app.get('/api/v1/meta', (c) => c.json({ name: APP_NAME, locales: SUPPORTED_LOCALES }));
+app.get('/api/v1/meta', (c) =>
+  c.json({ name: APP_NAME, version: env.APP_VERSION, locales: SUPPORTED_LOCALES }),
+);
 app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
 // SPA: static files, then index.html for client-side routes.
