@@ -1,14 +1,30 @@
 {
-  "branches": ["release", { "name": "next", "prerelease": "rc" }],
+  "branches": [
+    "release",
+    {
+      "name": "next",
+      "prerelease": "rc"
+    }
+  ],
   "tagFormat": "v${version}",
   "plugins": [
-    ["@semantic-release/commit-analyzer", { "preset": "angular" }],
-    ["@semantic-release/release-notes-generator", { "preset": "angular" }],
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "angular"
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "angular"
+      }
+    ],
     [
       "@semantic-release/github",
       {
-        "successComment": false,
-        "failComment": false,
+        "successCommentCondition": false,
+        "failCommentCondition": false,
         "releasedLabels": false
       }
     ]

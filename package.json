@@ -1,5 +1,6 @@
 {
   "name": "cookit",
+  "version": "0.0.0-development",
   "private": true,
   "type": "module",
   "workspaces": [

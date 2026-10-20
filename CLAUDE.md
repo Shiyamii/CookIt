@@ -160,5 +160,7 @@ CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests a
 - `.github/workflows/release.yml`: reuses `ci.yml` (checks + image + Playwright), then semantic-release creates the tag and GitHub release, then the image is built with `APP_VERSION` and pushed to Docker Hub. Nothing is tagged or published if CI fails.
 - The running version is exposed by `GET /api/v1/meta` (`version`, `dev` for local builds).
 - Never create version tags by hand; `v0.0.0` on the first commit is the baseline so the first release is `0.1.0`.
+- The `release` branch must always exist on GitHub, even before the first stable release: semantic-release refuses to run (`ERELEASEBRANCHES`) without at least one stable release branch. It was created at the `v0.0.0` commit.
+- `package.json` versions stay `0.0.0-development`: the Git tag is the only source of truth, no release commit is pushed back (so `next` / `release` never diverge from `main`).
 
 Decisions taken outside the plan are logged in `DECISIONS.md`.

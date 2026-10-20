@@ -31,3 +31,5 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Release = `next` / `release` branches, never `main`**: publishing is a deliberate merge, not a side effect of every push.
 - **The release workflow reuses `ci.yml` (`workflow_call`)**: a version is only tagged after the same checks, image build and Playwright run as regular CI. The published image is rebuilt from the same commit (with `APP_VERSION`), using the GitHub Actions build cache.
 - **`APP_VERSION` build arg exposed by `/api/v1/meta`**: shows which version is deployed.
+- **`package.json` versions stay `0.0.0-development`** (no `@semantic-release/npm` + `@semantic-release/git` commit back): a release commit on `next` / `release` would make them diverge from `main` and break `git push origin main:next`; the version lives in the Git tag and the image (`APP_VERSION`).
+- **`release` branch created at the `v0.0.0` commit**: semantic-release requires an existing stable branch even to publish release candidates from `next`.
