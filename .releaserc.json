@@ -27,6 +27,12 @@
         "failCommentCondition": false,
         "releasedLabels": false
       }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "publishCmd": "echo \"version=${nextRelease.version}\" >> \"$GITHUB_OUTPUT\""
+      }
     ]
   ]
 }

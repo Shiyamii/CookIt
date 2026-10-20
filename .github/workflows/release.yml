@@ -3,9 +3,17 @@ name: Release
 # Releases only happen from these branches (never from main):
 #   next    -> release candidates, e.g. v0.2.0-rc.1 -> image shiyamii/cookit:0.2.0-rc.1
 #   release -> stable versions,     e.g. v0.2.0      -> images 0.2.0, 0.2, latest
+# Manual run ("Run workflow"): rebuilds and pushes the image of an existing version tag,
+# e.g. when a publish failed after the tag was created.
 on:
   push:
     branches: [release, next]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing version to (re)publish, without the "v" (e.g. 0.1.0)
+        required: true
+        type: string
 
 concurrency:
   group: release-${{ github.ref }}
@@ -17,6 +25,7 @@ permissions:
 jobs:
   ci:
     name: CI
+    if: github.event_name == 'push'
     uses: ./.github/workflows/ci.yml
 
   release:
@@ -26,7 +35,8 @@ jobs:
     permissions:
       contents: write
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      # Written by @semantic-release/exec (publishCmd), only when a release is made.
+      version: ${{ steps.semantic.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,17 +45,16 @@ jobs:
         with:
           node-version: 24
       - name: Run semantic-release
+        id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx --yes semantic-release@25.0.9
-      - name: Detect the new version
-        id: version
+        run: npx --yes -p semantic-release@25.0.9 -p @semantic-release/exec@7.1.0 semantic-release
+      - name: Summary
+        env:
+          VERSION: ${{ steps.semantic.outputs.version }}
         run: |
-          git fetch --tags --force
-          tag=$(git tag --points-at HEAD --list 'v*' | sort -V | tail -1)
-          if [ -n "$tag" ]; then
-            echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
-            echo "New release: $tag"
+          if [ -n "$VERSION" ]; then
+            echo "New release: v$VERSION"
           else
             echo "No release (no feat/fix commits since the last version)"
           fi
@@ -53,10 +62,17 @@ jobs:
   publish:
     name: Publish Docker image
     needs: release
-    if: needs.release.outputs.version != ''
+    # Runs after a new release, or on a manual run (release job skipped).
+    if: >-
+      !cancelled() && !failure() &&
+      (github.event_name == 'workflow_dispatch' || needs.release.outputs.version != '')
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || needs.release.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: v${{ env.VERSION }}
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -69,16 +85,16 @@ jobs:
           images: shiyamii/cookit
           # Prereleases (x.y.z-rc.n) only get their exact tag; stable versions also get x.y and latest.
           tags: |
-            type=semver,pattern={{version}},value=v${{ needs.release.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.release.outputs.version }}
+            type=semver,pattern={{version}},value=v${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ env.VERSION }}
           flavor: |
-            latest=${{ !contains(needs.release.outputs.version, '-') }}
+            latest=${{ !contains(env.VERSION, '-') }}
       - uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64
           push: true
-          build-args: APP_VERSION=${{ needs.release.outputs.version }}
+          build-args: APP_VERSION=${{ env.VERSION }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

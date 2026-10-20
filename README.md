@@ -160,7 +160,7 @@ Images are published to Docker Hub as [`shiyamii/cookit`](https://hub.docker.com
 | `next`    | release candidate, e.g. `v0.2.0-rc.1` → image tag `0.2.0-rc.1`      |
 | `release` | stable release, e.g. `v0.2.0` → image tags `0.2.0`, `0.2`, `latest` |
 
-To release: merge `main` into `next` to publish a release candidate, then into `release` for the stable version. The full CI (including end-to-end tests against the image) must pass before anything is tagged or published.
+To release: merge `main` into `next` to publish a release candidate, then into `release` for the stable version. The full CI (including end-to-end tests against the image) must pass before anything is tagged or published. To republish the image of an existing version, run the **Release** workflow manually with that version.
 
 ## Deployment
 

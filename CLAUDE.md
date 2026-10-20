@@ -158,6 +158,8 @@ CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests a
 - `next`: push → release candidate `vX.Y.Z-rc.N` → image `shiyamii/cookit:X.Y.Z-rc.N`.
 - `release`: push → stable `vX.Y.Z` → images `X.Y.Z`, `X.Y`, `latest` (amd64).
 - `.github/workflows/release.yml`: reuses `ci.yml` (checks + image + Playwright), then semantic-release creates the tag and GitHub release, then the image is built with `APP_VERSION` and pushed to Docker Hub. Nothing is tagged or published if CI fails.
+- The released version comes from semantic-release itself (`@semantic-release/exec` writes it to `$GITHUB_OUTPUT`), never from guessing tags: an RC promoted to `release` carries two tags on the same commit.
+- If a publish fails after the tag was created: Actions → Release → **Run workflow** with the existing version (e.g. `0.1.0`) rebuilds and pushes that tag's image.
 - The running version is exposed by `GET /api/v1/meta` (`version`, `dev` for local builds).
 - Never create version tags by hand; `v0.0.0` on the first commit is the baseline so the first release is `0.1.0`.
 - The `release` branch must always exist on GitHub, even before the first stable release: semantic-release refuses to run (`ERELEASEBRANCHES`) without at least one stable release branch. It was created at the `v0.0.0` commit.
