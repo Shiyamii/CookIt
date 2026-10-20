@@ -19,6 +19,10 @@ services:
     build: .
     environment:
       DATABASE_URL: postgres://cookit:cookit@db:5432/cookit
+      ORIGIN: http://localhost:3000
+      BETTER_AUTH_SECRET: dev-secret-change-me-dev-secret-change-me
+      # End-to-end tests all come from one IP: loosen the rate limits (never in production).
+      RATE_LIMIT_FACTOR: '50'
     ports:
       - '3000:3000'
     depends_on:

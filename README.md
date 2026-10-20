@@ -125,6 +125,8 @@ bunx playwright install chromium   # first time only
 bun run test:e2e
 ```
 
+The tests sign in as `e2e_admin`, created through the rescue CLI on an empty database. If your local database already has another admin, start from a fresh one: `docker compose -f docker-compose.dev.yml down -v`.
+
 A Husky pre-commit hook runs Prettier, ESLint and the unit tests; it is installed automatically by `bun install`.
 
 To see how the recipe parser reads a markdown file (and try serving scaling):
@@ -134,9 +136,24 @@ bun run parse packages/shared/src/recipe/fixtures/boeuf-bourguignon.md --serving
 bun run parse my-recipe.md --canonical   # canonical form, as exported
 ```
 
-### First admin
+### First admin and accounts
 
-There is no default account. Set `ADMIN_EMAIL`; on first start, a one-time setup link is printed in the server logs.
+There is no default account. On first start (and on every restart while no admin exists), the server prints a one-time link in its logs, valid 24 hours:
+
+```
+No admin account yet. Create it within 24 hours with this one-time link:
+  https://cookit.example.com/setup#token=…
+```
+
+Open it to create the administrator account (`ADMIN_EMAIL`, if set, is pre-filled). Everyone else joins through an invitation link created on the **Invitations** admin page; there is no open sign-up and no email sending: the admin hands links over (chat, message…). From the **Users** page the admin can disable, delete a user or create a password reset link.
+
+Rescue commands, from the container's terminal (`docker exec -it <container> sh`, or Coolify's terminal):
+
+```sh
+node dist/cli.js admin:reset-link <username>   # one-time password reset link (lost password)
+node dist/cli.js setup-link                    # new first-admin link, only while no enabled admin exists
+node dist/cli.js rate-limits:clear             # lift every rate limit (someone locked out)
+```
 
 ## Configuration
 
@@ -144,8 +161,9 @@ There is no default account. Set `ADMIN_EMAIL`; on first start, a one-time setup
 | ---------------------------------------- | ------------------------------------------------------------------------- |
 | `DATABASE_URL`                           | PostgreSQL connection string                                              |
 | `ORIGIN`                                 | Public HTTPS URL of the app (used for CSRF checks and secure cookies)     |
-| `BETTER_AUTH_SECRET`                     | Secret used by Better Auth                                                |
-| `ADMIN_EMAIL`                            | Email of the initial admin account                                        |
+| `BETTER_AUTH_SECRET`                     | Session signing secret: `openssl rand -base64 32`                         |
+| `ADMIN_EMAIL`                            | Optional: email pre-filled on the first-admin page                        |
+| `TRUST_PROXY`                            | `true` behind one reverse proxy (client IP from `X-Forwarded-For`)        |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keys                                                             |
 | `VAPID_SUBJECT`                          | Contact for the push service (e.g. `mailto:you@example.com`)              |
 | `WEBAUTHN_RP_ID`                         | Public domain, without scheme (changing it invalidates existing passkeys) |
@@ -177,18 +195,18 @@ CookIt ships as a single image ([`shiyamii/cookit`](https://hub.docker.com/r/shi
 
 ```sh
 cd deploy
-cp .env.example .env   # set POSTGRES_PASSWORD (URL-safe, e.g. `openssl rand -hex 24`) and COOKIT_VERSION
+cp .env.example .env   # set ORIGIN, BETTER_AUTH_SECRET, POSTGRES_PASSWORD (URL-safe, e.g. `openssl rand -hex 24`), COOKIT_VERSION
 docker compose -f docker-compose.yml -f docker-compose.ports.yml up -d
 ```
 
-`docker-compose.yml` publishes no host port (made for a reverse proxy routing to the `app` service on port 3000); `docker-compose.ports.yml` additionally publishes it on `COOKIT_PORT` (default 3000). Put it behind HTTPS. To upgrade, change `COOKIT_VERSION` (or pull `latest`) and run `docker compose up -d` again.
+`docker-compose.yml` publishes no host port (made for a reverse proxy routing to the `app` service on port 3000); `docker-compose.ports.yml` additionally publishes it on `COOKIT_PORT` (default 3000) and sets `TRUST_PROXY=false` (without a proxy, `X-Forwarded-For` could be forged to dodge rate limiting). Put it behind HTTPS. Then look for the first-admin link in the logs: `docker compose logs app`. To upgrade, change `COOKIT_VERSION` (or pull `latest`) and run `docker compose up -d` again.
 
 ### Coolify
 
 Either:
 
 - **Docker Compose resource** pointing to `deploy/docker-compose.yml`: set the variables in the UI, then give the `app` service a domain such as `https://cookit.example.com:3000` (`:3000` is the container port); or
-- **Docker image** `shiyamii/cookit:<version>` plus a separate **PostgreSQL** resource, with `DATABASE_URL` set to that database.
+- **Docker image** `shiyamii/cookit:<version>` plus a separate **PostgreSQL** resource, with `DATABASE_URL` set to that database, `ORIGIN`, `BETTER_AUTH_SECRET` and `TRUST_PROXY=true`.
 
 Use `/healthz` as the healthcheck path (port 3000). HTTPS is handled by Coolify's proxy.
 

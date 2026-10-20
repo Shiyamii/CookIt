@@ -1,6 +1,7 @@
 import { APP_NAME } from '@cookit/shared';
 import { ChefHat } from 'lucide-react';
 import { Link, Outlet } from 'react-router';
+import { UserMenu } from '@/features/auth/views/UserMenu';
 import { LanguageMenu } from '@/features/preferences/views/LanguageMenu';
 import { ThemeMenu } from '@/features/preferences/views/ThemeMenu';
 
@@ -16,6 +17,7 @@ export function AppLayout() {
           <div className="ml-auto flex items-center gap-1">
             <LanguageMenu />
             <ThemeMenu />
+            <UserMenu />
           </div>
         </div>
       </header>

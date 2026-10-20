@@ -7,7 +7,7 @@ const dependencies: Record<string, string> = pkg.dependencies ?? {};
 const external = Object.keys(dependencies).filter((name) => !name.startsWith('@cookit/'));
 
 const result = await Bun.build({
-  entrypoints: ['src/index.ts'],
+  entrypoints: ['src/index.ts', 'src/cli.ts'],
   outdir: 'dist',
   target: 'node',
   format: 'esm',

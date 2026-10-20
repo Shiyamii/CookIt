@@ -139,6 +139,17 @@ When recipes are stored (phase 4): Zod schemas for the columns must refuse line 
 - `tags:` line appears only in export/import, **never in the markdown editor**. Tags are list values (never free text), always go through a "Validate tags" step on import, and are never created by an import.
 - Translations of a recipe must share the same structure (groups, ingredient/step counts, timer durations); the server warns on mismatch.
 
+## Accounts (phase 3)
+
+- **Better Auth** (`apps/server/src/modules/auth/auth.ts`) handles sessions, sign-in (email or username), sign-out and password changes, mounted at `/api/v1/auth`. Only an **allowlist** of its routes is reachable (`auth.controller.ts`); `update-user` only accepts `name` / `locale` (`updateProfileInputSchema`). Its own sign-up is disabled.
+- **Accounts are created only from an invite** (`POST /api/v1/register`): one transaction locks the invite row, creates the user and its credential account, marks the invite used, then the user is signed in through Better Auth. The first-admin setup link is an admin invite without creator, created at startup while no enabled admin exists.
+- Link tokens (invite, setup, password reset): 256-bit, stored as SHA-256 hashes, carried in the URL **fragment** (`#token=…`, never in server logs) and checked with `POST` routes.
+- No email: password reset links are created by an admin (Users page) or the rescue CLI (`node dist/cli.js admin:reset-link <username>`, `setup-link`, `rate-limits:clear`). A new link, a used link or a password change invalidates the user's other links.
+- Disabled accounts: sessions deleted, sign-in refused with the generic invalid-credentials error, `c.var.user` is null even if a session survived. The last enabled admin cannot be disabled or deleted (checked in the same transaction, under an advisory lock).
+- Rate limiting: our own DB-backed fixed windows (`modules/rate-limit`), per IP and per account on sign-in, per IP on register / reset / link checks. Better Auth POST routes only accept JSON (the per-account limiter reads it).
+- Every `/api` answer is `Cache-Control: no-store`. The SPA resets its query cache on sign-in, sign-up and sign-out. Zod runs `jitless` in the browser (`src/zod-config.ts`, imported first): its eval probe would break the CSP. Client IP from `X-Forwarded-For` only with `TRUST_PROXY=true` (one proxy).
+- Environment: `ORIGIN` (required; also the CSRF origin), `BETTER_AUTH_SECRET` (≥ 32 chars, the dev example is refused with an https origin), `ADMIN_EMAIL`, `TRUST_PROXY`, `RATE_LIMIT_FACTOR` (tests only).
+
 ## Security checklist
 
 argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` check on state-changing requests; DB-backed rate limiting on login/signup/reset; tokens ≥128 bits, invites & resets stored hashed; server-side authorization on every route; sanitized markdown output, no `javascript:` links (recipe `source` rendered as a link only for `http(s):` URLs, otherwise as text); **SSRF protection** on URL import (block localhost, RFC1918, local IPv6, redirects; check after DNS resolution; timeout; size limit); strict CSP compatible with the service worker; no sensitive data in logs. Validate **every** API input with a shared Zod schema. Bound untrusted input: Hono `bodyLimit` from the first route that accepts a body, `max()` on every string (markdown fields included), per-file and total limits on zip imports, `File.size` checked before reading uploads in the browser; parser output (diagnostics) is bounded too; documents are capped by `MAX_RECIPE_MARKDOWN_LENGTH` (shared, also used in the API schemas). Rendering recipe content (all parsed fields are untrusted): no raw HTML (`rehype-raw` / `allowDangerousHtml` forbidden), URL scheme allowlist (`http`, `https`, `mailto`, relative) applied to links, reference definitions and autolinks; `timer:` / `q:` links become components, never an `<a href>`; images in recipe markdown disabled or limited to `'self'` by the CSP; title, group names and `extraMeta` rendered as text.
@@ -159,7 +170,7 @@ argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` ch
 8. **Web Push** — service worker, subscriptions, server scheduler (`FOR UPDATE SKIP LOCKED`), dead subscription cleanup, iOS help page.
 9. **PWA & polish.**
 10. **Deployment & docs** — Coolify README, Playwright critical path, security review.
-11. **Optional** — SSE sync, backward planning, parallel tracks, Cooklang import, Capacitor Android, built-in AI.
+11. **Optional** — SSE sync, backward planning, parallel tracks, Cooklang import, Capacitor Android, optional email (SMTP: send invites, self-service password reset; never required), built-in AI.
 
 ## Commands
 
@@ -177,6 +188,7 @@ bun run format                                     # Prettier (write); format:ch
 bun run build                                      # build web, then bundle server for Node
 bun run start                                      # run the built server under Node
 bun run parse <file.md> [--servings N] [--lang fr|en] [--json | --canonical]  # what the recipe parser reads
+node apps/server/dist/cli.js admin:reset-link <username>  # rescue CLI (in the container: node dist/cli.js …)
 ```
 
 Example recipes live in `packages/shared/src/recipe/fixtures/` (excluded from Prettier, kept exactly as written) and are parsed by `fixtures.test.ts`.
@@ -194,6 +206,8 @@ bun run test:e2e                                        # Playwright (Chromium, 
 ```
 
 End-to-end tests live in `e2e/` and are named `*.e2e.ts` (so `bun test` ignores them). They target `E2E_BASE_URL` (default `http://localhost:3000`), i.e. the production image, never the Vite dev server. Prefer role-based locators (`getByRole`) and `data-testid` only when there is no accessible name. They are not run by the pre-commit hook (too slow); CI runs them.
+
+The global setup (`e2e/global-setup.ts`) gets the test admin `e2e_admin` in through the rescue CLI run in the app container (`docker exec $E2E_CONTAINER node dist/cli.js …`, default container `cookit-app-1`, `cookit` in CI) and saves its session to `e2e/.auth/admin.json` (`test.use({ storageState: ADMIN_STATE })`). Tests must be rerunnable on the same database: unique usernames (`uniqueName`), never sign out, disable or delete `e2e_admin`. The dev compose and CI set `RATE_LIMIT_FACTOR=50` so that the suite (one IP) does not hit the rate limits; never set it in production.
 
 CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests and build, then builds the Docker image, starts it against Postgres, checks migrations were applied and runs the Playwright suite against it.
 

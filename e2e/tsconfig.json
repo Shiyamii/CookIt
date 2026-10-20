@@ -1,7 +1,9 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node"],
+    // Code passed to page.evaluate() runs in the browser.
+    "lib": ["ES2023", "DOM"]
   },
   "include": [".", "../playwright.config.ts"]
 }

@@ -161,9 +161,9 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 
 ### 5.1 Comptes et invitations
 
-- **Premier démarrage** : pas de compte par défaut. Au démarrage, s'il n'existe **aucun admin**, le serveur crée un lien de configuration à usage unique (`ORIGIN/setup?token=…`, valable 24 h) et l'écrit dans les logs ; l'email est pré-rempli avec `ADMIN_EMAIL`, le compte créé reçoit le rôle `admin`.
+- **Premier démarrage** : pas de compte par défaut. Au démarrage, s'il n'existe **aucun admin**, le serveur crée un lien de configuration à usage unique (`ORIGIN/setup#token=…`, valable 24 h ; le token est dans le fragment de l'URL pour ne jamais apparaître dans les logs du proxy) et l'écrit dans les logs ; l'email est pré-rempli avec `ADMIN_EMAIL`, le compte créé reçoit le rôle `admin`.
   - Le lien est une **invitation avec le rôle admin** (table `invites`) : même logique que les invitations (token hashé, consommation atomique, expiration).
-  - Tant qu'aucun admin n'existe, chaque redémarrage génère un nouveau lien et invalide le précédent. Dès qu'un admin existe, plus de lien et `/setup` répond 404.
+  - Tant qu'aucun admin n'existe, chaque redémarrage génère un nouveau lien et invalide le précédent. Dès qu'un admin (actif) existe, plus de lien et la page `/setup` indique que le lien ne fonctionne pas.
   - `ORIGIN` est obligatoire (le serveur refuse de démarrer sans). Ce token dans les logs est une exception assumée à « aucune donnée sensible dans les logs » (usage unique, courte durée), notée dans `DECISIONS.md`.
   - **Commande de secours** lancée depuis le terminal du conteneur, ex. `node dist/cli.js admin:reset-link <username>` : génère un lien de réinitialisation (perte du mot de passe ou de la 2FA de l'admin).
 - Page admin **Invitations** : bouton « Créer une invitation » (un clic → lien copiable, expiration configurable, 7 jours par défaut), liste avec statut (en attente / utilisée / expirée / révoquée), révocation en un clic.
@@ -171,6 +171,7 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
 - Page admin **Catégories et tags** : voir §4.
 - L'inscription n'est possible qu'avec un lien d'invitation valide. Tokens stockés hashés. L'inscription libre de Better Auth est **désactivée** ; la création de compte passe par une route d'inscription maison qui vérifie et consomme l'invitation (de façon atomique) avant d'appeler Better Auth.
 - Limitation de débit sur login, inscription et réinitialisation.
+- **Plus tard (optionnel, en complément)** : envoi d'emails via SMTP configuré par variables d'environnement (ex. `SMTP_URL`, `MAIL_FROM`) : envoyer l'invitation directement par mail, « mot de passe oublié » en libre-service, notification à l'admin. Sans SMTP configuré, tout reste comme aujourd'hui (liens copiés à la main, commande de secours) : le mail n'est jamais obligatoire.
 
 ### 5.1 bis Authentification renforcée (optionnelle pour chaque utilisateur)
 
@@ -302,7 +303,7 @@ Chaque phase se termine par des tests verts, un commit propre et un court README
 9. **PWA et finitions** : manifest, installation, cache hors-ligne, thème, accessibilité, passe mobile complète.
    _Critère : Lighthouse PWA/accessibilité corrects, mode cuisine utilisable hors-ligne sur une recette déjà ouverte._
 10. **Déploiement et doc** : README (installation Coolify pas à pas, variables, VAPID, sauvegarde/restauration Postgres), test Playwright du parcours « invitation → créer recette → cuisiner avec timers », revue sécurité du §7.
-11. **Optionnel** : SSE pour la synchro temps réel entre appareils, planification à rebours, groupes d'étapes affichés comme **pistes parallèles** (ex. pâtes et sauce menées en même temps dans une même recette), import Cooklang (`.cook`), Capacitor Android pour une vraie alarme, **IA intégrée** (appel d'une API de modèle ou d'un modèle local, configurable par l'admin, qui exécuterait les mêmes prompts que ceux proposés à la copie ; à ne faire qu'après avoir validé l'usage réel des prompts manuels).
+11. **Optionnel** : SSE pour la synchro temps réel entre appareils, planification à rebours, groupes d'étapes affichés comme **pistes parallèles** (ex. pâtes et sauce menées en même temps dans une même recette), import Cooklang (`.cook`), Capacitor Android pour une vraie alarme, **envoi d'emails** (SMTP optionnel, voir §5.1), **IA intégrée** (appel d'une API de modèle ou d'un modèle local, configurable par l'admin, qui exécuterait les mêmes prompts que ceux proposés à la copie ; à ne faire qu'après avoir validé l'usage réel des prompts manuels).
 
 ## 9. Consignes pour Claude Code
 

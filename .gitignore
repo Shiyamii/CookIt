@@ -10,3 +10,5 @@ coverage/
 .claude/settings.local.json
 playwright-report/
 test-results/
+# Playwright sessions created by the global setup
+e2e/.auth/

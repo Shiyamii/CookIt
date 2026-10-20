@@ -1,0 +1,35 @@
+import type { CreateInviteInput, InviteSummary, UserSummary } from '@cookit/shared';
+import { apiDelete, apiGet, apiPost } from '@/lib/api';
+
+export const INVITES_QUERY_KEY = ['admin', 'invites'] as const;
+export const USERS_QUERY_KEY = ['admin', 'users'] as const;
+
+export const listInvites = () => apiGet<InviteSummary[]>('/admin/invites');
+
+export const createInvite = (input: CreateInviteInput) =>
+  apiPost<{ url: string }>('/admin/invites', input);
+
+export const revokeInvite = (id: string) =>
+  apiPost(`/admin/invites/${encodeURIComponent(id)}/revoke`);
+
+export const listUsers = () => apiGet<UserSummary[]>('/admin/users');
+
+export const disableUser = (id: string) =>
+  apiPost(`/admin/users/${encodeURIComponent(id)}/disable`);
+
+export const enableUser = (id: string) => apiPost(`/admin/users/${encodeURIComponent(id)}/enable`);
+
+export const deleteUser = (id: string) => apiDelete(`/admin/users/${encodeURIComponent(id)}`);
+
+export const createResetLink = (id: string) =>
+  apiPost<{ url: string }>(`/admin/users/${encodeURIComponent(id)}/reset-link`);
+
+/** Copies a link; false when the browser refuses (no permission, insecure context). */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}

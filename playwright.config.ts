@@ -6,6 +6,8 @@ export default defineConfig({
   testDir: './e2e',
   // `.e2e.ts` suffix so that `bun test` never picks these files up.
   testMatch: '**/*.e2e.ts',
+  // Gets the test admin in (first-admin link or password reset through the rescue CLI).
+  globalSetup: './e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

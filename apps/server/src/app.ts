@@ -1,22 +1,35 @@
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
-import { db } from './db';
+import type { Container } from './container';
 import { env } from './env';
+import type { AppEnv } from './http/app-env';
+import { onError } from './http/errors';
+import { apiBodyLimit, noStore, sameOrigin, securityHeaders } from './http/security';
+import { createAuthController } from './modules/auth/auth.controller';
+import { sessionMiddleware } from './modules/auth/auth.middleware';
+import { createInvitesController } from './modules/invites/invites.controller';
+import { createPasswordResetController } from './modules/password-reset/password-reset.controller';
 import { createSystemController } from './modules/system/system.controller';
-import { createSystemRepository } from './modules/system/system.repository';
-import { createSystemService } from './modules/system/system.service';
+import { createUsersController } from './modules/users/users.controller';
 
-// Composition root: repositories -> services -> controllers, wired by hand (no DI container).
-const systemService = createSystemService({
-  repository: createSystemRepository(db),
-  version: env.APP_VERSION,
-});
+export function createApp(container: Container) {
+  const app = new Hono<AppEnv>();
+  app.onError(onError);
 
-export const app = new Hono();
+  app.use('*', securityHeaders());
+  app.use('/api/*', apiBodyLimit(), sameOrigin(), noStore(), sessionMiddleware(container.auth));
 
-app.route('/', createSystemController(systemService));
-app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
+  app.route('/', createSystemController(container.system));
+  app.route('/', createAuthController(container));
+  app.route('/', createInvitesController(container));
+  app.route('/', createPasswordResetController(container));
+  app.route('/', createUsersController(container));
 
-// SPA: static files, then index.html for client-side routes.
-app.use('*', serveStatic({ root: env.STATIC_DIR }));
-app.get('*', serveStatic({ path: `${env.STATIC_DIR}/index.html` }));
+  app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
+
+  // SPA: static files, then index.html for client-side routes.
+  app.use('*', serveStatic({ root: env.STATIC_DIR }));
+  app.get('*', serveStatic({ path: `${env.STATIC_DIR}/index.html` }));
+
+  return app;
+}

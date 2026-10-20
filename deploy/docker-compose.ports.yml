@@ -4,3 +4,6 @@ services:
   app:
     ports:
       - '${COOKIT_PORT:-3000}:3000'
+    environment:
+      # Reached directly: X-Forwarded-For could be forged, so rate limiting uses the socket address.
+      TRUST_PROXY: 'false'
