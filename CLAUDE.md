@@ -64,13 +64,45 @@ Plain **Bun workspaces monorepo, no Turborepo**:
 - `/healthz` checks DB access. Drizzle migrations run automatically on startup, before listening.
 - The notification scheduler lives in `apps/server` and starts with Hono: **one process, no separate worker**.
 
+## Architecture (mandatory)
+
+Both apps are split **by domain** (`system`, `preferences`, `users`, `invites`, `recipes`, `tags`, `units`, `cooking`, `push`…), and inside a domain **by layer**. ESLint (`@typescript-eslint/no-restricted-imports`, see `eslint.config.js`) rejects imports that cross layers the wrong way; type-only imports are allowed.
+
+### Frontend: MVVM (`apps/web/src/features/<domain>/`)
+
+```
+model/        plain TypeScript: domain types, API calls (through src/lib/api.ts), pure logic, stores. No React.
+viewmodels/   use<Name>ViewModel() hooks: TanStack Query, local state, derived values, commands
+              (selectX, save…). Return plain data and functions, never JSX.
+views/        React components (pages and their parts): render what their ViewModel returns
+              and call its commands. No useQuery, no fetch, no localStorage, no business logic.
+```
+
+- A view calls **one** ViewModel hook (its own) or receives props from a parent view. `useTranslation` for `t()` is fine in views (presentation).
+- Pure logic shared with the server goes to `packages/shared`, not to `model/`.
+- `src/app/` holds the shell: providers, router (`App.tsx`), layout. `src/components/ui/` is shadcn; generic presentational components go to `src/components/`.
+
+### Backend: controller / service / repository (`apps/server/src/modules/<domain>/`)
+
+```
+<domain>.controller.ts   Hono routes: validate input with shared Zod schemas, call the service,
+                         map results/errors to HTTP. No Drizzle, no repository.
+<domain>.service.ts      Business rules and authorization. No Hono, no Drizzle: data through repositories.
+<domain>.repository.ts   Drizzle queries only. No business rules.
+<domain>.schema.ts       Drizzle tables of the domain, re-exported by src/db/schema.ts.
+```
+
+- Each layer is a factory taking its dependencies (`createRecipeService({ recipes, tags })`), wired by hand in the composition root `src/app.ts`. No DI container, no classes required.
+- Services are unit-tested with `bun test` and in-memory fake repositories (`<domain>.service.test.ts`); repositories and controllers are covered by Playwright against the real image.
+- A service may call another domain's service, never another domain's repository.
+
 ## Frontend conventions (`apps/web`)
 
 - Path alias `@/` → `apps/web/src`.
 - UI components: add them with `bunx shadcn@latest add <component>` (run in `apps/web`). Files in `src/components/ui/` are generated: do not hand-edit them, wrap or compose instead.
 - Theme: CSS variables in `src/index.css` (from tweakcn). Use the theme tokens (`bg-background`, `text-primary`, `text-muted-foreground`…), never hard-coded colors.
 - Every user-visible string goes through `react-i18next` (`t('…')`). Add keys to `src/locales/en.ts` (reference type) and `src/locales/fr.ts`.
-- Server state through TanStack Query, API calls through `src/lib/api.ts`. Pages in `src/pages/`, routes in `src/App.tsx`.
+- Server state through TanStack Query (in ViewModels), API calls through `src/lib/api.ts` (from `model/`). Pages are views in `src/features/<domain>/views/`, routes in `src/app/App.tsx`.
 - Mobile first: design for ~390px wide first, large touch targets, respect safe-area insets.
 - All web packages are `devDependencies` (everything is bundled by Vite).
 
@@ -80,6 +112,7 @@ Plain **Bun workspaces monorepo, no Turborepo**:
 - Other tables: `invites`, `recipes`, `recipe_translations`, `tag_categories`, `tags`, `recipe_tags`, `cook_sessions`, `timers`, `push_subscriptions` (see spec §3).
 - Recipe "part 1" (title, description, servings, source) is stored in **real columns** (source of truth); parts 2 and 3 (ingredients, steps) in `body_markdown`. The full markdown document is composed on the fly only for export, the markdown editor and AI prompts.
 - Tag/category labels are a JSONB `{ lang: label }` object validated by a shared Zod schema. No translation tables.
+- **Units are data, not code**: table `units` (slug, rounding `decimal`|`fraction`, `labels` and `aliases` as JSONB keyed by language), editable by the admin, seeded from the default catalog in `packages/shared`. The parser receives the catalog as a parameter. Adding a language never needs a migration.
 - **Never store a decreasing remaining time.** A timer is an absolute `ends_at`; remaining time is computed at display (with server/client clock skew correction).
 
 ## Markdown recipe format
@@ -91,6 +124,8 @@ Three parts separated by a line of dashes only (3+), **with a blank line before 
 - Parts 2/3: optional `### Group` headings; parts 2 and 3 may be empty (warning only).
 - Timer: `[10 min](timer:10m "label")` — durations `10m`, `1h30m`, `45s`. Timer durations are **never scaled**.
 - Inline scaled quantity: `[2 tbsp](q:)`.
+- Ingredient line: quantity (integer, decimal, `1/2`, `½`, `1 ½`, range `2-3`), optional unit, name. A unit is recognized through its aliases in **any** language (`c. à soupe`, `cuillère à soupe`, `CaS`, `tbsp`…), matched ignoring case, accents, dots and spaces, longest alias first; an unknown word stays part of the name. The text is kept as written: scaling only changes the number.
+- Rounding follows the unit: `decimal` (metric: half below 10, integer up to 100, nearest 5 above), `fraction` (cooking units and no unit: ½ ⅓ ⅔ ¼ ¾ ⅛, otherwise one decimal).
 - Unparsable lines are kept as raw text / free blocks — **never lose content**.
 - A canonical serializer must make `parse → serialize → parse` stable (tested on many examples).
 - `tags:` line appears only in export/import, **never in the markdown editor**. Tags are list values (never free text), always go through a "Validate tags" step on import, and are never created by an import.
@@ -104,11 +139,11 @@ argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` ch
 
 1. **Foundation** — monorepo, Hono + Drizzle + Postgres, React + Vite SPA, `docker-compose.dev.yml`, single-image Dockerfile, `/healthz`, i18n, mobile-first layout, Prettier + ESLint + Husky pre-commit hook. _`docker compose up` serves API + SPA with migrations applied._
    Order: Drizzle → front stack (Tailwind, shadcn/ui, Router, TanStack Query, i18n, layout) → Playwright smoke test → **v0.1 release**: image `shiyamii/cookit` (amd64) pushed to Docker Hub only from a version tag or a release branch, with automated versioning including release candidates (semantic-release, see "Releases" below).
-2. **Markdown parser + scaling** (pure module, no UI) with canonical serializer and round-trip tests.
+2. **Markdown parser + scaling** (pure module, no UI) with canonical serializer and round-trip tests. Units come from a catalog passed as a parameter (default catalog in `packages/shared`, FR + EN).
 3. **Accounts & invitations** — Better Auth, admin bootstrap, invites, admin pages, rate limiting.
    3b. **2FA & passkeys.**
 4. **Recipes** — CRUD, visual + markdown editors (lossless switch), visibilities, public gallery, "add to my library", search.
-   4b. **Categories & tags.**
+   4b. **Categories, tags & units** (admin pages; `units` table seeded from the shared catalog).
 5. **Creation & import/export** — quick create, wizard, markdown import, `.md`/zip export, URL import (JSON-LD) with SSRF protection.
    5b. **AI prompts** — import and translation prompts generated from code.
 6. **Single-recipe cooking mode.**

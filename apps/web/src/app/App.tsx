@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
-import { AppLayout } from '@/components/AppLayout';
-import { HomePage } from '@/pages/HomePage';
-import { NotFoundPage } from '@/pages/NotFoundPage';
+import { AppLayout } from './AppLayout';
+import { HomePage } from '@/features/system/views/HomePage';
+import { NotFoundPage } from '@/features/system/views/NotFoundPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },

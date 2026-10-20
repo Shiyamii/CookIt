@@ -8,13 +8,14 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { setTheme, THEMES, useTheme, type Theme } from '@/lib/theme';
+import type { Theme } from '../model/theme';
+import { useThemeMenuViewModel } from '../viewmodels/useThemeMenuViewModel';
 
 const icons = { light: Sun, dark: Moon, system: Monitor } satisfies Record<Theme, unknown>;
 
 export function ThemeMenu() {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const { theme, themes, selectTheme } = useThemeMenuViewModel();
   const Icon = icons[theme];
 
   return (
@@ -25,8 +26,8 @@ export function ThemeMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
-          {THEMES.map((value) => (
+        <DropdownMenuRadioGroup value={theme} onValueChange={selectTheme}>
+          {themes.map((value) => (
             <DropdownMenuRadioItem key={value} value={value}>
               {t(`theme.${value}`)}
             </DropdownMenuRadioItem>

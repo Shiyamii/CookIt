@@ -1,5 +1,3 @@
-import { useSyncExternalStore } from 'react';
-
 export const THEMES = ['light', 'dark', 'system'] as const;
 export type Theme = (typeof THEMES)[number];
 
@@ -34,14 +32,13 @@ export function setTheme(theme: Theme) {
   listeners.forEach((listener) => listener());
 }
 
-export function useTheme(): Theme {
-  return useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    () => current,
-  );
+export function getTheme(): Theme {
+  return current;
+}
+
+export function subscribeTheme(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
 darkQuery.addEventListener('change', apply);

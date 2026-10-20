@@ -1,4 +1,3 @@
-import { SUPPORTED_LOCALES } from '@cookit/shared';
 import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -9,9 +8,11 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useLanguageMenuViewModel } from '../viewmodels/useLanguageMenuViewModel';
 
 export function LanguageMenu() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { language, languages, selectLanguage } = useLanguageMenuViewModel();
 
   return (
     <DropdownMenu>
@@ -21,11 +22,8 @@ export function LanguageMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup
-          value={i18n.resolvedLanguage}
-          onValueChange={(lng) => void i18n.changeLanguage(lng)}
-        >
-          {SUPPORTED_LOCALES.map((locale) => (
+        <DropdownMenuRadioGroup value={language} onValueChange={selectLanguage}>
+          {languages.map((locale) => (
             <DropdownMenuRadioItem key={locale} value={locale}>
               {t(`language.${locale}`)}
             </DropdownMenuRadioItem>

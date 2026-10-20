@@ -50,5 +50,51 @@ export default defineConfig([
       ],
     },
   },
+  // Architecture layers (see CLAUDE.md "Architecture"). Type-only imports are allowed across layers.
+  layer('apps/web/src/features/*/views/**', [
+    ['@tanstack/react-query', '@/lib/api', '**/model/**'],
+    'Views get data and actions from their ViewModel only.',
+  ]),
+  layer('apps/web/src/features/*/viewmodels/**', [
+    ['@/components/**', '**/views/**'],
+    'ViewModels expose state and commands, never UI.',
+  ]),
+  layer('apps/web/src/features/*/model/**', [
+    ['react', 'react-*', '@tanstack/*', '@/components/**', '**/views/**', '**/viewmodels/**'],
+    'The model is plain TypeScript, without React.',
+  ]),
+  layer('apps/server/src/modules/**/*.controller.ts', [
+    ['drizzle-orm', 'drizzle-orm/*', 'postgres', '**/db', '**/*.repository'],
+    'Controllers call services; data access belongs to repositories.',
+  ]),
+  layer('apps/server/src/modules/**/*.service.ts', [
+    [
+      'hono',
+      'hono/*',
+      '@hono/*',
+      'drizzle-orm',
+      'drizzle-orm/*',
+      'postgres',
+      '**/db',
+      '**/*.controller',
+    ],
+    'Services hold business rules: no HTTP, no SQL (use a repository).',
+  ]),
+  layer('apps/server/src/modules/**/*.repository.ts', [
+    ['hono', 'hono/*', '@hono/*', '**/*.service', '**/*.controller'],
+    'Repositories only access the database.',
+  ]),
   prettier,
 ]);
+
+function layer(files, [group, message]) {
+  return {
+    files: [files],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        { patterns: [{ group, message, allowTypeImports: true }] },
+      ],
+    },
+  };
+}

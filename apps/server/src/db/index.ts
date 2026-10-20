@@ -6,6 +6,7 @@ import * as schema from './schema';
 
 export const client = postgres(env.DATABASE_URL, { max: 10 });
 export const db = drizzle(client, { schema });
+export type Database = typeof db;
 
 export async function runMigrations() {
   // Dedicated single connection, closed afterwards, so migration notices stay out of the app pool.

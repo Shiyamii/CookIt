@@ -1,14 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiGet } from '@/lib/api';
-
-type Meta = { name: string; locales: string[] };
+import { useHomeViewModel } from '../viewmodels/useHomeViewModel';
 
 export function HomePage() {
   const { t } = useTranslation();
-  const meta = useQuery({ queryKey: ['meta'], queryFn: () => apiGet<Meta>('/meta') });
-  const status = meta.isPending ? 'loading' : meta.isError ? 'error' : 'ok';
+  const { apiStatus: status } = useHomeViewModel();
 
   return (
     <Card>

@@ -1,24 +1,20 @@
 import { serveStatic } from '@hono/node-server/serve-static';
-import { APP_NAME, SUPPORTED_LOCALES } from '@cookit/shared';
-import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { db } from './db';
 import { env } from './env';
+import { createSystemController } from './modules/system/system.controller';
+import { createSystemRepository } from './modules/system/system.repository';
+import { createSystemService } from './modules/system/system.service';
+
+// Composition root: repositories -> services -> controllers, wired by hand (no DI container).
+const systemService = createSystemService({
+  repository: createSystemRepository(db),
+  version: env.APP_VERSION,
+});
 
 export const app = new Hono();
 
-app.get('/healthz', async (c) => {
-  try {
-    await db.execute(sql`select 1`);
-    return c.json({ status: 'ok' });
-  } catch {
-    return c.json({ status: 'error' }, 503);
-  }
-});
-
-app.get('/api/v1/meta', (c) =>
-  c.json({ name: APP_NAME, version: env.APP_VERSION, locales: SUPPORTED_LOCALES }),
-);
+app.route('/', createSystemController(systemService));
 app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
 // SPA: static files, then index.html for client-side routes.

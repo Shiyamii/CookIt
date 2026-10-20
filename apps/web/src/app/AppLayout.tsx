@@ -1,8 +1,8 @@
 import { APP_NAME } from '@cookit/shared';
 import { ChefHat } from 'lucide-react';
 import { Link, Outlet } from 'react-router';
-import { LanguageMenu } from './LanguageMenu';
-import { ThemeMenu } from './ThemeMenu';
+import { LanguageMenu } from '@/features/preferences/views/LanguageMenu';
+import { ThemeMenu } from '@/features/preferences/views/ThemeMenu';
 
 export function AppLayout() {
   return (
