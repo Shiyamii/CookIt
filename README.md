@@ -117,6 +117,14 @@ bun run format:check  # Prettier
 bun run build         # production build
 ```
 
+End-to-end tests (Playwright) run against the production image:
+
+```sh
+docker compose -f docker-compose.dev.yml up -d --build
+bunx playwright install chromium   # first time only
+bun run test:e2e
+```
+
 A Husky pre-commit hook runs Prettier, ESLint and the unit tests; it is installed automatically by `bun install`.
 
 ### First admin

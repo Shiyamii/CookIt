@@ -142,8 +142,13 @@ bun run db:migrate    # apply migrations manually (the server also applies them 
 
 Migrations live in `apps/server/drizzle/` (committed, generated: never edit an applied migration, never format it). The server applies pending migrations at startup before listening and exits if that fails.
 
-Not set up yet: Playwright (`bunx playwright test`).
+```sh
+docker compose -f docker-compose.dev.yml up -d --build  # e2e tests need the real image running
+bun run test:e2e                                        # Playwright (Chromium, mobile + desktop)
+```
 
-CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, tests and build, then builds the Docker image and smoke-tests it against Postgres (`/healthz`, API, SPA fallback).
+End-to-end tests live in `e2e/` and are named `*.e2e.ts` (so `bun test` ignores them). They target `E2E_BASE_URL` (default `http://localhost:3000`), i.e. the production image, never the Vite dev server. Prefer role-based locators (`getByRole`) and `data-testid` only when there is no accessible name. They are not run by the pre-commit hook (too slow); CI runs them.
+
+CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests and build, then builds the Docker image, starts it against Postgres, checks migrations were applied and runs the Playwright suite against it.
 
 Decisions taken outside the plan are logged in `DECISIONS.md`.

@@ -7,7 +7,14 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig([
-  globalIgnores(['**/node_modules/', '**/dist/', 'apps/server/public/', 'coverage/']),
+  globalIgnores([
+    '**/node_modules/',
+    '**/dist/',
+    'apps/server/public/',
+    'coverage/',
+    'playwright-report/',
+    'test-results/',
+  ]),
   js.configs.recommended,
   tseslint.configs.recommended,
   {
@@ -21,7 +28,7 @@ export default defineConfig([
     rules: { 'react-refresh/only-export-components': 'off' },
   },
   {
-    files: ['apps/server/**/*.ts', 'packages/**/*.ts', '*.{js,ts}'],
+    files: ['apps/server/**/*.ts', 'packages/**/*.ts', 'e2e/**/*.ts', '*.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
   {

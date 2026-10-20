@@ -21,3 +21,7 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Migrations on startup with the `drizzle-orm` migrator** (not drizzle-kit, which is a dev dependency): dedicated single connection, process exits on failure so the container is restarted instead of serving without a schema.
 - **`drizzle.config.ts` loads `.env` with `process.loadEnvFile`** (Node built-in): no dotenv dependency.
 - **`apps/server/drizzle/` excluded from Prettier**: generated files, reformatting them would break the hook after each `db:generate`.
+- **Playwright at the repo root** (`playwright.config.ts`, tests in `e2e/`, root dev dependency): not a workspace, so the Dockerfile manifests stay unchanged; `e2e/tsconfig.json` is type-checked by `bun run typecheck`.
+- **E2E files named `*.e2e.ts`**: `bun test` would otherwise pick up `*.spec.ts` files.
+- **Chromium only, two projects (Pixel 7 mobile + desktop)**: mobile first without the cost of installing WebKit/Firefox; widen later if a browser-specific bug shows up.
+- **E2E not in the pre-commit hook**: needs the Docker image running and takes seconds; CI runs them on every push.

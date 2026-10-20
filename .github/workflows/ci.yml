@@ -26,7 +26,7 @@ jobs:
       - run: bun run build
 
   docker:
-    name: Docker image smoke test
+    name: Docker image + end-to-end tests
     runs-on: ubuntu-latest
     needs: checks
     services:
@@ -51,16 +51,13 @@ jobs:
           docker run -d --name cookit --network host
           -e DATABASE_URL=postgres://cookit:cookit@localhost:5432/cookit
           cookit:ci
-      - name: Check /healthz, API and SPA
+      - name: Wait for the app
         run: |
           for i in $(seq 1 30); do
-            curl -fsS http://localhost:3000/healthz && break
+            curl -fsS http://localhost:3000/healthz && exit 0
             sleep 1
           done
-          curl -fsS http://localhost:3000/healthz
-          curl -fsS http://localhost:3000/api/v1/meta
-          curl -fsS http://localhost:3000/ | grep -q '<div id="root">'
-          curl -fsS http://localhost:3000/some/client/route | grep -q '<div id="root">'
+          exit 1
       - name: Check migrations were applied
         env:
           PGPASSWORD: cookit
@@ -69,6 +66,20 @@ jobs:
           expected=$(ls apps/server/drizzle/*.sql | wc -l)
           echo "applied=$applied expected=$expected"
           test "$applied" = "$expected"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - name: End-to-end tests (Playwright)
+        run: bun run test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
       - name: Container logs
         if: always()
         run: docker logs cookit

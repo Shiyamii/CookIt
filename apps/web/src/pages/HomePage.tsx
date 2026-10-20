@@ -13,7 +13,10 @@ export function HomePage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">{t('home.title')}</CardTitle>
+        {/* CardTitle renders a <div>: the page still needs a real <h1> for screen readers. */}
+        <CardTitle className="text-2xl">
+          <h1>{t('home.title')}</h1>
+        </CardTitle>
         <CardDescription>{t('home.subtitle')}</CardDescription>
       </CardHeader>
       <CardContent className="flex items-center justify-between gap-4 text-sm">

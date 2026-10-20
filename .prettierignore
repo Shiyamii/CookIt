@@ -4,3 +4,5 @@ apps/server/public/
 coverage/
 bun.lock
 apps/server/drizzle/
+playwright-report/
+test-results/
