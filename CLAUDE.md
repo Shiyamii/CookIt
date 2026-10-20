@@ -163,4 +163,9 @@ CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests a
 - The `release` branch must always exist on GitHub, even before the first stable release: semantic-release refuses to run (`ERELEASEBRANCHES`) without at least one stable release branch. It was created at the `v0.0.0` commit.
 - `package.json` versions stay `0.0.0-development`: the Git tag is the only source of truth, no release commit is pushed back (so `next` / `release` never diverge from `main`).
 
+## Deployment files
+
+- `docker-compose.dev.yml` (root): local development, builds the image from source.
+- `deploy/docker-compose.yml` + `deploy/.env.example`: production, runs the published image `shiyamii/cookit:${COOKIT_VERSION}` with PostgreSQL. When a phase adds a required environment variable (e.g. `ORIGIN`, `BETTER_AUTH_SECRET`), add it to both files and to the README.
+
 Decisions taken outside the plan are logged in `DECISIONS.md`.

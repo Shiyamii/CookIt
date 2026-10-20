@@ -1,0 +1,6 @@
+# Optional: publish the app on the host when there is no reverse proxy in front.
+#   docker compose -f docker-compose.yml -f docker-compose.ports.yml up -d
+services:
+  app:
+    ports:
+      - '${COOKIT_PORT:-3000}:3000'

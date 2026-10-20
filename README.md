@@ -162,15 +162,28 @@ Images are published to Docker Hub as [`shiyamii/cookit`](https://hub.docker.com
 
 To release: merge `main` into `next` to publish a release candidate, then into `release` for the stable version. The full CI (including end-to-end tests against the image) must pass before anything is tagged or published.
 
-## Deployment (Coolify)
+## Deployment
 
-1. Create a **PostgreSQL** resource in your Coolify project.
-2. Create an application from this Git repository using the **Dockerfile** build pack.
-3. Set the environment variables above (`DATABASE_URL` pointing to the Coolify Postgres).
-4. Use `/healthz` as the healthcheck path.
-5. Deploy. Migrations are applied on startup; HTTPS is handled by Coolify's Traefik proxy.
+CookIt ships as a single image ([`shiyamii/cookit`](https://hub.docker.com/r/shiyamii/cookit)) plus PostgreSQL. Migrations are applied automatically on startup; no application volume is needed, all state lives in PostgreSQL.
 
-No application volume is needed: all state lives in PostgreSQL.
+### Docker Compose
+
+```sh
+cd deploy
+cp .env.example .env   # set POSTGRES_PASSWORD (URL-safe, e.g. `openssl rand -hex 24`) and COOKIT_VERSION
+docker compose -f docker-compose.yml -f docker-compose.ports.yml up -d
+```
+
+`docker-compose.yml` publishes no host port (made for a reverse proxy routing to the `app` service on port 3000); `docker-compose.ports.yml` additionally publishes it on `COOKIT_PORT` (default 3000). Put it behind HTTPS. To upgrade, change `COOKIT_VERSION` (or pull `latest`) and run `docker compose up -d` again.
+
+### Coolify
+
+Either:
+
+- **Docker Compose resource** pointing to `deploy/docker-compose.yml`: set the variables in the UI, then give the `app` service a domain such as `https://cookit.example.com:3000` (`:3000` is the container port); or
+- **Docker image** `shiyamii/cookit:<version>` plus a separate **PostgreSQL** resource, with `DATABASE_URL` set to that database.
+
+Use `/healthz` as the healthcheck path (port 3000). HTTPS is handled by Coolify's proxy.
 
 ### Backups
 
