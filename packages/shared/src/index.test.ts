@@ -12,4 +12,10 @@ describe('isLocale', () => {
     expect(isLocale('FR')).toBe(false);
     expect(isLocale(undefined)).toBe(false);
   });
+
+  test('rejects padded strings, regional variants and non-string values', () => {
+    for (const value of [' fr', 'en ', 'fr-FR', 'en_US', '', null, 1, ['fr'], { fr: true }]) {
+      expect(isLocale(value)).toBe(false);
+    }
+  });
 });

@@ -126,14 +126,22 @@ Three parts separated by a line of dashes only (3+), **with a blank line before 
 - Inline scaled quantity: `[2 tbsp](q:)`.
 - Ingredient line: quantity (integer, decimal, `1/2`, `½`, `1 ½`, range `2-3`), optional unit, name. A unit is recognized through its aliases in **any** language (`c. à soupe`, `cuillère à soupe`, `CaS`, `tbsp`…), matched ignoring case, accents, dots and spaces, longest alias first; an unknown word stays part of the name. The text is kept as written: scaling only changes the number.
 - Rounding follows the unit: `decimal` (metric: half below 10, integer up to 100, nearest 5 above), `fraction` (cooking units and no unit: ½ ⅓ ⅔ ¼ ¾ ⅛, otherwise one decimal).
-- Unparsable lines are kept as raw text / free blocks — **never lose content**.
+- Rounding: `decimal` rounds to 0.1 below 1 as well; fractions are used within 0.04 of ½ ⅓ ⅔ ¼ ¾ ⅛ (≥ 10: nearest ½). Ranges scale both bounds and keep their separator (`2 à 3`). Factor 1 leaves the text untouched.
+- Unparsable lines are kept as raw text / free blocks — **never lose content**. An invalid `timer:` / `q:` link stays text with a warning.
 - A canonical serializer must make `parse → serialize → parse` stable (tested on many examples).
+
+### Parser module (`packages/shared/src/recipe/`)
+
+`parseRecipe(markdown, { units })` → `{ ok, document?, diagnostics }` (diagnostics are codes + params, translated by the UI; errors reject the document, warnings don't). Pieces: `split.ts` (3 parts), `presentation.ts` (part 1), `body.ts` (parts 2/3), `ingredient.ts` + `quantity.ts` + `units/` (quantity, unit, name), `inline.ts` (timers and `q:` through remark), `scale.ts` (`scaleIngredient`, `scaleSegment`, `formatAmount`), `serialize.ts` (`serializeRecipe`, `serializePresentation`, `serializeBody` = `body_markdown`), `translation.ts` (`checkTranslationStructure`). Pass the unit catalog from the database (`units` option); `DEFAULT_UNITS` is the seed. Serializer invariants: continuation lines indented 4 spaces, a dash-only text line never has blank lines on both sides, the canonical form always writes `format:`. Inline parsing only reads links (other markdown constructs are disabled for speed on hostile input) and skips steps longer than `MAX_INLINE_LENGTH`.
+
+When recipes are stored (phase 4): Zod schemas for the columns must refuse line breaks in single-line fields (title, source, group names, tags, `extraMeta` keys and values) and `extraMeta` keys that are known fields (`portions`, `tags`, `format`…); the unit catalog must be passed as a **new array** after each admin edit (the unit index is cached per array).
+
 - `tags:` line appears only in export/import, **never in the markdown editor**. Tags are list values (never free text), always go through a "Validate tags" step on import, and are never created by an import.
 - Translations of a recipe must share the same structure (groups, ingredient/step counts, timer durations); the server warns on mismatch.
 
 ## Security checklist
 
-argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` check on state-changing requests; DB-backed rate limiting on login/signup/reset; tokens ≥128 bits, invites & resets stored hashed; server-side authorization on every route; sanitized markdown output, no `javascript:` links; **SSRF protection** on URL import (block localhost, RFC1918, local IPv6, redirects; check after DNS resolution; timeout; size limit); strict CSP compatible with the service worker; no sensitive data in logs. Validate **every** API input with a shared Zod schema.
+argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` check on state-changing requests; DB-backed rate limiting on login/signup/reset; tokens ≥128 bits, invites & resets stored hashed; server-side authorization on every route; sanitized markdown output, no `javascript:` links (recipe `source` rendered as a link only for `http(s):` URLs, otherwise as text); **SSRF protection** on URL import (block localhost, RFC1918, local IPv6, redirects; check after DNS resolution; timeout; size limit); strict CSP compatible with the service worker; no sensitive data in logs. Validate **every** API input with a shared Zod schema. Bound untrusted input: Hono `bodyLimit` from the first route that accepts a body, `max()` on every string (markdown fields included), per-file and total limits on zip imports, `File.size` checked before reading uploads in the browser; parser output (diagnostics) is bounded too; documents are capped by `MAX_RECIPE_MARKDOWN_LENGTH` (shared, also used in the API schemas). Rendering recipe content (all parsed fields are untrusted): no raw HTML (`rehype-raw` / `allowDangerousHtml` forbidden), URL scheme allowlist (`http`, `https`, `mailto`, relative) applied to links, reference definitions and autolinks; `timer:` / `q:` links become components, never an `<a href>`; images in recipe markdown disabled or limited to `'self'` by the CSP; title, group names and `extraMeta` rendered as text.
 
 ## Phases
 
@@ -168,7 +176,10 @@ bun run lint                                       # ESLint
 bun run format                                     # Prettier (write); format:check to verify
 bun run build                                      # build web, then bundle server for Node
 bun run start                                      # run the built server under Node
+bun run parse <file.md> [--servings N] [--lang fr|en] [--json | --canonical]  # what the recipe parser reads
 ```
+
+Example recipes live in `packages/shared/src/recipe/fixtures/` (excluded from Prettier, kept exactly as written) and are parsed by `fixtures.test.ts`.
 
 ```sh
 bun run db:generate   # after editing apps/server/src/db/schema.ts: create a migration in apps/server/drizzle/

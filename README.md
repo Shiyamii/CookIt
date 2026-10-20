@@ -61,7 +61,7 @@ format: 1
 
 - `[label](timer:10m "name")` creates a timer (`10m`, `1h30m`, `45s`). Timer durations are never scaled.
 - `[2 tbsp](q:)` marks an inline quantity that follows serving scaling.
-- Ingredient lines (`400 g spaghetti`) are scaled automatically; unparsable lines are kept as-is.
+- Ingredient lines (`400 g spaghetti`, `1 ½ c. à café de sel`, `2-3 cloves garlic`) are scaled automatically; units are recognized in any of their spellings (`c. à soupe`, `CaS`, `tbsp`…), from a catalog the admin can edit. Lines without a number and unparsable lines are kept as-is.
 
 ## Tech stack
 
@@ -126,6 +126,13 @@ bun run test:e2e
 ```
 
 A Husky pre-commit hook runs Prettier, ESLint and the unit tests; it is installed automatically by `bun install`.
+
+To see how the recipe parser reads a markdown file (and try serving scaling):
+
+```sh
+bun run parse packages/shared/src/recipe/fixtures/boeuf-bourguignon.md --servings 4
+bun run parse my-recipe.md --canonical   # canonical form, as exported
+```
 
 ### First admin
 
