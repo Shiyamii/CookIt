@@ -22,6 +22,13 @@
       "when": 1792525896788,
       "tag": "0002_two_factor_and_passkeys",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792568138602,
+      "tag": "0003_recipes",
+      "breakpoints": true
     }
   ]
 }

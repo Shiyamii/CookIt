@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Database } from '../../db';
+import { uniqueViolation } from '../../db/errors';
 import { account, user, type UserRole } from '../auth/auth.schema';
 import { invites } from './invites.schema';
 
@@ -171,7 +172,3 @@ export function createInvitesRepository(db: Database): InvitesRepository {
 }
 
 /** The violated unique constraint of a Postgres error (code 23505), if that is what it is. */
-function uniqueViolation(error: unknown): string | undefined {
-  const cause = (error as { cause?: { code?: string; constraint_name?: string } } | null)?.cause;
-  return cause?.code === '23505' ? cause.constraint_name : undefined;
-}

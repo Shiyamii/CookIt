@@ -99,3 +99,19 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Changing `BETTER_AUTH_SECRET` breaks 2FA**: TOTP secrets and backup codes are encrypted with it; users would need a password reset link.
 - **Known limit**: a TOTP code can be reused while it is accepted (about 90 seconds: Better Auth allows one 30-second step of clock drift each way and keeps no used-code list); the password is still required with it.
 - **The security page includes the password change** (the route existed since phase 3, without UI).
+
+## Phase 4: recipes
+
+- **Web unit tests** on `model/` only (no DOM library): `apps/web/tsconfig.test.json` adds Bun's types for test files only; `bun test` from the root resolves `@/` through a second `paths` entry (`./apps/web/src/*`), since Bun resolves paths from its working directory (`baseUrl` is deprecated in TypeScript 6, a preload plugin's `onResolve` was not applied).
+- **Both editors edit the same text**: the visual editor keeps each ingredient or step as written (`raw`) and only shows derived fields (quantity, unit, rest; timer chips), so switching is the canonical serializer and nothing else. Ingredient fields keep what is typed locally and rebuild the line (otherwise text would jump between fields while typing).
+- **Timers in the visual editor**: a text field per step with the timers and adjustable quantities as chips under it (edit, remove), "Add a timer" inserted at the cursor, "Adjustable quantity" on the selection. No rich text editor (plan: "une interface structurée suffit"). The timer form is an inline panel (no modal: better on phones).
+- **dnd-kit** (`@dnd-kit/core` + `sortable`) for drag and drop of groups and rows (a row can go to another group), with "move up / down" menu items as the keyboard and screen-reader alternative.
+- **CodeMirror without `@codemirror/lang-markdown`**: it pulls the HTML, CSS and JavaScript languages; a 40-line line highlighter covers the format (separators, headings, timer and quantity links, lines with errors). Versions pinned at least two weeks old. The editor page is lazy-loaded (CodeMirror + dnd-kit: ~110 kB gzip, only for editing).
+- **Markdown rendering from the syntax tree** (`mdast-util-from-markdown`, already used by the parser) instead of react-markdown: no HTML string, link scheme allowlist, images as text, iterative text extraction (deeply nested hostile input).
+- **Share links in the URL fragment** (`/shared#token=…`) like invites, but the token stays in the address (a share link is reopened and bookmarked). It only works while the recipe is unlisted; leaving "unlisted" deletes it, so going back gives a new link (security review: a leaked link can always be cut off). Stored in plain text: the owner must be able to copy it again.
+- **`copied_from_id`** on recipes (not in the plan): "add to my library" remembers the original (no foreign key: the copy outlives it).
+- **Search**: `search_text` = title + description + ingredients with accents removed in code (Postgres `unaccent` is not immutable, so not usable in a generated column), indexed by a generated `tsvector` (French or English stemming per translation); each searched word is a prefix, all required.
+- **Optimistic concurrency** with `baseVersion` (the recipe's `updatedAt`): a save from a stale editor (another tab, another device) is a 409 with a "load the latest version" action, instead of silently overwriting.
+- **No cover image yet** (decided with the user: later phase, images need storage in Postgres and resizing). No tags (phase 4b) and only the base language (phase 5b).
+- **Deleting a user deletes their recipes** (cascade) for now; the plan's "choice of what happens to their recipes" comes with the admin pages of a later phase.
+- **Known limit**: CodeMirror on Android handles Enter through the real keyboard's input events, which Playwright's mobile emulation does not produce; the markdown editor is tested on desktop for typing.

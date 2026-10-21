@@ -4,3 +4,4 @@
 export * from '../modules/auth/auth.schema';
 export * from '../modules/invites/invites.schema';
 export * from '../modules/rate-limit/rate-limit.schema';
+export * from '../modules/recipes/recipes.schema';

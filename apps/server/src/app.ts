@@ -10,6 +10,7 @@ import { createAuthController } from './modules/auth/auth.controller';
 import { sessionMiddleware } from './modules/auth/auth.middleware';
 import { createInvitesController } from './modules/invites/invites.controller';
 import { createPasswordResetController } from './modules/password-reset/password-reset.controller';
+import { createRecipesController } from './modules/recipes/recipes.controller';
 import { createSystemController } from './modules/system/system.controller';
 import { createUsersController } from './modules/users/users.controller';
 
@@ -26,6 +27,7 @@ export function createApp(container: Container) {
   app.route('/', createInvitesController(container));
   app.route('/', createPasswordResetController(container));
   app.route('/', createUsersController(container));
+  app.route('/', createRecipesController(container));
 
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 

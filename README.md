@@ -136,6 +136,10 @@ bun run parse packages/shared/src/recipe/fixtures/boeuf-bourguignon.md --serving
 bun run parse my-recipe.md --canonical   # canonical form, as exported
 ```
 
+### Recipes
+
+**My recipes** lists and searches your recipes; **New recipe** opens the editor: a visual editor (form, groups, drag and drop, timers inserted at the cursor, adjustable quantities) or a markdown editor, switchable at any time without losing anything, plus a preview. Each recipe is private, unlisted (readable with its share link) or public (listed in the **Gallery**, readable without an account). A recipe of someone else can be added to your library as an independent copy.
+
 ### First admin and accounts
 
 There is no default account. On first start (and on every restart while no admin exists), the server prints a one-time link in its logs, valid 24 hours:

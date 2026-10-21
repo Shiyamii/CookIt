@@ -1,6 +1,8 @@
+import { DEFAULT_UNITS } from '@cookit/shared';
 import type { Database } from './db';
 import { env } from './env';
 import { hashPassword, verifyPassword } from './lib/password';
+import { generateToken } from './lib/tokens';
 import { createAccountSecurityRepository } from './modules/account-security/account-security.repository';
 import { createAccountSecurityService } from './modules/account-security/account-security.service';
 import { createAuth } from './modules/auth/auth';
@@ -8,6 +10,8 @@ import { createInvitesRepository } from './modules/invites/invites.repository';
 import { createInvitesService } from './modules/invites/invites.service';
 import { createPasswordResetRepository } from './modules/password-reset/password-reset.repository';
 import { createPasswordResetService } from './modules/password-reset/password-reset.service';
+import { createRecipesRepository } from './modules/recipes/recipes.repository';
+import { createRecipesService } from './modules/recipes/recipes.service';
 import { createRateLimitRepository } from './modules/rate-limit/rate-limit.repository';
 import { createRateLimitService } from './modules/rate-limit/rate-limit.service';
 import { createSystemRepository } from './modules/system/system.repository';
@@ -43,6 +47,13 @@ export function createContainer(db: Database) {
       hashPassword,
     }),
     passwordReset,
+    recipes: createRecipesService({
+      repository: createRecipesRepository(db),
+      origin: env.ORIGIN,
+      // The `units` table replaces the built-in catalog in phase 4b.
+      units: () => DEFAULT_UNITS,
+      generateToken,
+    }),
     users: createUsersService({ repository: createUsersRepository(db), passwordReset }),
   };
 }

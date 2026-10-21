@@ -1,0 +1,258 @@
+import type { Locale, RecipeVisibility } from '@cookit/shared';
+import { and, desc, eq, like, sql, type SQL } from 'drizzle-orm';
+import type { Database } from '../../db';
+import { uniqueViolation } from '../../db/errors';
+import { user } from '../auth/auth.schema';
+import { recipes, recipeTranslations } from './recipes.schema';
+
+/** A recipe with its base-language translation and its owner's display name. */
+export type RecipeRow = {
+  id: string;
+  ownerId: string;
+  ownerName: string;
+  slug: string;
+  lang: Locale;
+  servings: number;
+  visibility: RecipeVisibility;
+  shareToken: string | null;
+  sourceUrl: string | null;
+  copiedFromId: string | null;
+  title: string;
+  description: string;
+  extraMeta: Record<string, string>;
+  bodyMarkdown: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type RecipeListRow = Pick<
+  RecipeRow,
+  'id' | 'lang' | 'title' | 'description' | 'servings' | 'visibility' | 'ownerName' | 'updatedAt'
+>;
+
+/** What a save writes: the columns of part 1 and the body. */
+export type RecipeContent = {
+  slug: string;
+  servings: number;
+  sourceUrl: string | null;
+  title: string;
+  description: string;
+  extraMeta: Record<string, string>;
+  bodyMarkdown: string;
+  searchText: string;
+};
+
+export type NewRecipe = RecipeContent & {
+  id: string;
+  ownerId: string;
+  lang: Locale;
+  copiedFromId?: string | null;
+  now: Date;
+};
+
+export type ListQuery = {
+  /** A `to_tsquery` expression (built by the service from the words searched), if any. */
+  tsquery?: string;
+  limit: number;
+  offset: number;
+};
+
+export type RecipesRepository = {
+  /** `slug_taken` when another recipe of the owner got the slug meanwhile. */
+  create(recipe: NewRecipe): Promise<'ok' | 'slug_taken'>;
+  findById(id: string): Promise<RecipeRow | undefined>;
+  findByShareToken(token: string): Promise<RecipeRow | undefined>;
+  /** Slugs of the owner's recipes starting with `base` (to pick a free one). */
+  slugsStartingWith(ownerId: string, base: string): Promise<string[]>;
+  /**
+   * Saves part 1 and the body. With `baseVersion`, only if the recipe was not saved since
+   * (`conflict` otherwise).
+   */
+  update(
+    id: string,
+    content: RecipeContent,
+    options: { baseVersion?: Date; now: Date },
+  ): Promise<'ok' | 'conflict' | 'not_found'>;
+  setVisibility(id: string, visibility: RecipeVisibility, shareToken: string | null): Promise<void>;
+  delete(id: string): Promise<void>;
+  listByOwner(ownerId: string, query: ListQuery): Promise<RecipeListRow[]>;
+  listPublic(query: ListQuery): Promise<RecipeListRow[]>;
+};
+
+/** The base-language translation of each recipe. */
+const baseTranslation = and(
+  eq(recipeTranslations.recipeId, recipes.id),
+  eq(recipeTranslations.lang, recipes.baseLang),
+);
+
+const rowColumns = {
+  id: recipes.id,
+  ownerId: recipes.ownerId,
+  ownerName: user.name,
+  slug: recipes.slug,
+  lang: sql<Locale>`${recipes.baseLang}`,
+  servings: recipes.servings,
+  visibility: recipes.visibility,
+  shareToken: recipes.shareToken,
+  sourceUrl: recipes.sourceUrl,
+  copiedFromId: recipes.copiedFromId,
+  title: recipeTranslations.title,
+  description: recipeTranslations.description,
+  extraMeta: recipeTranslations.extraMeta,
+  bodyMarkdown: recipeTranslations.bodyMarkdown,
+  createdAt: recipes.createdAt,
+  updatedAt: recipes.updatedAt,
+};
+
+const listColumns = {
+  id: recipes.id,
+  lang: sql<Locale>`${recipes.baseLang}`,
+  title: recipeTranslations.title,
+  description: recipeTranslations.description,
+  servings: recipes.servings,
+  visibility: recipes.visibility,
+  ownerName: user.name,
+  updatedAt: recipes.updatedAt,
+};
+
+const searchConfig = sql`(case ${recipeTranslations.lang} when 'fr' then 'french'::regconfig else 'english'::regconfig end)`;
+
+export function createRecipesRepository(db: Database): RecipesRepository {
+  const findOne = async (where: SQL) => {
+    const [row] = await db
+      .select(rowColumns)
+      .from(recipes)
+      .innerJoin(recipeTranslations, baseTranslation)
+      .innerJoin(user, eq(user.id, recipes.ownerId))
+      .where(where);
+    return row;
+  };
+
+  const list = (where: SQL | undefined, query: ListQuery) => {
+    const matches = query.tsquery
+      ? sql`${recipeTranslations.search} @@ to_tsquery(${searchConfig}, ${query.tsquery})`
+      : undefined;
+    const order = query.tsquery
+      ? [
+          desc(
+            sql`ts_rank(${recipeTranslations.search}, to_tsquery(${searchConfig}, ${query.tsquery}))`,
+          ),
+          desc(recipes.updatedAt),
+        ]
+      : [desc(recipes.updatedAt)];
+    return db
+      .select(listColumns)
+      .from(recipes)
+      .innerJoin(recipeTranslations, baseTranslation)
+      .innerJoin(user, eq(user.id, recipes.ownerId))
+      .where(and(where, matches))
+      .orderBy(...order, recipes.id)
+      .limit(query.limit)
+      .offset(query.offset);
+  };
+
+  const insert = (recipe: NewRecipe) =>
+    db.transaction(async (tx) => {
+      await tx.insert(recipes).values({
+        id: recipe.id,
+        ownerId: recipe.ownerId,
+        slug: recipe.slug,
+        baseLang: recipe.lang,
+        servings: recipe.servings,
+        sourceUrl: recipe.sourceUrl,
+        copiedFromId: recipe.copiedFromId ?? null,
+        createdAt: recipe.now,
+        updatedAt: recipe.now,
+      });
+      await tx.insert(recipeTranslations).values({
+        recipeId: recipe.id,
+        lang: recipe.lang,
+        title: recipe.title,
+        description: recipe.description,
+        extraMeta: recipe.extraMeta,
+        bodyMarkdown: recipe.bodyMarkdown,
+        searchText: recipe.searchText,
+        updatedAt: recipe.now,
+      });
+    });
+
+  return {
+    async create(recipe) {
+      try {
+        await insert(recipe);
+        return 'ok';
+      } catch (error) {
+        if (uniqueViolation(error) === 'recipes_owner_slug_unique') return 'slug_taken';
+        throw error;
+      }
+    },
+
+    findById: (id) => findOne(eq(recipes.id, id)),
+
+    findByShareToken: (token) => findOne(eq(recipes.shareToken, token)),
+
+    async slugsStartingWith(ownerId, base) {
+      const rows = await db
+        .select({ slug: recipes.slug })
+        .from(recipes)
+        .where(
+          and(
+            eq(recipes.ownerId, ownerId),
+            like(recipes.slug, `${base.replace(/[\\%_]/g, '\\$&')}%`),
+          ),
+        );
+      return rows.map((row) => row.slug);
+    },
+
+    update(id, content, options) {
+      return db.transaction(async (tx) => {
+        const [current] = await tx
+          .select({ updatedAt: recipes.updatedAt, baseLang: recipes.baseLang })
+          .from(recipes)
+          .where(eq(recipes.id, id))
+          .for('update');
+        if (!current) return 'not_found';
+        // Timestamps are written from JS (millisecond precision): exact comparison is safe.
+        if (options.baseVersion && current.updatedAt.getTime() !== options.baseVersion.getTime()) {
+          return 'conflict';
+        }
+        await tx
+          .update(recipes)
+          .set({
+            slug: content.slug,
+            servings: content.servings,
+            sourceUrl: content.sourceUrl,
+            updatedAt: options.now,
+          })
+          .where(eq(recipes.id, id));
+        await tx
+          .update(recipeTranslations)
+          .set({
+            title: content.title,
+            description: content.description,
+            extraMeta: content.extraMeta,
+            bodyMarkdown: content.bodyMarkdown,
+            searchText: content.searchText,
+            updatedAt: options.now,
+          })
+          .where(
+            and(eq(recipeTranslations.recipeId, id), eq(recipeTranslations.lang, current.baseLang)),
+          );
+        return 'ok';
+      });
+    },
+
+    // Not a content change: `updatedAt` (list order, editor conflicts) stays.
+    async setVisibility(id, visibility, shareToken) {
+      await db.update(recipes).set({ visibility, shareToken }).where(eq(recipes.id, id));
+    },
+
+    async delete(id) {
+      await db.delete(recipes).where(eq(recipes.id, id));
+    },
+
+    listByOwner: (ownerId, query) => list(eq(recipes.ownerId, ownerId), query),
+
+    listPublic: (query) => list(eq(recipes.visibility, 'public'), query),
+  };
+}

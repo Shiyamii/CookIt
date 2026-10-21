@@ -9,11 +9,18 @@ import { RegisterPage } from '@/features/auth/views/RegisterPage';
 import { RequireAccess } from '@/features/auth/views/RequireAccess';
 import { ResetPasswordPage } from '@/features/auth/views/ResetPasswordPage';
 import { HomePage } from '@/features/system/views/HomePage';
+import { RecipeListPage } from '@/features/recipes/views/RecipeListPage';
+import { RecipePage } from '@/features/recipes/views/RecipePage';
 import { NotFoundPage } from '@/features/system/views/NotFoundPage';
 import { AppLayout } from './AppLayout';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+});
+
+// The editor (CodeMirror, drag and drop) is only downloaded when opened.
+const editorPage = async () => ({
+  Component: (await import('@/features/recipes/views/RecipeEditorPage')).RecipeEditorPage,
 });
 
 const router = createBrowserRouter([
@@ -26,6 +33,20 @@ const router = createBrowserRouter([
       { path: 'invite', element: <RegisterPage /> },
       { path: 'setup', element: <RegisterPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
+      {
+        path: 'recipes',
+        element: <RequireAccess level="user" />,
+        children: [
+          { index: true, element: <RecipeListPage kind="mine" /> },
+          { path: 'new', lazy: editorPage },
+          { path: ':id/edit', lazy: editorPage },
+        ],
+      },
+      // Readable without an account when public (the server decides).
+      { path: 'recipes/:id', element: <RecipePage source="id" /> },
+      { path: 'gallery', element: <RecipeListPage kind="gallery" /> },
+      // Unlisted recipes: `/shared#token=…`.
+      { path: 'shared', element: <RecipePage source="shared" /> },
       {
         path: 'account',
         element: <RequireAccess level="user" />,

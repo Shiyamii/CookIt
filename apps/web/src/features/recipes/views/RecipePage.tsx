@@ -1,0 +1,211 @@
+import type { RecipeVisibility } from '@cookit/shared';
+import { Check, Copy, Minus, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
+import { Markdown } from '@/components/Markdown';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { NotFoundPage } from '@/features/system/views/NotFoundPage';
+import { useRecipeViewModel } from '../viewmodels/useRecipeViewModel';
+import { RecipeContent } from './RecipeContent';
+
+const VISIBILITIES: RecipeVisibility[] = ['private', 'unlisted', 'public'];
+
+/** A recipe: from its id (`/recipes/:id`) or from a share link (`/shared#token=…`). */
+export function RecipePage({ source }: { source: 'id' | 'shared' }) {
+  const { t } = useTranslation();
+  const vm = useRecipeViewModel(source);
+
+  if (vm.status === 'loading')
+    return <p className="text-muted-foreground">{t('common.loading')}</p>;
+  if (vm.status === 'not_found' || !vm.recipe) return <NotFoundPage />;
+  const recipe = vm.recipe;
+
+  return (
+    <article className="grid grid-cols-1 gap-6">
+      <header className="grid gap-3">
+        <h1 className="text-3xl font-semibold wrap-anywhere">{recipe.title}</h1>
+        <p className="text-sm text-muted-foreground">
+          {vm.isOwner ? t('recipes.yours') : t('recipes.by', { name: vm.ownerName })}
+        </p>
+        {recipe.description && (
+          <div className="text-muted-foreground">
+            <Markdown text={recipe.description} />
+          </div>
+        )}
+        {(recipe.source || recipe.extraMeta.length > 0) && (
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
+            {recipe.source && (
+              <>
+                <dt className="text-muted-foreground">{t('recipes.fields.source')}</dt>
+                <dd className="wrap-anywhere">
+                  {vm.sourceHref ? (
+                    <a
+                      href={vm.sourceHref}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      className="text-primary underline underline-offset-2"
+                    >
+                      {recipe.source}
+                    </a>
+                  ) : (
+                    recipe.source
+                  )}
+                </dd>
+              </>
+            )}
+            {recipe.extraMeta.map(([key, value]) => (
+              <div key={key} className="contents">
+                <dt className="text-muted-foreground">{key}</dt>
+                <dd className="wrap-anywhere">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </header>
+
+      {vm.error && (
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>{t(`errors.${vm.error}`, t('errors.unknown'))}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium" id="servings-label">
+          {t('recipes.fields.servings')}
+        </span>
+        <div role="group" aria-labelledby="servings-label" className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={t('recipes.fewerServings')}
+            disabled={vm.servings <= 1}
+            onClick={() => vm.setServings(vm.servings - 1)}
+          >
+            <Minus />
+          </Button>
+          <output aria-live="polite" className="w-10 text-center text-lg font-semibold">
+            {vm.servings}
+          </output>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label={t('recipes.moreServings')}
+            disabled={vm.servings >= 1000}
+            onClick={() => vm.setServings(vm.servings + 1)}
+          >
+            <Plus />
+          </Button>
+        </div>
+        {vm.servings !== vm.baseServings && (
+          <Button variant="link" size="sm" onClick={vm.resetServings}>
+            {t('recipes.resetServings', { n: vm.baseServings })}
+          </Button>
+        )}
+      </div>
+
+      <RecipeContent recipe={recipe} durationText={vm.durationText} />
+
+      {vm.isOwner && (
+        <section className="grid gap-4 rounded-lg border p-4" aria-labelledby="manage-title">
+          <h2 id="manage-title" className="font-semibold">
+            {t('recipes.manage')}
+          </h2>
+          <div className="grid gap-2">
+            <Label htmlFor="visibility">{t('recipes.visibility.label')}</Label>
+            <Select
+              value={vm.visibility}
+              onValueChange={(value) => vm.changeVisibility(value as RecipeVisibility)}
+              disabled={vm.busy}
+            >
+              <SelectTrigger id="visibility" className="h-11 w-full sm:w-72">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {VISIBILITIES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`recipes.visibility.${value}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              {t(`recipes.visibility.${vm.visibility}Hint`)}
+            </p>
+          </div>
+          {vm.shareUrl && (
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={vm.shareUrl}
+                aria-label={t('recipes.shareLink')}
+                className="h-11 font-mono text-xs"
+                onFocus={(event) => event.target.select()}
+              />
+              <Button variant="outline" size="lg" onClick={() => void vm.copyShareUrl()}>
+                {vm.copied ? <Check /> : <Copy />}
+                {vm.copied ? t('common.copied') : t('common.copy')}
+              </Button>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button asChild>
+              <Link to={`/recipes/${vm.id}/edit`}>
+                <Pencil /> {t('recipes.edit')}
+              </Link>
+            </Button>
+            <Button variant="destructive" onClick={vm.askDelete} disabled={vm.busy}>
+              <Trash2 /> {t('recipes.delete')}
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {vm.canCopy && (
+        <Button
+          size="lg"
+          className="justify-self-start"
+          onClick={vm.addToLibrary}
+          disabled={vm.busy}
+        >
+          <Plus /> {t('recipes.addToLibrary')}
+        </Button>
+      )}
+      {!vm.signedIn && <p className="text-sm text-muted-foreground">{t('recipes.signInToCopy')}</p>}
+
+      <AlertDialog open={vm.confirmDelete} onOpenChange={(open) => !open && vm.cancelDelete()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('recipes.deleteTitle', { title: recipe.title })}</AlertDialogTitle>
+            <AlertDialogDescription>{t('recipes.deleteText')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={vm.deleteRecipe}>
+              {t('recipes.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </article>
+  );
+}

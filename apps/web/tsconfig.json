@@ -5,8 +5,12 @@
     "jsx": "react-jsx",
     "types": ["vite/client", "node"],
     "paths": {
-      "@/*": ["./src/*"]
+      // The second entry is for `bun test` run from the repository root: Bun resolves these
+      // paths from its working directory.
+      "@/*": ["./src/*", "./apps/web/src/*"]
     }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts"],
+  // Unit tests run under Bun: type-checked by tsconfig.test.json, with Bun's types.
+  "exclude": ["src/**/*.test.ts"]
 }

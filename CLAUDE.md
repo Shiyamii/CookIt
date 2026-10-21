@@ -39,6 +39,7 @@ Guidance for Claude Code working in this repository. The full functional spec (i
 
 - **Never use `Bun.*` APIs** in application code (`apps/server`, `apps/web`, `packages/shared`). All shipped code must run under Node. `Bun.*` is only allowed in tooling scripts that are not shipped in the image.
 - Unit tests stay on pure, runtime-independent logic. Anything touching the server, DB or notifications is covered by Playwright against the real image.
+- Web unit tests cover the pure `model/` logic of `apps/web` (`*.test.ts` next to the code, no DOM). They are type-checked by `apps/web/tsconfig.test.json` (Bun types stay out of the app's tsconfig); `bun test` resolves `@/` from the root thanks to the second `paths` entry in `apps/web/tsconfig.json` (Bun resolves paths from its working directory).
 - `bun.lock` is the single lockfile and is committed. The Dockerfile uses `bun install --frozen-lockfile`.
 - Verify early that `drizzle-kit generate/migrate`, `vite build` and running the server build with `tsx`/Node all work from a Bun workspace. Note workarounds in `DECISIONS.md`.
 
@@ -136,6 +137,15 @@ Three parts separated by a line of dashes only (3+), **with a blank line before 
 
 When recipes are stored (phase 4): Zod schemas for the columns must refuse line breaks in single-line fields (title, source, group names, tags, `extraMeta` keys and values) and `extraMeta` keys that are known fields (`portions`, `tags`, `format`…); the unit catalog must be passed as a **new array** after each admin edit (the unit index is cached per array).
 
+## Recipes (phase 4)
+
+- Tables `recipes` (owner, slug unique per owner, `base_lang`, servings, visibility, `share_token`, `source_url`, `copied_from_id`) and `recipe_translations` (title, description, `extra_meta`, `body_markdown`, `search_text` + generated `search` tsvector). Module `modules/recipes`; shared API schemas and `composeRecipeMarkdown` in `packages/shared/src/recipes.ts`.
+- Every save is checked by **parsing** the composed document on the server (`invalid_recipe` 422 with diagnostics); the stored columns and body are the parser's canonical output. `baseVersion` (the `updatedAt` the editor started from) makes a stale save a `conflict` (409). Timestamps are written from JS (millisecond precision) so the comparison is exact.
+- **Access**: a private recipe is seen only by its owner (admins included: 404, never 403); public by anyone (no account); unlisted by its owner and with its share link (`/shared#token=…`, POST `/api/v1/shared`). Only the owner changes, deletes or shares; "add to my library" copies a readable recipe (public, or unlisted with the token) as a new private one.
+- Search: title, description and ingredients, accents removed (`fold`) in `search_text`, French or English stemming per translation, every word as a prefix (`searchQuery`).
+- Web (`features/recipes`): the visual editor and the markdown editor (CodeMirror 6, own line highlighter, no language package) work on the **same text**: a row is the raw text of an ingredient or step, the canonical serializer writes the markdown (`model/editor.ts`), edits are a pure reducer (`model/editor-actions.ts`). Markdown → visual is refused while the text has errors. Local draft (`model/draft.ts`, cleared at sign-out), leave guard (`useBlocker`), preview. The editor route is lazy-loaded.
+- Untrusted markdown (descriptions, steps) is rendered by `components/Markdown.tsx` from its syntax tree: no HTML string, http(s)/mailto links only, images as text. Recipe `source` is a link only for http(s) URLs.
+
 - `tags:` line appears only in export/import, **never in the markdown editor**. Tags are list values (never free text), always go through a "Validate tags" step on import, and are never created by an import.
 - Translations of a recipe must share the same structure (groups, ingredient/step counts, timer durations); the server warns on mismatch.
 
@@ -182,7 +192,7 @@ bun install                                        # install all workspaces (+ H
 docker compose -f docker-compose.dev.yml up -d db  # Postgres only, for local dev
 bun run dev                                        # server (tsx watch, :3000) + web (Vite, proxies /api)
 docker compose -f docker-compose.dev.yml up --build  # full stack from the production image
-bun test                                           # unit tests (pure logic)
+bun test                                           # unit tests (pure logic, shared + server services + web models)
 bun run typecheck                                  # tsc in every workspace
 bun run lint                                       # ESLint
 bun run format                                     # Prettier (write); format:check to verify

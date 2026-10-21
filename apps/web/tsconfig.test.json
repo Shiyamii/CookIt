@@ -1,0 +1,9 @@
+{
+  // Unit tests of the web app's pure logic (`bun test`): same settings plus Bun's types.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["src/**/*.test.ts"],
+  "exclude": []
+}
