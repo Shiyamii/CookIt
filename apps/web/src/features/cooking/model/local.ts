@@ -36,6 +36,26 @@ export function saveLocalCopy(userId: string, copy: LocalCopy): void {
   }
 }
 
+/**
+ * The recipe shown on this device (one tab per recipe): a choice of the device, not of the
+ * session, so two devices can each follow their own recipe.
+ */
+export function loadActiveRecipe(userId: string): string | undefined {
+  try {
+    return localStorage.getItem(`${PREFIX}active:${userId}`) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function saveActiveRecipe(userId: string, recipeId: string): void {
+  try {
+    localStorage.setItem(`${PREFIX}active:${userId}`, recipeId);
+  } catch {
+    // Not kept: the first recipe is shown after a reload.
+  }
+}
+
 /** At sign-out: another person may use this browser next. */
 export function clearLocalCopies(): void {
   try {

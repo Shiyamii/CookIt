@@ -11,7 +11,8 @@ import { MAX_SERVINGS } from './recipe/presentation';
 export const COOK_COLORS = ['chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5'] as const;
 export type CookColor = (typeof COOK_COLORS)[number];
 
-export const MAX_COOK_ITEMS = 8;
+/** Recipes cooked at once: one color each. */
+export const MAX_COOK_ITEMS = COOK_COLORS.length;
 export const MAX_COOK_TIMERS = 50;
 const MAX_STEPS = 10_000;
 

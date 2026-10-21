@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  COOK_COLORS,
   DEFAULT_UNITS,
   EXAMPLE_RECIPES,
   parseRecipe,
@@ -11,9 +12,11 @@ import { displayRecipe } from '@/features/recipes/model/display';
 import { clockOffset, formatCountdown, remainingSeconds } from './clock';
 import type { LocalCopy } from './local';
 import {
+  canAddRecipe,
   EMPTY_STATE,
   extendTimer,
   goToStep,
+  removeRecipe,
   removeTimer,
   setServings,
   sortedTimers,
@@ -59,7 +62,7 @@ describe('clock', () => {
 describe('session state', () => {
   const started = startRecipe(EMPTY_STATE, { recipeId: A, lang: 'fr', servings: 4 });
 
-  test('starting a recipe; the same one keeps its progress, another replaces it', () => {
+  test('starting a recipe; the same one keeps its progress, another is added', () => {
     expect(started.items).toEqual([
       {
         recipeId: A,
@@ -75,8 +78,56 @@ describe('session state', () => {
     expect(again.items[0]).toMatchObject({ currentStep: 3, lang: 'en', servings: 6 });
     expect(again.timers).toHaveLength(1);
     const other = startRecipe(progressed, { recipeId: B, lang: 'fr', servings: 2 });
-    expect(other.items.map((item) => item.recipeId)).toEqual([B]);
-    expect(other.timers).toEqual([]);
+    expect(other.items.map((item) => [item.recipeId, item.color])).toEqual([
+      [A, 'chart-1'],
+      [B, 'chart-2'],
+    ]);
+    expect(other.items[0]).toBe(progressed.items[0]);
+    expect(other.timers).toBe(progressed.timers);
+  });
+
+  test('two recipes: each keeps its own step, ingredients and timers', () => {
+    const both = startRecipe(started, { recipeId: B, lang: 'en', servings: 2 });
+    const cooked = startTimer(
+      startTimer(goToStep(toggleIngredient(both, B, 2), B, 1, 4), timer('t1'), NOW),
+      { ...timer('t2'), recipeId: B, recipeTitle: 'Soup' },
+      NOW + 60_000,
+    );
+    expect(cooked.items).toEqual([
+      { ...started.items[0]!, currentStep: 0, checkedIngredients: [] },
+      { ...both.items[1]!, currentStep: 1, checkedIngredients: [2] },
+    ]);
+    // The same step and slot in another recipe is another timer.
+    expect(cooked.timers.map((t) => [t.id, t.recipeId])).toEqual([
+      ['t1', A],
+      ['t2', B],
+    ]);
+  });
+
+  test('removing a recipe takes its timers; its color is free again', () => {
+    const both = startTimer(
+      startTimer(startRecipe(started, { recipeId: B, lang: 'fr', servings: 2 }), timer('t1'), NOW),
+      { ...timer('t2'), recipeId: B },
+      NOW,
+    );
+    const left = removeRecipe(both, A);
+    expect(left.items.map((item) => item.recipeId)).toEqual([B]);
+    expect(left.timers.map((t) => t.id)).toEqual(['t2']);
+    const again = startRecipe(left, { recipeId: A, lang: 'fr', servings: 4 });
+    expect(again.items.map((item) => item.color)).toEqual(['chart-2', 'chart-1']);
+  });
+
+  test('a full session takes no other recipe, but the same ones still start', () => {
+    let full = EMPTY_STATE;
+    const ids = COOK_COLORS.map((_, i) => `0000000${i}-0000-4000-8000-000000000000`);
+    for (const recipeId of ids) full = startRecipe(full, { recipeId, lang: 'fr', servings: 2 });
+    expect(new Set(full.items.map((item) => item.color)).size).toBe(COOK_COLORS.length);
+    expect(canAddRecipe(full, A)).toBe(false);
+    expect(startRecipe(full, { recipeId: A, lang: 'fr', servings: 2 })).toBe(full);
+    expect(canAddRecipe(full, ids[0]!)).toBe(true);
+    expect(
+      startRecipe(full, { recipeId: ids[0]!, lang: 'en', servings: 3 }).items[0],
+    ).toMatchObject({ lang: 'en', servings: 3 });
   });
 
   test('steps stay within the recipe', () => {

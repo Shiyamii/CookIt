@@ -11,7 +11,7 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 - **Markdown import/export** with a simple, human-readable format and special syntax for timers and scalable quantities.
 - **Two editors**: a structured visual editor (mobile friendly) and a markdown editor, switchable without losing anything.
 - **Serving scaling** with readable rounding and clean fractions (½, ¼, ⅓).
-- **Cooking mode**: one step at a time, large buttons, ingredient checklist, screen kept awake, one-tap timers.
+- **Cooking mode**: one step at a time, large buttons, ingredient checklist, screen kept awake, one-tap timers, several recipes at once.
 - **Multi-recipe sessions**: cook several dishes in parallel, with a shared timer bar where each timer is labeled with its dish.
 - **Web Push notifications** when a timer ends, scheduled by the server.
 - **Many ways to add a recipe**: quick create, step-by-step wizard (paste ingredients/steps, automatic duration detection), markdown paste or file/zip upload, URL import (schema.org JSON-LD), or a ready-to-copy prompt for the AI assistant of your choice.
@@ -142,7 +142,7 @@ bun run parse my-recipe.md --canonical   # canonical form, as exported
 
 **Add a recipe** offers a quick creation (title and servings, completed later), a step-by-step wizard (paste the ingredients and the steps; durations like "10 min" or "1h30" become timers), the import of markdown (pasted, a `.md` file or a zip) or of a recipe web page (schema.org), and the full editor. Every import shows a preview and asks to validate the tags. Each recipe can be exported as a `.md` file, and all your recipes as a zip.
 
-**Cooking mode**: "Cook" on a recipe opens one step at a time with large buttons, the ingredients to check in a drawer (quantities follow the servings), and timers started with a tap on the durations of a step (+1 min, cancel; a sound and a vibration when one ends while the page is open). The screen stays on. Progress is saved on the server at every action and kept in the browser during network cuts: reloading the page or opening it on another device finds the same step and timers.
+**Cooking mode**: "Cook" on a recipe opens one step at a time with large buttons, the ingredients to check in a drawer (quantities follow the servings), and timers started with a tap on the durations of a step (+1 min, cancel; a sound and a vibration when one ends while the page is open). The screen stays on. Progress is saved on the server at every action and kept in the browser during network cuts: reloading the page or opening it on another device finds the same step and timers. Several recipes can be cooked at once (up to 5): one card per recipe with its color, its step and its next timer, and one timer bar for all of them, in the order they end, each timer naming its dish.
 
 **AI prompts** (no AI built in): "Import with an AI" gives a prompt to copy into the assistant of your choice, generated from the recipe format (with your tag list and units); paste the answer back, check the preview, save. On a recipe, "Add a translation" does the same for another language: the prompt holds the recipe, the pasted translation is checked live against the original (same groups, ingredients, steps and timers). A recipe is read in your interface language when it has that translation, and its page lets you switch languages.
 

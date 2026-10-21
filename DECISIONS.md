@@ -165,3 +165,10 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Timer names are cleaned, not refused** (`cookText`): they come from recipe texts written by anyone; control, bidi and line separator characters become spaces, and the text is cut by code points (a cut emoji would be refused by Postgres).
 - **For phase 8**: the scheduler must use `timers.recipe_title` / `label` (the user's own copy), never look a title up through `recipe_id` (it is not checked against recipe access); disabled users' timers must not be notified.
 - **shadcn `sheet` and `checkbox` added** (ingredients drawer; same Radix package as the other components).
+
+## Phase 7: multi-recipe sessions
+
+- **Up to 5 recipes at once** (`MAX_COOK_ITEMS` = the 5 theme chart colors): each recipe keeps a color of its own, so timers stay told apart by color as well as by name. A sixth recipe is refused with a message rather than reusing a color.
+- **The shown recipe is a choice of the device**, kept in localStorage (`cookit:cook:active:<user>`, cleared at sign-out), not in the server state: switching tabs is not an event of the session (plan §5.3 lists the events to save), and two devices can each follow a different recipe.
+- **A new color is the first one not used** by the session, so removing a recipe frees its color.
+- **"Finish" on the last step takes that recipe out** of the session (with its timers); with a single recipe it ends the session as before. "Stop cooking" always ends the whole session.

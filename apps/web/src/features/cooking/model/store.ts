@@ -1,5 +1,11 @@
 import { endSession, fetchSession, saveSession } from './cooking';
-import { clearLocalCopies, loadLocalCopy, saveLocalCopy } from './local';
+import {
+  clearLocalCopies,
+  loadActiveRecipe,
+  loadLocalCopy,
+  saveActiveRecipe,
+  saveLocalCopy,
+} from './local';
 import { createCookSync, type CookSync } from './sync';
 
 const syncs = new Map<string, CookSync>();
@@ -20,8 +26,26 @@ export function cookSyncFor(userId: string): CookSync {
   return sync;
 }
 
+const active = new Map<string, string>();
+const activeListeners = new Set<() => void>();
+
+/** The recipe shown on this device, per user (kept in memory when storage is blocked). */
+export const activeRecipe = {
+  subscribe(listener: () => void) {
+    activeListeners.add(listener);
+    return () => activeListeners.delete(listener);
+  },
+  get: (userId: string): string | undefined => active.get(userId) ?? loadActiveRecipe(userId),
+  set(userId: string, recipeId: string) {
+    active.set(userId, recipeId);
+    saveActiveRecipe(userId, recipeId);
+    for (const listener of activeListeners) listener();
+  },
+};
+
 /** At sign-out: the next person on this browser starts from the server, with nothing local. */
 export function clearCookingData(): void {
   syncs.clear();
+  active.clear();
   clearLocalCopies();
 }

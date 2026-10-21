@@ -17,7 +17,12 @@ type Session = {
   session: {
     version: number;
     state: {
-      items: { recipeId: string; currentStep: number; checkedIngredients: number[] }[];
+      items: {
+        recipeId: string;
+        currentStep: number;
+        checkedIngredients: number[];
+        color: string;
+      }[];
       timers: { id: string; endsAt: string; label: string }[];
     };
   } | null;
@@ -148,36 +153,132 @@ test('timers: +1 min, cancel, and a finished timer rings until dismissed', async
   await expect(timer).toHaveCount(0);
 });
 
-test('starting another recipe asks first; stopping ends the session', async ({
+test('two recipes with two timers each stay readable and correct after reload', async ({
   browser,
   page: adminPage,
 }) => {
-  const { page } = await newMember(browser, adminPage, 'replace');
-  const first = await createRecipe(page);
-  const second = await createRecipe(page, EXAMPLE_RECIPES.en);
-  await page.goto(`/recipes/${first}`);
-  await page.getByRole('link', { name: 'Cook', exact: true }).click();
-  await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page.getByRole('heading', { name: 'Step 2 of 5' })).toBeVisible();
+  const { page } = await newMember(browser, adminPage, 'multi');
+  const crepes = await createRecipe(page);
+  const english = await createRecipe(page, EXAMPLE_RECIPES.en);
+  const timers = page.getByTestId('cook-timer');
+  const cards = page.getByTestId('cook-card');
 
-  await page.goto(`/recipes/${second}`);
+  // First recipe: two timers of step 4.
+  await page.goto(`/recipes/${crepes}`);
   await page.getByRole('link', { name: 'Cook', exact: true }).click();
-  await page.getByRole('button', { name: 'Keep cooking the current one' }).click();
-  await expect(page.getByRole('heading', { name: 'Crêpes au beurre salé' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Step 2 of 5' })).toBeVisible();
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Next' }).click();
+  await expect(page.getByRole('heading', { name: 'Step 4 of 5' })).toBeVisible();
+  await page.getByRole('button', { name: /^Start the timer 1 min \(/ }).click();
+  await page.getByRole('button', { name: /^Start the timer 1 min 30/ }).click();
+  await expect(timers).toHaveCount(2);
 
-  await page.goto(`/recipes/${second}`);
+  // Second recipe: added to the session, shown, the first one keeps its progress.
+  await page.goto(`/recipes/${english}`);
   await page.getByRole('link', { name: 'Cook', exact: true }).click();
-  await page.getByRole('button', { name: 'Replace' }).click();
   await expect(page.getByRole('heading', { name: 'Salted butter crêpes' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Step 1 of 5' })).toBeVisible();
+  await expect(cards).toHaveCount(2);
+  await expect(
+    page.getByRole('button', { name: 'Crêpes au beurre salé: step 4 of 5' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: /^Start the timer 1 h/ }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: /^Start the timer 1 min 30/ }).click();
+  await expect(timers).toHaveCount(4);
 
-  await page.getByRole('button', { name: 'Stop cooking' }).click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Stop cooking' }).click();
-  await expect(page).toHaveURL(new RegExp(`/recipes/${second}$`));
+  const check = async () => {
+    // One bar for all, in the order they end, each naming its dish.
+    await expect(timers.nth(0)).toContainText('Crêpes au beurre salé');
+    await expect(timers.nth(0).getByRole('timer')).toHaveText(/^(1:00|0:\d\d)$/);
+    await expect(timers.nth(1)).toContainText('Crêpes au beurre salé');
+    await expect(timers.nth(1)).toContainText('première face');
+    await expect(timers.nth(2)).toContainText('Salted butter crêpes');
+    await expect(timers.nth(2)).toContainText('first side');
+    await expect(timers.nth(3)).toContainText('Salted butter crêpes');
+    await expect(timers.nth(3)).toContainText('batter rest');
+    await expect(timers.nth(3).getByRole('timer')).toHaveText(/^59:\d\d$/);
+  };
+  await check();
+  await expect.poll(async () => (await session(page)).session?.state.timers.length).toBe(4);
+  const saved = await session(page);
+  expect(
+    saved.session?.state.items.map((item) => [item.recipeId, item.currentStep, item.color]),
+  ).toEqual([
+    [crepes, 3, 'chart-1'],
+    [english, 3, 'chart-2'],
+  ]);
+
+  // Reload: the same recipe shown, the same cards and timers.
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Salted butter crêpes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Step 4 of 5' })).toBeVisible();
+  await expect(cards).toHaveCount(2);
+  await check();
+
+  // Switching recipe keeps each one's state.
+  await page.getByRole('button', { name: 'Crêpes au beurre salé: step 4 of 5' }).click();
+  await expect(page.getByRole('heading', { name: 'Crêpes au beurre salé' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Timer 1 min 30: .* left$/ })).toBeVisible();
+  // A timer's name shows its recipe.
+  await timers
+    .nth(3)
+    .getByRole('button', { name: /Salted butter crêpes/ })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Salted butter crêpes' })).toBeVisible();
+
+  // Removing a recipe takes its timers; the other goes on.
+  await page.getByRole('button', { name: 'Remove from cooking' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Remove from cooking' }).click();
+  await expect(cards).toHaveCount(1);
+  await expect(timers).toHaveCount(2);
+  await expect(page.getByRole('heading', { name: 'Crêpes au beurre salé' })).toBeVisible();
+  await expect.poll(async () => (await session(page)).session?.state.items.length).toBe(1);
+
+  // Finishing the last recipe ends the session.
+  await page.getByRole('button', { name: 'Next' }).click();
+  await page.getByRole('button', { name: 'Finish' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Finish' }).click();
+  await expect(page).toHaveURL(new RegExp(`/recipes/${crepes}$`));
   await expect.poll(async () => (await session(page)).session).toBeNull();
   await page.goto('/cook');
   await expect(page.getByText('Nothing is cooking.')).toBeVisible();
+});
+
+test('a full session refuses another recipe; stopping ends everything', async ({
+  browser,
+  page: adminPage,
+}) => {
+  const { page } = await newMember(browser, adminPage, 'full');
+  const ids: string[] = [];
+  for (let i = 0; i < 6; i++) ids.push(await createRecipe(page));
+  const items = ids.slice(0, 5).map((recipeId, i) => ({
+    recipeId,
+    lang: 'fr',
+    servings: 4,
+    currentStep: 0,
+    checkedIngredients: [],
+    color: `chart-${i + 1}`,
+  }));
+  const put = await page.request.put('/api/v1/cook/session', {
+    headers: ORIGIN_HEADER,
+    data: { state: { items, timers: [] } },
+  });
+  expect(put.status()).toBe(200);
+
+  await page.goto(`/recipes/${ids[5]}`);
+  await page.getByRole('link', { name: 'Cook', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Up to 5 recipes');
+  await expect(page.getByTestId('cook-card')).toHaveCount(5);
+  await expect(page.getByRole('link', { name: 'Add a recipe' })).toHaveCount(0);
+  await page.getByRole('alert').getByRole('button', { name: 'OK' }).click();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect((await session(page)).session?.state.items).toHaveLength(5);
+
+  await page.getByRole('button', { name: 'Stop cooking' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Stop cooking' }).click();
+  await expect.poll(async () => (await session(page)).session).toBeNull();
 });
 
 test('a recipe without steps cannot be cooked', async ({ browser, page: adminPage }) => {

@@ -44,23 +44,6 @@ export function CookPage() {
   if (vm.status === 'loading')
     return <p className="text-muted-foreground">{t('common.loading')}</p>;
 
-  if (vm.status === 'confirm_replace') {
-    return (
-      <div className="grid gap-4">
-        <h1 className="text-2xl font-semibold">{t('cook.title')}</h1>
-        <p>{t('cook.replaceText')}</p>
-        <div className="flex flex-wrap gap-2">
-          <Button size="lg" onClick={vm.replaceSession}>
-            {t('cook.replace')}
-          </Button>
-          <Button size="lg" variant="outline" onClick={vm.keepSession}>
-            {t('cook.keep')}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   if (vm.status === 'empty') {
     return (
       <div className="grid gap-4">
@@ -73,69 +56,78 @@ export function CookPage() {
     );
   }
 
-  if (vm.status === 'recipe_missing' || vm.status === 'incomplete') {
-    return (
-      <div className="grid gap-4">
-        <h1 className="text-2xl font-semibold">{t('cook.title')}</h1>
-        <p className="text-muted-foreground">
-          {t(vm.status === 'incomplete' ? 'cook.incomplete' : 'cook.missing')}
-        </p>
-        <Button className="justify-self-start" onClick={vm.endSession}>
-          {t('cook.end')}
-        </Button>
-      </div>
-    );
-  }
-
   const step = vm.step;
   const last = vm.stepIndex >= vm.stepCount - 1;
+  const ready = vm.recipeStatus === 'ready';
 
   return (
     <div className="grid grid-cols-1 gap-5 pb-28">
-      <header className="grid gap-2">
-        <div className="flex items-start gap-2">
-          <span
-            aria-hidden
-            className={`mt-2 size-3 shrink-0 rounded-full ${COLOR_CLASSES[vm.color] ?? ''}`}
-          />
-          <h1 className="min-w-0 flex-1 text-xl font-semibold wrap-anywhere">{vm.title}</h1>
-          <Button variant="ghost" size="sm" onClick={vm.askEnd}>
-            {t('cook.end')}
-          </Button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <IngredientsDrawer vm={vm} />
-          {vm.languages.length > 1 && (
-            <div role="group" aria-label={t('cook.language')} className="flex gap-1">
-              {vm.languages.map((language) => (
-                <Button
-                  key={language}
-                  size="sm"
-                  variant={language === vm.lang ? 'default' : 'outline'}
-                  aria-pressed={language === vm.lang}
-                  onClick={() => void vm.chooseLanguage(language)}
-                >
-                  {language.toUpperCase()}
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-        {vm.offline && (
-          <p role="status" className="text-sm text-muted-foreground">
-            {t('cook.offline')}
-          </p>
-        )}
-        {vm.error && (
-          <Alert variant="destructive" role="alert">
-            <AlertDescription>{t(`cook.errors.${vm.error}`)}</AlertDescription>
-          </Alert>
-        )}
-      </header>
+      <RecipeCards vm={vm} />
+      {vm.offline && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {t('cook.offline')}
+        </p>
+      )}
+      {vm.error && (
+        <Alert variant="destructive" role="alert">
+          <AlertDescription className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 flex-1">{t(`cook.errors.${vm.error}`)}</span>
+            <Button size="sm" variant="outline" onClick={vm.dismissError}>
+              {t('cook.dismiss')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {vm.timers.length > 0 && <TimerBar vm={vm} />}
 
-      {step && (
+      {vm.recipeStatus === 'loading' && (
+        <p className="text-muted-foreground">{t('common.loading')}</p>
+      )}
+      {(vm.recipeStatus === 'recipe_missing' || vm.recipeStatus === 'incomplete') && (
+        <div className="grid gap-3">
+          <p className="text-muted-foreground">
+            {t(vm.recipeStatus === 'incomplete' ? 'cook.incomplete' : 'cook.missing')}
+          </p>
+          <Button className="justify-self-start" onClick={vm.leaveRecipe}>
+            {t(vm.alone ? 'cook.end' : 'cook.remove')}
+          </Button>
+        </div>
+      )}
+
+      {ready && (
+        <header className="grid gap-2">
+          <div className="flex items-start gap-2">
+            <ColorDot color={vm.color} className="mt-2 size-3" />
+            <h1 className="min-w-0 flex-1 text-xl font-semibold wrap-anywhere">{vm.title}</h1>
+            {!vm.alone && (
+              <Button variant="ghost" size="sm" onClick={vm.askRemove}>
+                {t('cook.remove')}
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <IngredientsDrawer vm={vm} />
+            {vm.languages.length > 1 && (
+              <div role="group" aria-label={t('cook.language')} className="flex gap-1">
+                {vm.languages.map((language) => (
+                  <Button
+                    key={language}
+                    size="sm"
+                    variant={language === vm.lang ? 'default' : 'outline'}
+                    aria-pressed={language === vm.lang}
+                    onClick={() => void vm.chooseLanguage(language)}
+                  >
+                    {language.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+        </header>
+      )}
+
+      {ready && step && (
         <section aria-labelledby="step-title" className="grid gap-4">
           <div className="grid gap-1">
             {step.groupName && (
@@ -197,39 +189,55 @@ export function CookPage() {
         </section>
       )}
 
-      <nav
-        aria-label={t('cook.navigation')}
-        className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-2 gap-3 border-t bg-background/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur"
-      >
-        <Button
-          variant="outline"
-          className="h-14 text-lg"
-          disabled={vm.stepIndex === 0}
-          onClick={vm.previous}
+      {ready && (
+        <nav
+          aria-label={t('cook.navigation')}
+          className="fixed inset-x-0 bottom-0 z-10 grid grid-cols-2 gap-3 border-t bg-background/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur"
         >
-          <ChevronLeft className="size-6" /> {t('cook.previous')}
-        </Button>
-        {last ? (
-          <Button className="h-14 text-lg" onClick={vm.askEnd}>
-            {t('cook.finish')}
+          <Button
+            variant="outline"
+            className="h-14 text-lg"
+            disabled={vm.stepIndex === 0}
+            onClick={vm.previous}
+          >
+            <ChevronLeft className="size-6" /> {t('cook.previous')}
           </Button>
-        ) : (
-          <Button className="h-14 text-lg" onClick={vm.next}>
-            {t('cook.next')} <ChevronRight className="size-6" />
-          </Button>
-        )}
-      </nav>
+          {last ? (
+            <Button className="h-14 text-lg" onClick={vm.askFinish}>
+              {t('cook.finish')}
+            </Button>
+          ) : (
+            <Button className="h-14 text-lg" onClick={vm.next}>
+              {t('cook.next')} <ChevronRight className="size-6" />
+            </Button>
+          )}
+        </nav>
+      )}
 
-      <AlertDialog open={vm.confirmEnd} onOpenChange={(open) => !open && vm.cancelEnd()}>
+      <AlertDialog
+        open={vm.confirm !== undefined}
+        onOpenChange={(open) => !open && vm.cancelConfirm()}
+      >
         <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('cook.endTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('cook.endText')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('cook.continue')}</AlertDialogCancel>
-            <AlertDialogAction onClick={vm.endSession}>{t('cook.end')}</AlertDialogAction>
-          </AlertDialogFooter>
+          {vm.confirm === 'end' || (vm.confirm === 'finish' && vm.alone) ? (
+            <Confirm
+              title={t(vm.confirm === 'end' ? 'cook.endTitle' : 'cook.finishTitle', {
+                title: vm.title,
+              })}
+              text={t('cook.endText')}
+              action={t(vm.confirm === 'end' ? 'cook.end' : 'cook.finish')}
+              onConfirm={vm.endSession}
+            />
+          ) : (
+            <Confirm
+              title={t(vm.confirm === 'finish' ? 'cook.finishTitle' : 'cook.removeTitle', {
+                title: vm.title,
+              })}
+              text={t(vm.confirm === 'finish' ? 'cook.finishText' : 'cook.removeText')}
+              action={t(vm.confirm === 'finish' ? 'cook.finish' : 'cook.remove')}
+              onConfirm={vm.leaveRecipe}
+            />
+          )}
         </AlertDialogContent>
       </AlertDialog>
     </div>
@@ -249,19 +257,24 @@ function TimerBar({ vm }: { vm: Vm }) {
               timer.finished ? 'border-primary bg-primary/10' : ''
             }`}
           >
-            <span
-              aria-hidden
-              className={`size-2.5 shrink-0 rounded-full ${COLOR_CLASSES[vm.color] ?? ''}`}
-            />
-            <span className="min-w-0 flex-1 text-sm wrap-anywhere">
-              {timer.label || t('cook.stepTimer', { n: (timer.step ?? 0) + 1 })}
-            </span>
+            <ColorDot color={timer.color} className="size-2.5" />
+            <button
+              type="button"
+              className="min-w-0 flex-1 text-left text-sm wrap-anywhere"
+              disabled={!timer.recipeId}
+              onClick={() => timer.recipeId && vm.select(timer.recipeId)}
+            >
+              <span className="block font-medium">{timer.recipeTitle}</span>
+              <span className="block text-muted-foreground">
+                {timer.label || t('cook.stepTimer', { n: (timer.step ?? 0) + 1 })}
+              </span>
+            </button>
             <span
               className="font-mono text-xl font-semibold tabular-nums"
               role="timer"
               aria-label={
                 timer.finished
-                  ? t('cook.timerDone', { label: timer.label })
+                  ? t('cook.timerDone', { label: timer.label || timer.recipeTitle })
                   : t('cook.timerLeft', { left: timer.countdown })
               }
             >
@@ -360,5 +373,98 @@ function IngredientsDrawer({ vm }: { vm: Vm }) {
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function ColorDot({ color, className }: { color: string; className: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`shrink-0 rounded-full ${COLOR_CLASSES[color] ?? ''} ${className}`}
+    />
+  );
+}
+
+function Confirm(props: { title: string; text: string; action: string; onConfirm: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{props.title}</AlertDialogTitle>
+        <AlertDialogDescription>{props.text}</AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>{t('cook.continue')}</AlertDialogCancel>
+        <AlertDialogAction onClick={props.onConfirm}>{props.action}</AlertDialogAction>
+      </AlertDialogFooter>
+    </>
+  );
+}
+
+/** One card per recipe of the session: its color, its step and its next timer; tap to show it. */
+function RecipeCards({ vm }: { vm: Vm }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-start gap-2">
+      <div
+        role="group"
+        aria-label={t('cook.recipes')}
+        className="-mx-1 flex min-w-0 flex-1 gap-2 overflow-x-auto px-1 pb-1"
+      >
+        {vm.cards.map((card) => {
+          const title = card.title || (card.status === 'recipe_missing' ? '?' : '…');
+          return (
+            <button
+              key={card.recipeId}
+              type="button"
+              data-testid="cook-card"
+              aria-pressed={card.active}
+              aria-label={
+                card.stepCount > 0
+                  ? t('cook.cardLabel', { title, n: card.stepNumber, total: card.stepCount })
+                  : title
+              }
+              onClick={() => vm.select(card.recipeId)}
+              className={`grid w-40 shrink-0 gap-1 rounded-lg border p-2 text-left text-sm ${
+                card.active ? 'border-primary bg-accent' : 'bg-card'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <ColorDot color={card.color} className="size-3" />
+                <span className="line-clamp-2 font-medium wrap-anywhere">{title}</span>
+              </span>
+              <span className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
+                {card.stepCount > 0 &&
+                  t('cook.cardStep', { n: card.stepNumber, total: card.stepCount })}
+                {card.nextTimer && (
+                  <span
+                    className="inline-flex items-center gap-1 tabular-nums"
+                    title={t('cook.cardTimers', { count: card.timerCount })}
+                  >
+                    <Timer className="size-3.5" />
+                    {card.nextTimer.finished ? t('cook.done') : card.nextTimer.countdown}
+                    {card.timerCount > 1 && ` +${card.timerCount - 1}`}
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
+        {vm.canAdd && (
+          <Button
+            asChild
+            variant="outline"
+            className="h-auto min-h-16 w-28 shrink-0 self-stretch whitespace-normal"
+          >
+            <Link to="/recipes">
+              <Plus /> {t('cook.addRecipe')}
+            </Link>
+          </Button>
+        )}
+      </div>
+      <Button variant="ghost" size="sm" onClick={vm.askEnd}>
+        {t('cook.end')}
+      </Button>
+    </div>
   );
 }

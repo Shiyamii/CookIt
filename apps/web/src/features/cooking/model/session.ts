@@ -1,6 +1,7 @@
 import {
   cookText,
   COOK_COLORS,
+  MAX_COOK_ITEMS,
   MAX_COOK_TIMERS,
   MAX_TIMER_SECONDS,
   type CookItem,
@@ -16,31 +17,6 @@ import {
 
 export const EMPTY_STATE: CookState = { items: [], timers: [] };
 
-/**
- * Cooking one recipe (phase 6: one recipe per session). The same recipe keeps its progress (new
- * servings or language if given); another recipe replaces the session, timers included.
- */
-export function startRecipe(
-  state: CookState,
-  start: { recipeId: string; lang: Locale; servings: number },
-): CookState {
-  const current = state.items.find((item) => item.recipeId === start.recipeId);
-  if (current) {
-    return {
-      ...state,
-      items: [{ ...current, lang: start.lang, servings: start.servings }],
-      timers: state.timers.filter((timer) => timer.recipeId === start.recipeId),
-    };
-  }
-  const item: CookItem = {
-    ...start,
-    currentStep: 0,
-    checkedIngredients: [],
-    color: COOK_COLORS[0],
-  };
-  return { items: [item], timers: [] };
-}
-
 const updateItem = (
   state: CookState,
   recipeId: string,
@@ -49,6 +25,48 @@ const updateItem = (
   ...state,
   items: state.items.map((item) => (item.recipeId === recipeId ? update(item) : item)),
 });
+
+/** Another recipe can join the session (one color per recipe). */
+export function canAddRecipe(state: CookState, recipeId: string): boolean {
+  return (
+    state.items.some((item) => item.recipeId === recipeId) || state.items.length < MAX_COOK_ITEMS
+  );
+}
+
+/**
+ * Cooks a recipe along with the others of the session (plan §5.3). The same recipe keeps its
+ * progress (new servings or language if given); another one is added with the first free color.
+ * A full session is left as it is (`canAddRecipe`).
+ */
+export function startRecipe(
+  state: CookState,
+  start: { recipeId: string; lang: Locale; servings: number },
+): CookState {
+  if (state.items.some((item) => item.recipeId === start.recipeId)) {
+    return updateItem(state, start.recipeId, (item) => ({
+      ...item,
+      lang: start.lang,
+      servings: start.servings,
+    }));
+  }
+  if (!canAddRecipe(state, start.recipeId)) return state;
+  const used = new Set(state.items.map((item) => item.color));
+  const item: CookItem = {
+    ...start,
+    currentStep: 0,
+    checkedIngredients: [],
+    color: COOK_COLORS.find((color) => !used.has(color)) ?? COOK_COLORS[0],
+  };
+  return { ...state, items: [...state.items, item] };
+}
+
+/** Takes a recipe out of the session, with its timers. */
+export function removeRecipe(state: CookState, recipeId: string): CookState {
+  return {
+    items: state.items.filter((item) => item.recipeId !== recipeId),
+    timers: state.timers.filter((timer) => timer.recipeId !== recipeId),
+  };
+}
 
 /** Goes to a step, within the recipe's `stepCount` steps. */
 export function goToStep(
