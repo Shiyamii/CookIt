@@ -58,8 +58,21 @@ export const fr: Translations = {
       title: 'Se connecter',
       subtitle: 'Content de vous revoir !',
       submit: 'Se connecter',
+      passkey: 'Se connecter avec une passkey',
       inviteOnly:
         'Pas de compte ? CookIt fonctionne sur invitation : demandez un lien à la personne qui gère ce site.',
+    },
+    twoFactor: {
+      title: 'Vérification en deux étapes',
+      subtitle: 'Saisissez le code à 6 chiffres affiché par votre application d’authentification.',
+      backupSubtitle:
+        'Saisissez un des codes de secours que vous avez gardés. Chaque code ne sert qu’une fois.',
+      code: 'Code',
+      backupCode: 'Code de secours',
+      submit: 'Vérifier',
+      useBackup: 'Utiliser plutôt un code de secours',
+      useApp: 'Utiliser plutôt l’application',
+      back: 'Retour',
     },
     register: {
       title: 'Créer votre compte',
@@ -74,6 +87,8 @@ export const fr: Translations = {
       title: 'Choisir un nouveau mot de passe',
       submit: 'Enregistrer le mot de passe',
       done: 'Votre mot de passe a été changé. Vous avez été déconnecté de tous vos appareils.',
+      secondFactor:
+        'Cela désactive aussi la vérification en deux étapes et supprime vos passkeys : vous pourrez les remettre en place ensuite.',
     },
     invalidLink: {
       title: 'Ce lien ne fonctionne pas',
@@ -82,6 +97,72 @@ export const fr: Translations = {
     menu: {
       label: 'Compte',
       signOut: 'Se déconnecter',
+    },
+  },
+  account: {
+    security: {
+      title: 'Sécurité',
+      recovery:
+        'Téléphone et codes de secours perdus ? Demandez à un administrateur un lien de réinitialisation du mot de passe : il désactive la vérification en deux étapes et supprime vos passkeys.',
+    },
+    password: {
+      title: 'Mot de passe',
+      current: 'Mot de passe actuel',
+      currentRequired: 'Saisissez votre mot de passe actuel.',
+      submit: 'Changer le mot de passe',
+      done: 'Mot de passe changé. Vos autres appareils ont été déconnectés.',
+    },
+    twoFactor: {
+      title: 'Vérification en deux étapes',
+      description:
+        'Après le mot de passe, un code d’une application d’authentification (Aegis, 2FAS, Google Authenticator…) est demandé à la connexion.',
+      on: 'Activée',
+      off: 'Désactivée',
+      enable: 'Activer',
+      disable: 'Désactiver',
+      regenerate: 'Nouveaux codes de secours',
+      continue: 'Continuer',
+      confirm: {
+        enable: 'Saisissez votre mot de passe pour configurer la vérification en deux étapes.',
+        disable: 'Saisissez votre mot de passe pour désactiver la vérification en deux étapes.',
+        regenerate:
+          'Saisissez votre mot de passe pour obtenir de nouveaux codes de secours. Les codes actuels ne fonctionneront plus.',
+      },
+      setup: {
+        scan: 'Scannez ce QR code avec votre application d’authentification (ou saisissez la clé ci-dessous).',
+        enterCode: 'Saisissez le code à 6 chiffres affiché par l’application pour terminer.',
+        qrLabel: 'QR code pour l’application d’authentification',
+        manual: 'Clé pour une saisie manuelle',
+        activate: 'Activer',
+      },
+      codes: {
+        intro:
+          'Gardez ces codes de secours en lieu sûr (gestionnaire de mots de passe, papier). Chacun permet de se connecter une fois sans votre téléphone. Ils ne sont affichés que maintenant.',
+        saved: 'Je les ai gardés',
+      },
+    },
+    passkeys: {
+      title: 'Passkeys',
+      description:
+        'Connectez-vous sans mot de passe, avec votre empreinte, votre visage, un code PIN ou une clé de sécurité. Une passkey ne fonctionne que sur ce site.',
+      empty: 'Aucune passkey pour l’instant.',
+      added: 'Passkey ajoutée. Vous pouvez maintenant l’utiliser pour vous connecter.',
+      unnamed: 'Passkey',
+      created: 'Ajoutée le {{date}}',
+      synced: 'synchronisée',
+      name: 'Nom',
+      newName: 'Nom de la nouvelle passkey',
+      newNameHint: 'Facultatif, par exemple « Mon téléphone ».',
+      passwordHint: 'Votre mot de passe, pour confirmer que c’est bien vous.',
+      invalidName: '64 caractères au maximum.',
+      add: 'Ajouter une passkey',
+      save: 'Enregistrer',
+      rename: 'Renommer',
+      delete: 'Supprimer',
+      deleteTitle: 'Supprimer « {{name}} » ?',
+      deleteText:
+        'Vous ne pourrez plus vous connecter avec. Supprimez-la aussi de votre appareil ou de votre gestionnaire de mots de passe.',
+      unsupported: 'Ce navigateur ne prend pas en charge les passkeys.',
     },
   },
   admin: {
@@ -137,6 +218,25 @@ export const fr: Translations = {
     not_found: 'Introuvable : la page n’est peut-être plus à jour.',
     forbidden: 'Vous n’avez pas le droit de faire ça.',
     unauthorized: 'Reconnectez-vous.',
+    INVALID_CODE: 'Code incorrect. Vérifiez l’heure de votre téléphone et réessayez.',
+    INVALID_BACKUP_CODE: 'Code de secours incorrect ou déjà utilisé.',
+    TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: 'Trop de codes incorrects. Reconnectez-vous.',
+    INVALID_TWO_FACTOR_COOKIE: 'La connexion a pris trop de temps. Reconnectez-vous.',
+    ACCOUNT_TEMPORARILY_LOCKED: 'Trop de codes incorrects : réessayez dans une heure.',
+    INVALID_PASSWORD: 'Mot de passe incorrect.',
+    PASSWORD_TOO_SHORT: 'Le mot de passe doit faire entre 10 et 128 caractères.',
+    PASSWORD_TOO_LONG: 'Le mot de passe doit faire entre 10 et 128 caractères.',
+    TOTP_ALREADY_ENABLED: 'La vérification en deux étapes est déjà activée.',
+    AUTHENTICATION_FAILED: 'Cette passkey n’a pas été acceptée.',
+    PASSKEY_NOT_FOUND: 'Cette passkey n’est pas connue ici : elle a peut-être été supprimée.',
+    USER_VERIFICATION_REQUIRED:
+      'Votre appareil doit confirmer que c’est bien vous (code PIN, empreinte ou visage) pour utiliser une passkey.',
+    CHALLENGE_NOT_FOUND: 'Cela a pris trop de temps. Réessayez.',
+    FAILED_TO_VERIFY_REGISTRATION: 'La passkey n’a pas pu être ajoutée. Réessayez.',
+    last_sign_in_method: 'C’est votre seul moyen de connexion : il doit rester.',
+    passkey_cancelled: 'Annulé.',
+    passkey_exists: 'Cet appareil a déjà une passkey pour votre compte.',
+    passkey_failed: 'La passkey n’a pas fonctionné. Réessayez.',
   },
   notFound: {
     title: 'Page introuvable',

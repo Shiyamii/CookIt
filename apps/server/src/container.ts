@@ -1,6 +1,8 @@
 import type { Database } from './db';
 import { env } from './env';
-import { hashPassword } from './lib/password';
+import { hashPassword, verifyPassword } from './lib/password';
+import { createAccountSecurityRepository } from './modules/account-security/account-security.repository';
+import { createAccountSecurityService } from './modules/account-security/account-security.service';
 import { createAuth } from './modules/auth/auth';
 import { createInvitesRepository } from './modules/invites/invites.repository';
 import { createInvitesService } from './modules/invites/invites.service';
@@ -25,6 +27,10 @@ export function createContainer(db: Database) {
   });
   return {
     auth: createAuth(db),
+    accountSecurity: createAccountSecurityService({
+      repository: createAccountSecurityRepository(db),
+      verifyPassword,
+    }),
     system: createSystemService({
       repository: createSystemRepository(db),
       version: env.APP_VERSION,

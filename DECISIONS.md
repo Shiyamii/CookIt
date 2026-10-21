@@ -79,3 +79,23 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Link token removed from the address bar once read** (`useLinkToken`): an opened but unused link does not stay in the browser history.
 - **Zod `jitless` in the browser**, configured in the very first imported module: Zod's `new Function()` probe would violate the CSP on every page load.
 - **`rate-limits:clear` rescue command**: unlocks someone locked out by the per-account limit; the e2e global setup also uses it, so reruns from one IP never hit stale counters.
+
+## Phase 3b: 2FA and passkeys
+
+- **Better Auth plugins `twoFactor` (core) and `@better-auth/passkey` 1.7.7** (pinned like better-auth; passkeys moved to their own package in 1.4). Front: `@simplewebauthn/browser` (WebAuthn ceremonies, what Better Auth's client uses) and **`uqr`** (zero-dependency QR encoder, drawn as one SVG path: no `innerHTML`, CSP-safe). No Better Auth client: the SPA calls the routes through `src/lib/api.ts` like the others.
+- **Passkey user verification required** (PIN, biometrics), checked server-side in the plugin's `afterVerification` hooks: Better Auth accepts possession only, but a passkey replaces the password here. Discoverable credentials required (sign-in without a username, browser autofill).
+- **`rpID` and expected origin derived from `ORIGIN`** instead of the `WEBAUTHN_RP_ID` / `WEBAUTHN_RP_NAME` variables of the plan: one less setting that could disagree with `ORIGIN`; the RP name is `CookIt`.
+- **Passkey sign-in skips the TOTP step**: a user-verified passkey is already two factors (device + PIN/biometrics), as the plan's criterion "passkey seule" says.
+- **No "trust this device" option** for 2FA (`trustDevice` refused by the strict body schema): every password sign-in asks for a code.
+- **Strict body schemas** for every Better Auth POST route that takes input (`BODY_SCHEMAS` in `auth.controller.ts`): unknown fields (`issuer`, `method`, `trustDevice`, `disableSession`…) never reach Better Auth. Better Auth's `list-user-passkeys` is not exposed: `GET /api/v1/me/security` returns the 2FA status and passkeys without key material.
+- **A password reset link turns 2FA off and deletes passkeys** (same transaction as the new password): it is the recovery path when the phone and the backup codes are lost (plan §5.1 bis). The reset page says so before the user confirms.
+- **"An account keeps a sign-in method"**: every account has a password (created at sign-up, never removable), so deleting passkeys is always allowed; the server still refuses to delete the last passkey of an account without a password (`last_sign_in_method`).
+- **Adding or deleting a passkey asks for the password** (security review): a passkey skips the 2FA step and survives "sign out everywhere", so a stolen session alone must not plant one (or remove the owner's). Better Auth's `generate-register-options` is a GET without body: we expose it as a POST that checks the password, then calls Better Auth; its challenge is the only one `verify-registration` accepts. Better Auth's "fresh session" rule is turned off (`freshAge: 0`): the password replaces it.
+- **2FA lockout: 5 wrong codes lock 2FA for an hour** (Better Auth default: 10 per 15 minutes, which resets after each lock): someone holding the password gets about 120 guesses a day whatever their IP.
+- **Rate limits**: 2FA code checks 20 per 15 minutes per IP (on top of the lockout and Better Auth's 5 tries per sign-in challenge); passkey sign-in 60 per 10 minutes per IP; routes that check the password (change password, 2FA on/off, new backup codes, add/delete a passkey) share 10 per 15 minutes per IP.
+- **The anonymous `generate-authenticate-options` GET refuses `Sec-Fetch-Site` other than `same-origin`**: it writes a challenge, and `sameOrigin` only covers state-changing methods. Expired Better Auth `verification` rows (2FA and passkey challenges) are deleted hourly with the rate-limit counters.
+- **Turning 2FA on signs out the other devices** (the SPA calls `revoke-other-sessions` after the first code): 2FA often follows a doubt about the password.
+- **WebAuthn answers have a strict shared schema** (shape and sizes; the cryptographic checks stay in @simplewebauthn), so a malformed `id` never reaches the database.
+- **Changing `BETTER_AUTH_SECRET` breaks 2FA**: TOTP secrets and backup codes are encrypted with it; users would need a password reset link.
+- **Known limit**: a TOTP code can be reused while it is accepted (about 90 seconds: Better Auth allows one 30-second step of clock drift each way and keeps no used-code list); the password is still required with it.
+- **The security page includes the password change** (the route existed since phase 3, without UI).

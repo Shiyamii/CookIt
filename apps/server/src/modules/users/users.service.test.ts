@@ -16,6 +16,7 @@ function user(overrides: Partial<UserRow> & { id: string }): UserRow {
     role: 'user',
     locale: 'fr',
     disabledAt: null,
+    twoFactorEnabled: false,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     ...overrides,

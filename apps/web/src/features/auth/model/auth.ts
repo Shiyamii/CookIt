@@ -1,5 +1,12 @@
 import type { Locale, PasswordResetInput, RegisterInput } from '@cookit/shared';
-import { apiGet, apiPost } from '@/lib/api';
+import {
+  browserSupportsWebAuthn,
+  browserSupportsWebAuthnAutofill,
+  startAuthentication,
+  WebAuthnAbortService,
+  type PublicKeyCredentialRequestOptionsJSON,
+} from '@simplewebauthn/browser';
+import { ApiError, apiGet, apiPost } from '@/lib/api';
 
 export type CurrentUser = {
   id: string;
@@ -24,11 +31,76 @@ export async function fetchCurrentUser(): Promise<CurrentUser | null> {
   return (await apiGet<{ user: CurrentUser | null }>('/me')).user;
 }
 
-/** Sign-in with a username or an email (the field accepts both). */
-export async function signIn(identifier: string, password: string): Promise<void> {
+export type SignInResult = 'signed_in' | 'two_factor';
+
+/**
+ * Sign-in with a username or an email (the field accepts both). With 2FA on, the password only
+ * opens a short-lived challenge (`two_factor` cookie): a code is still needed.
+ */
+export async function signIn(identifier: string, password: string): Promise<SignInResult> {
   const value = identifier.trim();
-  if (value.includes('@')) await apiPost('/auth/sign-in/email', { email: value, password });
-  else await apiPost('/auth/sign-in/username', { username: value, password });
+  const result = value.includes('@')
+    ? await apiPost<{ twoFactorRedirect?: boolean }>('/auth/sign-in/email', {
+        email: value,
+        password,
+      })
+    : await apiPost<{ twoFactorRedirect?: boolean }>('/auth/sign-in/username', {
+        username: value,
+        password,
+      });
+  return result.twoFactorRedirect ? 'two_factor' : 'signed_in';
+}
+
+/** Second sign-in step: a code from the authenticator app, or a single-use backup code. */
+export async function verifySignInCode(kind: 'totp' | 'backup', code: string): Promise<void> {
+  if (kind === 'totp') await apiPost('/auth/two-factor/verify-totp', { code: normalizeTotp(code) });
+  else await apiPost('/auth/two-factor/verify-backup-code', { code: code.trim() });
+}
+
+/** Authenticator apps show `123 456`: only the digits count. */
+export function normalizeTotp(code: string): string {
+  return code.replace(/\s/g, '');
+}
+
+export function passkeysSupported(): boolean {
+  return browserSupportsWebAuthn();
+}
+
+/** Passkeys suggested by the browser in the username field (conditional mediation). */
+export function passkeyAutofillSupported(): Promise<boolean> {
+  return browserSupportsWebAuthnAutofill();
+}
+
+/**
+ * Sign-in with a passkey alone. With `autofill`, waits until the user picks a passkey suggested
+ * in the username field; otherwise opens the browser's passkey dialog.
+ */
+export async function signInWithPasskey(autofill = false): Promise<void> {
+  const options = await apiGet<PublicKeyCredentialRequestOptionsJSON>(
+    '/auth/passkey/generate-authenticate-options',
+  );
+  const response = await startAuthentication({
+    optionsJSON: options,
+    useBrowserAutofill: autofill,
+  }).catch((error: unknown) => {
+    throw new ApiError(0, webAuthnErrorCode(error));
+  });
+  await apiPost('/auth/passkey/verify-authentication', { response });
+}
+
+/** Stops a pending passkey prompt (the autofill one, when leaving the login page). */
+export function cancelPasskeyPrompt(): void {
+  WebAuthnAbortService.cancelCeremony();
+}
+
+/** Browser WebAuthn failures, as error codes for `t('errors.<code>')`. */
+export function webAuthnErrorCode(error: unknown): string {
+  const name = error instanceof Error ? error.name : '';
+  // `NotAllowedError`: dismissed, timed out or refused; `AbortError`: cancelled by the page.
+  if (name === 'NotAllowedError' || name === 'AbortError') return 'passkey_cancelled';
+  // `InvalidStateError` on registration: this authenticator already holds a passkey for us.
+  if (name === 'InvalidStateError') return 'passkey_exists';
+  return 'passkey_failed';
 }
 
 export async function signOut(): Promise<void> {

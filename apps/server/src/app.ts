@@ -5,6 +5,7 @@ import { env } from './env';
 import type { AppEnv } from './http/app-env';
 import { onError } from './http/errors';
 import { apiBodyLimit, noStore, sameOrigin, securityHeaders } from './http/security';
+import { createAccountSecurityController } from './modules/account-security/account-security.controller';
 import { createAuthController } from './modules/auth/auth.controller';
 import { sessionMiddleware } from './modules/auth/auth.middleware';
 import { createInvitesController } from './modules/invites/invites.controller';
@@ -21,6 +22,7 @@ export function createApp(container: Container) {
 
   app.route('/', createSystemController(container.system));
   app.route('/', createAuthController(container));
+  app.route('/', createAccountSecurityController(container));
   app.route('/', createInvitesController(container));
   app.route('/', createPasswordResetController(container));
   app.route('/', createUsersController(container));

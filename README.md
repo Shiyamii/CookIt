@@ -155,19 +155,21 @@ node dist/cli.js setup-link                    # new first-admin link, only whil
 node dist/cli.js rate-limits:clear             # lift every rate limit (someone locked out)
 ```
 
+Each user can turn on **two-step verification** (authenticator app + 10 single-use backup codes) and add **passkeys** from the **Security** page of the account menu. Lost phone and backup codes: a password reset link (admin Users page, or `admin:reset-link` for an admin) turns two-step verification off and removes the passkeys.
+
 ## Configuration
 
-| Variable                                 | Description                                                               |
-| ---------------------------------------- | ------------------------------------------------------------------------- |
-| `DATABASE_URL`                           | PostgreSQL connection string                                              |
-| `ORIGIN`                                 | Public HTTPS URL of the app (used for CSRF checks and secure cookies)     |
-| `BETTER_AUTH_SECRET`                     | Session signing secret: `openssl rand -base64 32`                         |
-| `ADMIN_EMAIL`                            | Optional: email pre-filled on the first-admin page                        |
-| `TRUST_PROXY`                            | `true` behind one reverse proxy (client IP from `X-Forwarded-For`)        |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keys                                                             |
-| `VAPID_SUBJECT`                          | Contact for the push service (e.g. `mailto:you@example.com`)              |
-| `WEBAUTHN_RP_ID`                         | Public domain, without scheme (changing it invalidates existing passkeys) |
-| `WEBAUTHN_RP_NAME`                       | Display name shown when registering a passkey                             |
+| Variable                                 | Description                                                                                                                                   |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                           | PostgreSQL connection string                                                                                                                  |
+| `ORIGIN`                                 | Public HTTPS URL of the app (used for CSRF checks and secure cookies)                                                                         |
+| `BETTER_AUTH_SECRET`                     | Session signing secret: `openssl rand -base64 32`. Also encrypts 2FA secrets: changing it turns 2FA off in practice (users need a reset link) |
+| `ADMIN_EMAIL`                            | Optional: email pre-filled on the first-admin page                                                                                            |
+| `TRUST_PROXY`                            | `true` behind one reverse proxy (client IP from `X-Forwarded-For`)                                                                            |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keys                                                                                                                                 |
+| `VAPID_SUBJECT`                          | Contact for the push service (e.g. `mailto:you@example.com`)                                                                                  |
+| `WEBAUTHN_RP_ID`                         | Public domain, without scheme (changing it invalidates existing passkeys)                                                                     |
+| `WEBAUTHN_RP_NAME`                       | Display name shown when registering a passkey                                                                                                 |
 
 Generate VAPID keys with:
 
@@ -216,6 +218,7 @@ Back up the PostgreSQL database, for example with Coolify's built-in backups. Us
 
 ### Notes
 
+- Passkeys are bound to the domain of `ORIGIN`: moving CookIt to another domain makes existing passkeys unusable (users sign in with their password and add new ones).
 - iOS only delivers Web Push notifications when the app is installed on the home screen (iOS 16.4+).
 - Notifications use the system default sound; there is no repeating alarm.
 

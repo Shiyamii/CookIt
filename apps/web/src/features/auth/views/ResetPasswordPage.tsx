@@ -33,6 +33,7 @@ export function ResetPasswordPage() {
           </div>
         ) : (
           <form className="grid gap-4" onSubmit={vm.submit} noValidate>
+            <p className="text-sm text-muted-foreground">{t('auth.reset.secondFactor')}</p>
             {vm.error && (
               <Alert variant="destructive" role="alert">
                 <AlertDescription>{t(`errors.${vm.error}`, t('errors.unknown'))}</AlertDescription>

@@ -3,14 +3,16 @@ import { env } from '../../env';
 import { clientIp } from '../../http/client-ip';
 import type { RateLimitRule, RateLimitService } from './rate-limit.service';
 
-/** Rules of the sensitive routes (plan §5.1: login, sign-up, password reset). */
+/** Rules of the sensitive routes (plan §5.1: login, sign-up, password reset, 2FA, passkeys). */
 export const RATE_LIMITS = {
   signInPerIp: { name: 'sign-in:ip', limit: 20, windowSeconds: 15 * 60 },
   signInPerAccount: { name: 'sign-in:account', limit: 10, windowSeconds: 15 * 60 },
   registerPerIp: { name: 'register:ip', limit: 10, windowSeconds: 60 * 60 },
   passwordResetPerIp: { name: 'password-reset:ip', limit: 10, windowSeconds: 60 * 60 },
   tokenCheckPerIp: { name: 'token-check:ip', limit: 60, windowSeconds: 10 * 60 },
-  changePasswordPerIp: { name: 'change-password:ip', limit: 10, windowSeconds: 15 * 60 },
+  passwordCheckPerIp: { name: 'password-check:ip', limit: 10, windowSeconds: 15 * 60 },
+  twoFactorPerIp: { name: 'two-factor:ip', limit: 20, windowSeconds: 15 * 60 },
+  passkeySignInPerIp: { name: 'passkey-sign-in:ip', limit: 60, windowSeconds: 10 * 60 },
 } satisfies Record<string, RateLimitRule>;
 
 /**

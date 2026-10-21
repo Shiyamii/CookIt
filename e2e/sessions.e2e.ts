@@ -67,7 +67,7 @@ test.describe('sign-in redirect', () => {
     await expect(page).toHaveURL(/\/login\?redirect=%2Fadmin%2Fusers$/);
     await page.getByLabel('Username or email').fill(ADMIN.username);
     await page.getByLabel('Password').fill(ADMIN.password);
-    await page.getByRole('button', { name: 'Sign in' }).click();
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await expect(page).toHaveURL('/admin/users');
     await expect(page.getByRole('heading', { name: 'Users' })).toBeVisible();
   });
@@ -82,7 +82,7 @@ test.describe('sign-in redirect', () => {
         await visitor.goto(`/login?redirect=${encodeURIComponent(target)}`);
         await visitor.getByLabel('Username or email').fill(member.username);
         await visitor.getByLabel('Password').fill(PASSWORD);
-        await visitor.getByRole('button', { name: 'Sign in' }).click();
+        await visitor.getByRole('button', { name: 'Sign in', exact: true }).click();
         await expect(visitor.getByRole('button', { name: 'Account' })).toBeVisible();
         expect(visitor.url(), target).toBe(`${BASE_URL}/`);
         await visitor.context().close();

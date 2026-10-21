@@ -1,4 +1,4 @@
-import { CircleUser, LogOut, Mail, Users } from 'lucide-react';
+import { CircleUser, LogOut, Mail, ShieldCheck, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,12 @@ export function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         <DropdownMenuLabel className="truncate">{vm.user.name}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/account/security">
+            <ShieldCheck /> {t('account.security.title')}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {vm.isAdmin && (
           <>

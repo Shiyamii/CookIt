@@ -57,6 +57,82 @@ export const passwordResetInputSchema = z.object({
 });
 export type PasswordResetInput = z.infer<typeof passwordResetInputSchema>;
 
+// Two-factor authentication and passkeys (phase 3b). Bodies of the Better Auth routes we expose
+// are checked with these strict schemas before reaching Better Auth.
+
+/** Re-entering one's password before a sensitive change (enable/disable 2FA, new backup codes). */
+export const passwordConfirmInputSchema = z
+  .object({ password: z.string().min(1).max(PASSWORD_MAX_LENGTH) })
+  .strict();
+
+/** A code from an authenticator app (6 digits, spaces removed by the UI). */
+export const totpCodeInputSchema = z.object({ code: z.string().regex(/^\d{6}$/) }).strict();
+
+/** A single-use backup code (`xxxxx-xxxxx`, as Better Auth generates them). */
+export const backupCodeInputSchema = z.object({ code: z.string().trim().min(1).max(32) }).strict();
+
+export const passkeyNameSchema = labelString(64);
+
+/**
+ * The browser's WebAuthn answer (`PublicKeyCredential.toJSON()`), checked cryptographically by
+ * Better Auth (@simplewebauthn): here only its shape and sizes, so that a malformed `id` or
+ * `transports` never reaches the database or the library.
+ */
+const base64url = (max: number) =>
+  z
+    .string()
+    .regex(/^[A-Za-z0-9_-]*$/)
+    .max(max);
+const webAuthnResponseSchema = z.object({
+  id: base64url(1024).min(1),
+  rawId: base64url(1024).min(1),
+  type: z.literal('public-key'),
+  authenticatorAttachment: z.string().max(32).optional(),
+  clientExtensionResults: z.record(z.string(), z.unknown()).optional(),
+  response: z.object({
+    clientDataJSON: base64url(8192),
+    attestationObject: base64url(65536).optional(),
+    authenticatorData: base64url(8192).optional(),
+    signature: base64url(2048).optional(),
+    userHandle: base64url(1024).optional(),
+    publicKey: base64url(8192).optional(),
+    publicKeyAlgorithm: z.number().int().optional(),
+    transports: z.array(z.string().max(32)).max(10).optional(),
+  }),
+});
+
+export const passkeyRegistrationInputSchema = z
+  .object({ response: webAuthnResponseSchema, name: passkeyNameSchema.optional() })
+  .strict();
+
+export const passkeyAuthenticationInputSchema = z
+  .object({ response: webAuthnResponseSchema })
+  .strict();
+
+export const passkeyRenameInputSchema = z
+  .object({ id: z.string().min(1).max(64), name: passkeyNameSchema })
+  .strict();
+
+/** Deleting a passkey asks for the password, like adding one (a stolen session is not enough). */
+export const passkeyDeleteInputSchema = z
+  .object({ id: z.string().min(1).max(64), password: z.string().min(1).max(PASSWORD_MAX_LENGTH) })
+  .strict();
+
+/** A passkey as listed on the security page (no key material). */
+export type PasskeySummary = {
+  id: string;
+  name: string | null;
+  createdAt: string | null;
+  /** Synced across devices (password manager, iCloud…) rather than bound to one device. */
+  backedUp: boolean;
+};
+
+/** What the security settings page shows about the signed-in account. */
+export type AccountSecurity = {
+  twoFactorEnabled: boolean;
+  passkeys: PasskeySummary[];
+};
+
 export const createInviteInputSchema = z.object({
   label: optionalText(100),
   expiresInDays: z.number().int().min(1).max(INVITE_MAX_DAYS).default(INVITE_DEFAULT_DAYS),
@@ -97,5 +173,6 @@ export const ACCOUNT_ERRORS = [
   'cannot_change_self',
   'last_admin',
   'not_found',
+  'last_sign_in_method',
 ] as const;
 export type AccountError = (typeof ACCOUNT_ERRORS)[number];

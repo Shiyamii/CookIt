@@ -19,7 +19,9 @@ if (setupUrl) {
   );
 }
 
-const purge = setInterval(() => void container.rateLimits.purgeExpired().catch(() => {}), 3600_000);
+const purgeExpired = () =>
+  Promise.all([container.rateLimits.purgeExpired(), container.accountSecurity.purgeExpired()]);
+const purge = setInterval(() => void purgeExpired().catch(() => {}), 3600_000);
 purge.unref();
 
 const server = serve({ fetch: createApp(container).fetch, port: env.PORT }, (info) => {

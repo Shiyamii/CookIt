@@ -1,3 +1,4 @@
+import { KeyRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router';
 import { FormField } from '@/components/FormField';
@@ -11,6 +12,53 @@ export function LoginPage() {
   const vm = useLoginViewModel();
   if (vm.alreadySignedIn) return <Navigate to="/" replace />;
 
+  const errorAlert = vm.error && (
+    <Alert variant="destructive" role="alert">
+      <AlertDescription>{t(`errors.${vm.error}`, t('errors.unknown'))}</AlertDescription>
+    </Alert>
+  );
+
+  if (vm.step === 'code') {
+    const backup = vm.codeKind === 'backup';
+    return (
+      <Card className="mx-auto max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            <h1>{t('auth.twoFactor.title')}</h1>
+          </CardTitle>
+          <CardDescription>
+            {backup ? t('auth.twoFactor.backupSubtitle') : t('auth.twoFactor.subtitle')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="grid gap-4" onSubmit={vm.submitCode} noValidate>
+            {errorAlert}
+            <FormField
+              key={vm.codeKind}
+              label={backup ? t('auth.twoFactor.backupCode') : t('auth.twoFactor.code')}
+              autoComplete="one-time-code"
+              inputMode={backup ? 'text' : 'numeric'}
+              autoCapitalize="none"
+              autoFocus
+              required
+              value={vm.code}
+              onChange={(event) => vm.setCode(event.target.value)}
+            />
+            <Button type="submit" size="lg" disabled={vm.submitting}>
+              {t('auth.twoFactor.submit')}
+            </Button>
+            <Button type="button" variant="link" onClick={vm.toggleCodeKind}>
+              {backup ? t('auth.twoFactor.useApp') : t('auth.twoFactor.useBackup')}
+            </Button>
+            <Button type="button" variant="ghost" onClick={vm.backToCredentials}>
+              {t('auth.twoFactor.back')}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="mx-auto max-w-sm">
       <CardHeader>
@@ -21,14 +69,11 @@ export function LoginPage() {
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={vm.submit} noValidate>
-          {vm.error && (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{t(`errors.${vm.error}`, t('errors.unknown'))}</AlertDescription>
-            </Alert>
-          )}
+          {errorAlert}
           <FormField
             label={t('auth.fields.identifier')}
-            autoComplete="username"
+            // `webauthn`: the browser may suggest saved passkeys in this field.
+            autoComplete="username webauthn"
             autoCapitalize="none"
             required
             value={vm.identifier}
@@ -45,6 +90,17 @@ export function LoginPage() {
           <Button type="submit" size="lg" disabled={vm.submitting}>
             {t('auth.login.submit')}
           </Button>
+          {vm.passkeysAvailable && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              disabled={vm.submitting}
+              onClick={vm.signInWithPasskey}
+            >
+              <KeyRound /> {t('auth.login.passkey')}
+            </Button>
+          )}
           <p className="text-sm text-muted-foreground">{t('auth.login.inviteOnly')}</p>
         </form>
       </CardContent>

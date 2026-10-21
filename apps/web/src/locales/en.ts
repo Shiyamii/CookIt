@@ -56,8 +56,20 @@ export const en = {
       title: 'Sign in',
       subtitle: 'Welcome back!',
       submit: 'Sign in',
+      passkey: 'Sign in with a passkey',
       inviteOnly:
         'No account? CookIt is invite-only: ask the person who runs this site for a link.',
+    },
+    twoFactor: {
+      title: 'Two-step verification',
+      subtitle: 'Enter the 6-digit code shown by your authenticator app.',
+      backupSubtitle: 'Enter one of the backup codes you saved. Each code works only once.',
+      code: 'Code',
+      backupCode: 'Backup code',
+      submit: 'Verify',
+      useBackup: 'Use a backup code instead',
+      useApp: 'Use the authenticator app instead',
+      back: 'Back',
     },
     register: {
       title: 'Create your account',
@@ -72,6 +84,8 @@ export const en = {
       title: 'Choose a new password',
       submit: 'Save the password',
       done: 'Your password has been changed. You were signed out from every device.',
+      secondFactor:
+        'This also turns off two-step verification and removes your passkeys: you can set them up again afterwards.',
     },
     invalidLink: {
       title: 'This link does not work',
@@ -80,6 +94,72 @@ export const en = {
     menu: {
       label: 'Account',
       signOut: 'Sign out',
+    },
+  },
+  account: {
+    security: {
+      title: 'Security',
+      recovery:
+        'Lost your phone and your backup codes? Ask an administrator for a password reset link: it turns off two-step verification and removes your passkeys.',
+    },
+    password: {
+      title: 'Password',
+      current: 'Current password',
+      currentRequired: 'Enter your current password.',
+      submit: 'Change the password',
+      done: 'Password changed. Your other devices were signed out.',
+    },
+    twoFactor: {
+      title: 'Two-step verification',
+      description:
+        'After your password, a code from an authenticator app (Aegis, 2FAS, Google Authenticator…) is asked at sign-in.',
+      on: 'On',
+      off: 'Off',
+      enable: 'Turn on',
+      disable: 'Turn off',
+      regenerate: 'New backup codes',
+      continue: 'Continue',
+      confirm: {
+        enable: 'Enter your password to set up two-step verification.',
+        disable: 'Enter your password to turn off two-step verification.',
+        regenerate:
+          'Enter your password to get new backup codes. The current ones will stop working.',
+      },
+      setup: {
+        scan: 'Scan this QR code with your authenticator app (or type the key below).',
+        enterCode: 'Enter the 6-digit code the app shows to finish.',
+        qrLabel: 'QR code for the authenticator app',
+        manual: 'Key for manual entry',
+        activate: 'Turn on',
+      },
+      codes: {
+        intro:
+          'Save these backup codes somewhere safe (password manager, paper). Each one lets you sign in once without your phone. They are only shown now.',
+        saved: 'I saved them',
+      },
+    },
+    passkeys: {
+      title: 'Passkeys',
+      description:
+        'Sign in without a password, with your fingerprint, face, PIN or a security key. A passkey only works on this website.',
+      empty: 'No passkey yet.',
+      added: 'Passkey added. You can now use it to sign in.',
+      unnamed: 'Passkey',
+      created: 'Added on {{date}}',
+      synced: 'synced',
+      name: 'Name',
+      newName: 'Name of the new passkey',
+      newNameHint: 'Optional, e.g. "My phone".',
+      passwordHint: 'Your password, to confirm it is you.',
+      invalidName: 'At most 64 characters.',
+      add: 'Add a passkey',
+      save: 'Save',
+      rename: 'Rename',
+      delete: 'Delete',
+      deleteTitle: 'Delete "{{name}}"?',
+      deleteText:
+        'You will not be able to sign in with it anymore. Also remove it from your device or password manager.',
+      unsupported: 'This browser does not support passkeys.',
     },
   },
   admin: {
@@ -135,6 +215,25 @@ export const en = {
     not_found: 'Not found: the page may be out of date.',
     forbidden: 'You are not allowed to do this.',
     unauthorized: 'Please sign in again.',
+    INVALID_CODE: 'Wrong code. Check the time on your phone and try again.',
+    INVALID_BACKUP_CODE: 'Wrong or already used backup code.',
+    TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: 'Too many wrong codes. Sign in again.',
+    INVALID_TWO_FACTOR_COOKIE: 'This sign-in took too long. Sign in again.',
+    ACCOUNT_TEMPORARILY_LOCKED: 'Too many wrong codes: try again in an hour.',
+    INVALID_PASSWORD: 'Wrong password.',
+    PASSWORD_TOO_SHORT: 'The password must be 10 to 128 characters long.',
+    PASSWORD_TOO_LONG: 'The password must be 10 to 128 characters long.',
+    TOTP_ALREADY_ENABLED: 'Two-step verification is already on.',
+    AUTHENTICATION_FAILED: 'This passkey was not accepted.',
+    PASSKEY_NOT_FOUND: 'This passkey is not known here: it may have been deleted.',
+    USER_VERIFICATION_REQUIRED:
+      'Your device must confirm it is you (PIN, fingerprint or face) to use a passkey.',
+    CHALLENGE_NOT_FOUND: 'This took too long. Try again.',
+    FAILED_TO_VERIFY_REGISTRATION: 'The passkey could not be added. Try again.',
+    last_sign_in_method: 'This is your only way to sign in: it must stay.',
+    passkey_cancelled: 'Cancelled.',
+    passkey_exists: 'This device already has a passkey for your account.',
+    passkey_failed: 'The passkey did not work. Try again.',
   },
   notFound: {
     title: 'Page not found',

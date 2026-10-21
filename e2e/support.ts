@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import {
   expect,
@@ -110,7 +111,7 @@ export async function signIn(page: Page, identifier: string, password: string) {
   await page.goto('/login');
   await page.getByLabel('Username or email').fill(identifier);
   await page.getByLabel('Password').fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 
 /**
@@ -143,4 +144,62 @@ export async function createResetLink(adminPage: Page, id: string): Promise<stri
   });
   if (res.status() !== 201) throw new Error(`Reset link creation failed: ${res.status()}`);
   return ((await res.json()) as { url: string }).url;
+}
+
+/** The current code of a TOTP secret (base32, as shown for manual entry), like an authenticator app. */
+export function totpCode(secret: string, at = Date.now()): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const char of secret.replace(/[\s=]/g, '').toUpperCase()) {
+    bits += alphabet.indexOf(char).toString(2).padStart(5, '0');
+  }
+  const key = Buffer.from(bits.match(/.{8}/g)?.map((byte) => parseInt(byte, 2)) ?? []);
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(at / 1000 / 30)));
+  const hmac = createHmac('sha1', key).update(counter).digest();
+  const offset = (hmac[hmac.length - 1] ?? 0) & 0xf;
+  const value = (hmac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000;
+  return value.toString().padStart(6, '0');
+}
+
+/**
+ * A virtual WebAuthn authenticator (Chromium only) for `page`: a platform authenticator with
+ * discoverable credentials that verifies the user (like a fingerprint) unless told otherwise.
+ *
+ * The virtual authenticator answers passkey autofill requests by itself (no user pick), so the
+ * sign-in page would sign in on load and race with clicks: autofill is reported unavailable unless
+ * `autofill: true` (set before the next navigation).
+ */
+export async function addVirtualAuthenticator(
+  page: Page,
+  options: { userVerified?: boolean; hasUserVerification?: boolean; autofill?: boolean } = {},
+): Promise<{
+  credentialCount: () => Promise<number>;
+  /** Whether the next ceremonies verify the user (PIN, fingerprint) or only check presence. */
+  setUserVerified: (verified: boolean) => Promise<void>;
+}> {
+  if (!options.autofill) {
+    await page.addInitScript(() => {
+      PublicKeyCredential.isConditionalMediationAvailable = () => Promise.resolve(false);
+    });
+  }
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('WebAuthn.enable');
+  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
+    options: {
+      protocol: 'ctap2',
+      transport: 'internal',
+      hasResidentKey: true,
+      hasUserVerification: options.hasUserVerification ?? true,
+      isUserVerified: options.userVerified ?? true,
+      automaticPresenceSimulation: true,
+    },
+  });
+  return {
+    credentialCount: async () =>
+      (await cdp.send('WebAuthn.getCredentials', { authenticatorId })).credentials.length,
+    setUserVerified: async (isUserVerified) => {
+      await cdp.send('WebAuthn.setUserVerified', { authenticatorId, isUserVerified });
+    },
+  };
 }

@@ -1,6 +1,6 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Database } from '../../db';
-import { account, passwordResets, session } from '../auth/auth.schema';
+import { account, passkey, passwordResets, session, twoFactor, user } from '../auth/auth.schema';
 
 export type PasswordResetRow = typeof passwordResets.$inferSelect;
 
@@ -8,8 +8,9 @@ export type PasswordResetRepository = {
   create(reset: typeof passwordResets.$inferInsert): Promise<void>;
   findByTokenHash(tokenHash: string): Promise<PasswordResetRow | undefined>;
   /**
-   * In one transaction: consumes the link (row locked), sets the new password and signs the user
-   * out everywhere. False if the link is unknown, used or expired.
+   * In one transaction: consumes the link (row locked), sets the new password, turns 2FA off,
+   * removes the passkeys and signs the user out everywhere (plan §5.1 bis: the reset is the way
+   * back in after losing the second factor). False if the link is unknown, used or expired.
    */
   consume(tokenHash: string, passwordHash: string, now: Date): Promise<boolean>;
 };
@@ -58,6 +59,9 @@ export function createPasswordResetRepository(db: Database): PasswordResetReposi
             password: passwordHash,
           });
         }
+        await tx.delete(twoFactor).where(eq(twoFactor.userId, reset.userId));
+        await tx.update(user).set({ twoFactorEnabled: false }).where(eq(user.id, reset.userId));
+        await tx.delete(passkey).where(eq(passkey.userId, reset.userId));
         await tx.delete(session).where(eq(session.userId, reset.userId));
         // This link and any other pending one of the user.
         await tx
