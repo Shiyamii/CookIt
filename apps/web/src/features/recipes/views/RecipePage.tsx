@@ -1,5 +1,5 @@
 import type { RecipeVisibility } from '@cookit/shared';
-import { Check, Copy, Minus, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Check, Copy, Download, Minus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Markdown } from '@/components/Markdown';
@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,8 +45,9 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
     <article className="grid grid-cols-1 gap-6">
       <header className="grid gap-3">
         <h1 className="text-3xl font-semibold wrap-anywhere">{recipe.title}</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           {vm.isOwner ? t('recipes.yours') : t('recipes.by', { name: vm.ownerName })}
+          {vm.incomplete && <Badge variant="secondary">{t('recipes.incomplete')}</Badge>}
         </p>
         {recipe.description && (
           <div className="text-muted-foreground">
@@ -196,6 +198,10 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
           </div>
         </section>
       )}
+
+      <Button variant="outline" className="justify-self-start" onClick={vm.exportMarkdown}>
+        <Download /> {t('recipes.exportOne')}
+      </Button>
 
       {vm.canCopy && (
         <Button

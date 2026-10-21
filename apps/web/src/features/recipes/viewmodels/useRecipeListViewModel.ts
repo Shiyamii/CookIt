@@ -2,6 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTagCatalog } from '@/features/catalog/viewmodels/useCatalogs';
 import { useSearchParams } from 'react-router';
+import { EXPORT_ALL_URL } from '../model/importing';
 import { fetchGallery, fetchMyRecipes, RECIPES_QUERY_KEY } from '../model/recipes';
 
 const SEARCH_DELAY_MS = 300;
@@ -83,5 +84,6 @@ export function useRecipeListViewModel(kind: 'mine' | 'gallery') {
     hasMore: query.hasNextPage,
     loadingMore: query.isFetchingNextPage,
     loadMore: () => void query.fetchNextPage(),
+    exportAllUrl: EXPORT_ALL_URL,
   };
 }

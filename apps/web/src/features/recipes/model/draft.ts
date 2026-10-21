@@ -77,3 +77,22 @@ export function clearDrafts(): void {
     // Nothing to do.
   }
 }
+
+/** A draft that is not markdown (the wizard's state), under the same rules. */
+export function loadJsonDraft<T>(key: string): T | undefined {
+  try {
+    const value = localStorage.getItem(PREFIX + key);
+    return value ? (JSON.parse(value) as T) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function saveJsonDraft(key: string, value: unknown): void {
+  try {
+    const json = JSON.stringify(value);
+    if (json.length <= MAX_LENGTH) localStorage.setItem(PREFIX + key, json);
+  } catch {
+    // Storage full or blocked: the draft is only a convenience.
+  }
+}

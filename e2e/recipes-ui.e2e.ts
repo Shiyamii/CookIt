@@ -252,7 +252,7 @@ test.describe('drafts', () => {
     page: adminPage,
   }) => {
     const { page } = await newMember(browser, adminPage, 'draftA');
-    await page.goto('/recipes/new');
+    await page.goto('/recipes/new/editor');
     await page.getByLabel('Title').fill('Secret de A');
     await page.waitForTimeout(1200);
     const stored = await page.evaluate(() => Object.keys(localStorage));
@@ -262,7 +262,7 @@ test.describe('drafts', () => {
     const invite = await createInvite(adminPage);
     await page.context().clearCookies();
     await registerWithApi(page.request, invite, uniqueName('draftB'));
-    await page.goto('/recipes/new');
+    await page.goto('/recipes/new/editor');
     await expect(page.getByLabel('Title')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Restore them' })).toHaveCount(0);
     const left = await page.evaluate(() => JSON.stringify(Object.entries(localStorage)));

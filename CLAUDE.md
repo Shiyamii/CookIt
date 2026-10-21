@@ -157,6 +157,16 @@ When recipes are stored (phase 4): Zod schemas for the columns must refuse line 
 - `GET /api/v1/units` and `GET /api/v1/tags` are public (needed to read and scale public recipes); admin routes under `/api/v1/admin/units`, `/admin/tags`, `/admin/tag-categories`. Deleting a used tag needs `{ confirm: true }` or `{ mergeInto }` (409 `tag_in_use` with `recipeCount` otherwise); a category must be empty to be deleted; a duplicate normalized alias is a 409 `alias_conflict`.
 - Lists filter by tag slugs (`?tags=a,b`, all required). Labels are shown with `labelFor` (interface language, then the others, then the slug); the front reads the interface language with `i18n.resolvedLanguage` (`i18n.language` can be `en-US`).
 
+## Creation, import and export (phase 5)
+
+- "Add a recipe" (`/recipes/new`): quick creation (title + servings, body `---`, then the editor), the wizard (`/recipes/new/wizard`, `model/wizard.ts`), import (`/recipes/import`), the blank editor (`/recipes/new/editor`). Wizard and import pages are lazy-loaded.
+- Pure, deterministic helpers in `packages/shared/src/import/`: `splitIngredients` / `splitSteps` (pasted text), `detectDurations` (FR/EN; a range proposes its high value and keeps `lowSeconds`), `extractJsonLd` / `findRecipe` / `recipeFromJsonLd` (schema.org → document; missing servings are left out, never invented). `reviewTags` in `tags.ts` is the "Validate tags" step (by slug, then by label in any language; ambiguous; ignored).
+- Every import goes through a preview and the tag step, then `POST /api/v1/recipes/markdown` with `tagIds` (one recipe at a time). Files are read in the browser with limits checked before reading/inflating (`IMPORT_LIMITS`, fflate `unzipSync` filter on declared sizes).
+- Export: one `.md` built in the browser (`composeRecipeMarkdown` with `includeTags`: slugs, `format:`), all recipes as a zip built by the server (`GET /api/v1/recipes/export`, fflate).
+- **Import by URL** (`POST /api/v1/import/url`, signed in, rate limited): `lib/safe-fetch.ts` is the only way the server fetches a user-given URL: http(s) on standard ports, no credentials, every resolved address checked against `BlockList` (private, loopback, link-local, reserved, IPv6 local, IPv4-mapped), connection pinned to the checked address (`lookup`), redirects re-checked (max 3), 10 s, 2 MB, `Accept-Encoding: identity`, HTML only. Unit-tested with a fake resolver and transport; e2e only covers refusals (no internet in tests).
+- `recipes.has_steps` (computed on every save) gives `incomplete` ("to complete") in lists and details.
+- Zod, `zod-config.ts` and `packages/shared` are forced into one chunk (`vite.config.ts`, `advancedChunks`): split across chunks, shared schemas were created before `jitless` was set and Zod's eval probe broke the CSP. The e2e CSP test visits every page, lazy ones included.
+
 ## Accounts (phase 3)
 
 - **Better Auth** (`apps/server/src/modules/auth/auth.ts`) handles sessions, sign-in (email or username), sign-out and password changes, mounted at `/api/v1/auth`. Only an **allowlist** of its routes is reachable (`auth.controller.ts`); `update-user` only accepts `name` / `locale` (`updateProfileInputSchema`). Its own sign-up is disabled.

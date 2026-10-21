@@ -8,6 +8,7 @@ import {
   recipeVisibilityInputSchema,
   sharedRecipeInputSchema,
 } from '@cookit/shared';
+import { strToU8, zipSync } from 'fflate';
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import type { AppEnv } from '../../http/app-env';
@@ -63,6 +64,19 @@ export function createRecipesController(deps: {
     const input = await parseJson(c, sharedRecipeInputSchema);
     if (!input.ok) return input.response;
     return respond(c, await deps.recipes.getShared(input.data.token, c.var.user?.id ?? null));
+  });
+
+  // "Export all my recipes": a zip of `.md` files (built in memory: a library is small).
+  app.get('/api/v1/recipes/export', requireUser, async (c) => {
+    const files = await deps.recipes.exportAll(userId(c));
+    const zip = zipSync(
+      Object.fromEntries(files.map((file) => [file.name, strToU8(file.markdown)])),
+      { level: 6 },
+    );
+    return c.body(zip, 200, {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': 'attachment; filename="cookit-recipes.zip"',
+    });
   });
 
   // A recipe from its id: its owner, or anyone for a public recipe.

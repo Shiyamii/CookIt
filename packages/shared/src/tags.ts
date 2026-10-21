@@ -133,3 +133,48 @@ export const DEFAULT_TAG_CATEGORIES: {
     ],
   },
 ];
+
+/**
+ * The "Validate tags" step of every import (plan §4): each value found (the `tags:` line, or the
+ * keywords of a web page) is compared with the list, by slug then by label in any language.
+ * Recognized tags are proposed checked; a label matching several tags asks to choose; unknown
+ * values are shown as ignored. Tags are never created by an import.
+ */
+export type TagReview = {
+  recognized: Tag[];
+  ambiguous: { value: string; candidates: Tag[] }[];
+  ignored: string[];
+};
+
+export function reviewTags(
+  categories: readonly TagCategory[],
+  values: readonly string[],
+): TagReview {
+  const review: TagReview = { recognized: [], ambiguous: [], ignored: [] };
+  const seen = new Set<string>();
+  for (const raw of values) {
+    const value = raw.trim();
+    const key = fold(value);
+    if (!value || seen.has(key)) continue;
+    seen.add(key);
+    const matches = matchTags(categories, value);
+    if (matches.length === 1 && matches[0]) {
+      if (!review.recognized.some((tag) => tag.id === matches[0]?.id)) {
+        review.recognized.push(matches[0]);
+      }
+    } else if (matches.length > 1) {
+      review.ambiguous.push({ value, candidates: matches });
+    } else {
+      review.ignored.push(value);
+    }
+  }
+  return review;
+}
+
+/** Values of a `tags:` line or a keywords field: comma or semicolon separated. */
+export function splitTagValues(text: string): string[] {
+  return text
+    .split(/[,;]/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}

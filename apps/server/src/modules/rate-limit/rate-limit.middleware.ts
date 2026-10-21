@@ -13,6 +13,8 @@ export const RATE_LIMITS = {
   passwordCheckPerIp: { name: 'password-check:ip', limit: 10, windowSeconds: 15 * 60 },
   twoFactorPerIp: { name: 'two-factor:ip', limit: 20, windowSeconds: 15 * 60 },
   passkeySignInPerIp: { name: 'passkey-sign-in:ip', limit: 60, windowSeconds: 10 * 60 },
+  // Each import makes the server fetch a page: kept low.
+  importUrlPerIp: { name: 'import-url:ip', limit: 20, windowSeconds: 10 * 60 },
 } satisfies Record<string, RateLimitRule>;
 
 /**

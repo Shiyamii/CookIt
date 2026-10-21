@@ -13,6 +13,7 @@ import { createPasswordResetController } from './modules/password-reset/password
 import { createRecipesController } from './modules/recipes/recipes.controller';
 import { createTagsController } from './modules/tags/tags.controller';
 import { createUnitsController } from './modules/units/units.controller';
+import { createImportController } from './modules/import/import.controller';
 import { createSystemController } from './modules/system/system.controller';
 import { createUsersController } from './modules/users/users.controller';
 
@@ -30,6 +31,7 @@ export function createApp(container: Container) {
   app.route('/', createPasswordResetController(container));
   app.route('/', createUsersController(container));
   app.route('/', createRecipesController(container));
+  app.route('/', createImportController(container));
   app.route('/', createTagsController(container));
   app.route('/', createUnitsController(container));
 

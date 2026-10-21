@@ -22,13 +22,22 @@ export type RecipeRow = {
   extraMeta: Record<string, string>;
   bodyMarkdown: string;
   tagIds: string[];
+  hasSteps: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
 
 export type RecipeListRow = Pick<
   RecipeRow,
-  'id' | 'lang' | 'title' | 'description' | 'servings' | 'visibility' | 'ownerName' | 'updatedAt'
+  | 'id'
+  | 'lang'
+  | 'title'
+  | 'description'
+  | 'servings'
+  | 'visibility'
+  | 'ownerName'
+  | 'hasSteps'
+  | 'updatedAt'
 >;
 
 /** What a save writes: the columns of part 1 and the body. */
@@ -41,6 +50,7 @@ export type RecipeContent = {
   extraMeta: Record<string, string>;
   bodyMarkdown: string;
   searchText: string;
+  hasSteps: boolean;
 };
 
 export type NewRecipe = RecipeContent & {
@@ -81,6 +91,8 @@ export type RecipesRepository = {
   delete(id: string): Promise<void>;
   listByOwner(ownerId: string, query: ListQuery): Promise<RecipeListRow[]>;
   listPublic(query: ListQuery): Promise<RecipeListRow[]>;
+  /** Every recipe of the owner, complete (export of all recipes), oldest first. */
+  listAllByOwner(ownerId: string): Promise<RecipeRow[]>;
 };
 
 /** The base-language translation of each recipe. */
@@ -100,6 +112,7 @@ const rowColumns = {
   shareToken: recipes.shareToken,
   sourceUrl: recipes.sourceUrl,
   copiedFromId: recipes.copiedFromId,
+  hasSteps: recipes.hasSteps,
   title: recipeTranslations.title,
   description: recipeTranslations.description,
   extraMeta: recipeTranslations.extraMeta,
@@ -116,6 +129,7 @@ const listColumns = {
   servings: recipes.servings,
   visibility: recipes.visibility,
   ownerName: user.name,
+  hasSteps: recipes.hasSteps,
   updatedAt: recipes.updatedAt,
 };
 
@@ -190,6 +204,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         servings: recipe.servings,
         sourceUrl: recipe.sourceUrl,
         copiedFromId: recipe.copiedFromId ?? null,
+        hasSteps: recipe.hasSteps,
         createdAt: recipe.now,
         updatedAt: recipe.now,
       });
@@ -252,6 +267,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
             slug: content.slug,
             servings: content.servings,
             sourceUrl: content.sourceUrl,
+            hasSteps: content.hasSteps,
             updatedAt: options.now,
           })
           .where(eq(recipes.id, id));
@@ -286,5 +302,24 @@ export function createRecipesRepository(db: Database): RecipesRepository {
     listByOwner: (ownerId, query) => list(eq(recipes.ownerId, ownerId), query),
 
     listPublic: (query) => list(eq(recipes.visibility, 'public'), query),
+
+    async listAllByOwner(ownerId) {
+      const rows = await db
+        .select(rowColumns)
+        .from(recipes)
+        .innerJoin(recipeTranslations, baseTranslation)
+        .innerJoin(user, eq(user.id, recipes.ownerId))
+        .where(eq(recipes.ownerId, ownerId))
+        .orderBy(recipes.createdAt, recipes.id);
+      const links = await db
+        .select({ recipeId: recipeTags.recipeId, tagId: recipeTags.tagId })
+        .from(recipeTags)
+        .innerJoin(recipes, eq(recipes.id, recipeTags.recipeId))
+        .where(eq(recipes.ownerId, ownerId));
+      return rows.map((row) => ({
+        ...row,
+        tagIds: links.filter((link) => link.recipeId === row.id).map((link) => link.tagId),
+      }));
+    },
   };
 }

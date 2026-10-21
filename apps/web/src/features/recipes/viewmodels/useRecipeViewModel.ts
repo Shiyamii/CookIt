@@ -6,7 +6,9 @@ import { errorCode } from '@/lib/api';
 import { useLinkToken } from '@/features/auth/viewmodels/useLinkToken';
 import { useSession } from '@/features/auth/viewmodels/useSession';
 import { useTagCatalog, useUnitCatalog } from '@/features/catalog/viewmodels/useCatalogs';
+import { composeRecipeMarkdown } from '@cookit/shared';
 import { displayRecipe, durationText, parseDetail, sourceLink } from '../model/display';
+import { downloadText, markdownFileName } from '../model/importing';
 import {
   copyRecipe,
   deleteRecipe,
@@ -149,5 +151,26 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
     cancelDelete: () => setConfirmDelete(false),
     deleteRecipe: () => removal.mutate(),
     addToLibrary: () => copy.mutate(),
+    incomplete: detail?.incomplete ?? false,
+    /** The recipe as a `.md` file, with its tags (neutral slugs) and the format version. */
+    exportMarkdown: () => {
+      if (!detail) return;
+      const slugs = new Map(
+        catalog.categories.flatMap((category) => category.tags.map((tag) => [tag.id, tag.slug])),
+      );
+      const markdown = composeRecipeMarkdown(
+        {
+          title: detail.title,
+          description: detail.description,
+          servings: detail.servings,
+          source: detail.source ?? undefined,
+          extraMeta: detail.extraMeta,
+          tags: detail.tagIds.flatMap((id) => slugs.get(id) ?? []),
+        },
+        detail.body,
+        { locale: detail.lang, includeTags: true },
+      );
+      downloadText(markdownFileName(detail.title), markdown);
+    },
   };
 }

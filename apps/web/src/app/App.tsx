@@ -11,6 +11,7 @@ import { RegisterPage } from '@/features/auth/views/RegisterPage';
 import { RequireAccess } from '@/features/auth/views/RequireAccess';
 import { ResetPasswordPage } from '@/features/auth/views/ResetPasswordPage';
 import { HomePage } from '@/features/system/views/HomePage';
+import { AddRecipePage } from '@/features/recipes/views/AddRecipePage';
 import { RecipeListPage } from '@/features/recipes/views/RecipeListPage';
 import { RecipePage } from '@/features/recipes/views/RecipePage';
 import { NotFoundPage } from '@/features/system/views/NotFoundPage';
@@ -23,6 +24,13 @@ const queryClient = new QueryClient({
 // The editor (CodeMirror, drag and drop) is only downloaded when opened.
 const editorPage = async () => ({
   Component: (await import('@/features/recipes/views/RecipeEditorPage')).RecipeEditorPage,
+});
+
+const wizardPage = async () => ({
+  Component: (await import('@/features/recipes/views/WizardPage')).WizardPage,
+});
+const importPage = async () => ({
+  Component: (await import('@/features/recipes/views/ImportPage')).ImportPage,
 });
 
 const router = createBrowserRouter([
@@ -40,7 +48,10 @@ const router = createBrowserRouter([
         element: <RequireAccess level="user" />,
         children: [
           { index: true, element: <RecipeListPage kind="mine" /> },
-          { path: 'new', lazy: editorPage },
+          { path: 'new', element: <AddRecipePage /> },
+          { path: 'new/editor', lazy: editorPage },
+          { path: 'new/wizard', lazy: wizardPage },
+          { path: 'import', lazy: importPage },
           { path: ':id/edit', lazy: editorPage },
         ],
       },

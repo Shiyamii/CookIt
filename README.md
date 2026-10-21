@@ -140,6 +140,8 @@ bun run parse my-recipe.md --canonical   # canonical form, as exported
 
 **My recipes** lists and searches your recipes; **New recipe** opens the editor: a visual editor (form, groups, drag and drop, timers inserted at the cursor, adjustable quantities) or a markdown editor, switchable at any time without losing anything, plus a preview. Each recipe is private, unlisted (readable with its share link) or public (listed in the **Gallery**, readable without an account). A recipe of someone else can be added to your library as an independent copy. Recipes get tags from a common list (by category: dish type, diet, cuisine…), used as filters in lists.
 
+**Add a recipe** offers a quick creation (title and servings, completed later), a step-by-step wizard (paste the ingredients and the steps; durations like "10 min" or "1h30" become timers), the import of markdown (pasted, a `.md` file or a zip) or of a recipe web page (schema.org), and the full editor. Every import shows a preview and asks to validate the tags. Each recipe can be exported as a `.md` file, and all your recipes as a zip.
+
 The admin manages **Categories and tags** and **Units** from the account menu. Units are data: their ways of writing (`c. à soupe`, `CaS`, `tbsp`…) are recognized in any language and decide how quantities are rounded; changing them never changes recipe texts.
 
 ### First admin and accounts

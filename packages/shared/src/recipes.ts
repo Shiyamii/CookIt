@@ -122,6 +122,21 @@ export const sharedRecipeInputSchema = z.object({ token: shareTokenSchema }).str
 /** "Add to my library": the share token is needed for an unlisted recipe. */
 export const recipeCopyInputSchema = z.object({ token: shareTokenSchema.optional() }).strict();
 
+/** Import by URL: a web page with a schema.org Recipe. */
+export const importUrlInputSchema = z
+  .object({ url: z.string().trim().min(1).max(2000), lang: z.enum(SUPPORTED_LOCALES) })
+  .strict();
+
+export const IMPORT_ERRORS = [
+  'invalid_url',
+  'blocked_address',
+  'fetch_failed',
+  'too_large',
+  'timeout',
+  'not_html',
+  'no_recipe',
+] as const;
+
 export const recipeSearchSchema = z.object({
   q: z.string().trim().max(RECIPE_SEARCH_MAX).optional(),
   /** Tag slugs, comma-separated: recipes having all of them. */
@@ -149,6 +164,8 @@ export type RecipeSummary = {
   servings: number;
   visibility: RecipeVisibility;
   ownerName: string;
+  /** No step yet ("to complete"): cannot be cooked. */
+  incomplete: boolean;
   updatedAt: string;
 };
 
@@ -173,6 +190,8 @@ export type RecipeDetail = {
   /** Set when this recipe was copied from another one ("add to my library"). */
   copiedFromId: string | null;
   tagIds: string[];
+  /** No step yet ("to complete"). */
+  incomplete: boolean;
   createdAt: string;
   updatedAt: string;
 };

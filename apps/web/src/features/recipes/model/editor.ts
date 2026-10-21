@@ -80,7 +80,8 @@ function groupsFrom(groups: (IngredientGroup | StepGroup)[]): EditorGroup[] {
       raw: item.raw,
     })),
   }));
-  return result.length ? result : [{ id: newId(), name: undefined, rows: [] }];
+  // An empty part (quick creation) gets one empty line to type into (empty lines are not saved).
+  return result.length ? result : [{ id: newId(), name: undefined, rows: [newRow()] }];
 }
 
 export function fromDocument(document: RecipeDocument): EditorRecipe {

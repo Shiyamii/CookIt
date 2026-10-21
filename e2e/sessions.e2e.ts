@@ -332,7 +332,22 @@ test.describe('security headers', () => {
           console.error(`Content Security Policy violation: ${event.violatedDirective}`);
         });
       });
-      for (const path of ['/', '/admin/invites', '/admin/users', '/some/unknown/route']) {
+      for (const path of [
+        '/',
+        '/admin/invites',
+        '/admin/users',
+        '/admin/tags',
+        '/admin/units',
+        '/account/security',
+        '/recipes',
+        '/gallery',
+        // Lazily loaded pages (their own chunks).
+        '/recipes/new',
+        '/recipes/new/editor',
+        '/recipes/new/wizard',
+        '/recipes/import',
+        '/some/unknown/route',
+      ]) {
         await page.goto(path);
         await page.getByRole('heading').first().waitFor();
       }

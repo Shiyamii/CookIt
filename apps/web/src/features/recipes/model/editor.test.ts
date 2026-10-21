@@ -138,3 +138,22 @@ describe('ingredient rows', () => {
     }
   });
 });
+
+describe('editor: empty parts', () => {
+  test('a recipe with empty ingredients and steps gets one empty row to type into', () => {
+    const recipe = editorOf('# Vide\n\nportions: 2\n\n---\n\n---\n');
+    expect(recipe.ingredientGroups).toHaveLength(1);
+    expect(recipe.ingredientGroups[0]?.rows).toHaveLength(1);
+    expect(recipe.ingredientGroups[0]?.rows[0]?.raw).toBe('');
+    expect(recipe.stepGroups[0]?.rows.map((r) => r.raw)).toEqual(['']);
+  });
+
+  test('the empty row is not saved: the body stays empty and parses again', () => {
+    const recipe = editorOf('# Vide\n\nportions: 2\n\n---\n\n---\n');
+    const body = toBody(recipe, 'fr');
+    expect(body).not.toContain('- ');
+    const reparsed = parseRecipe(toMarkdown(recipe, 'fr'));
+    if (!reparsed.ok) throw new Error(JSON.stringify(reparsed.diagnostics));
+    expect(reparsed.document.ingredientGroups.flatMap((g) => g.items)).toEqual([]);
+  });
+});

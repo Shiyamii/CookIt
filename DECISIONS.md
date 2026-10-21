@@ -125,3 +125,17 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Units and tags catalogs are public read-only routes**: public recipes are read and scaled without an account. Cached by the services (one process) and by the front (5 minutes, refreshed after admin edits).
 - **Admin ordering with up/down buttons** (no drag and drop on admin pages): short lists, and it keeps dnd-kit in the editor chunk only.
 - **Tag pickers as toggle buttons** (`aria-pressed`) for single and multiple categories; a single-choice category replaces the previous tag. A filter on an unknown tag slug matches nothing.
+
+## Phase 5: creation, import and export
+
+- **fflate** (zero dependency, ~8 kB used) for zips: built by the server for "export all", read in the browser for imports (lazy-loaded). Zip limits are checked from the declared sizes before inflating (no zip bomb).
+- **Imports are parsed and previewed in the browser**, then saved one recipe at a time through the existing `POST /recipes/markdown` (with the validated `tagIds`): no bulk import route to secure, the server still parses and checks everything.
+- **Import by URL fetched with Node's `http`/`https` and a pinned `lookup`** (no new dependency): the address checked after DNS resolution is the one connected to, so DNS rebinding cannot switch it to an internal one. Standard ports only, no compression accepted. The fetch function takes an injectable resolver and transport for unit tests; e2e tests only check refusals (no internet).
+- **The recipe language of an import is chosen on the import page** (default: the interface language): files do not carry it.
+- **Missing servings in a web page are not invented**: the document has no `portions:` line, the preview shows the error and the user fills it in.
+- **"To complete"** is a stored flag (`recipes.has_steps`, computed on every save; existing recipes filled by the migration from their body).
+- **Single export built in the browser** (the page already has the recipe and the tag catalog); "export all" on the server (one request, no N fetches).
+- **An empty part gets one empty line in the visual editor** (quick creation: something to type into); empty lines are never saved.
+- **Zod and shared code in one chunk** (Vite `advancedChunks`): with code splitting, the shared schemas were created before `jitless` was set, and Zod's `new Function` probe was reported by the CSP on every page.
+- **Untrusted page content is processed in linear time** (security review): a web page given to the import reaches shared code on the server, so group headings are detected with string checks (no backtracking regex: a line of 100 000 spaces took hours), JSON-LD blocks are found with an `indexOf` scan, and every text is bounded before any regex. Hostile inputs of that size now take a few milliseconds.
+- **SSRF hardening**: every IPv6 address whose first 64 bits are zero is refused (all forms embedding an IPv4 address), zones (`%eth0`) are stripped before checking, DNS resolution counts in the 10 s limit, refused responses are destroyed (not drained), and only our own error codes reach the client. Bun's `BlockList` panics on some overlapping IPv6 subnets: the zero-prefix rule is plain code.

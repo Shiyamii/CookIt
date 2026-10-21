@@ -1,4 +1,5 @@
-import { Lock, Plus, Search, Globe, Link2 } from 'lucide-react';
+import { Download, Lock, Plus, Search, Globe, Link2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import type { RecipeSummary } from '@cookit/shared';
@@ -103,6 +104,14 @@ export function RecipeListPage({ kind }: { kind: 'mine' | 'gallery' }) {
         ))}
       </ul>
 
+      {mine && vm.recipes.length > 0 && (
+        <Button asChild variant="outline" className="justify-self-start">
+          <a href={vm.exportAllUrl} download>
+            <Download /> {t('recipes.exportAll')}
+          </a>
+        </Button>
+      )}
+
       {vm.hasMore && (
         <Button
           variant="outline"
@@ -140,6 +149,11 @@ function RecipeCard({ recipe, showOwner }: { recipe: RecipeSummary; showOwner: b
         <span className="line-clamp-2 text-sm wrap-anywhere text-muted-foreground">
           {recipe.description}
         </span>
+      )}
+      {recipe.incomplete && (
+        <Badge variant="secondary" className="justify-self-start">
+          {t('recipes.incomplete')}
+        </Badge>
       )}
       <span className="text-xs text-muted-foreground">
         {t('recipes.servingsCount', { count: recipe.servings })}

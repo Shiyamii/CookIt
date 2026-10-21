@@ -55,6 +55,7 @@ function fakeRepository() {
     createdAt: r.now,
     updatedAt: r.now,
     searchText: r.searchText,
+    hasSteps: r.hasSteps,
   });
   const repository: RecipesRepository = {
     async create(recipe) {
@@ -102,6 +103,9 @@ function fakeRepository() {
       state.lastList = query;
       return [...rows.values()].filter((r) => r.visibility === 'public') as RecipeListRow[];
     },
+    async listAllByOwner(ownerId) {
+      return [...rows.values()].filter((r) => r.ownerId === ownerId);
+    },
   };
   return { repository, rows, state };
 }
@@ -122,6 +126,20 @@ function setup() {
         const known = unique.every((id) => /^t\d+$|^single-[ab]$/.test(id));
         const singles = unique.filter((id) => id.startsWith('single-')).length;
         return known && singles <= 1 ? unique : undefined;
+      },
+      async catalog() {
+        return [
+          {
+            id: 'c1',
+            slug: 'cat',
+            position: 0,
+            multiple: true,
+            labels: { fr: 'Cat' },
+            tags: [
+              { id: 't1', slug: 'tag-one', categoryId: 'c1', position: 0, labels: { fr: 'Un' } },
+            ],
+          },
+        ];
       },
       async idsOfSlugs(slugs) {
         return slugs.filter((slug) => slug.startsWith('tag-')).map((slug) => slug.slice(4));
@@ -531,5 +549,30 @@ describe('tags', () => {
     expect(s.state.lastList).toBeUndefined();
     await s.service.listMine(OWNER, search({ tags: ['tag-t1'] }));
     expect(s.state.lastList?.tagIds).toEqual(['t1']);
+  });
+});
+
+describe('export and "to complete"', () => {
+  test('a recipe without steps is incomplete; one with steps is not', async () => {
+    const s = setup();
+    const empty = await s.service.create(OWNER, { ...FIELDS, body: '---' });
+    const full = await s.service.create(OWNER, FIELDS);
+    if ('error' in empty || 'error' in full) throw new Error('create failed');
+    expect(await s.service.get(empty.id, OWNER)).toMatchObject({ incomplete: true });
+    expect(await s.service.get(full.id, OWNER)).toMatchObject({ incomplete: false });
+    const page = await s.service.listMine(OWNER, search());
+    expect(page.recipes.map((r) => r.incomplete).sort()).toEqual([false, true]);
+  });
+
+  test('exports one .md per recipe with the tags line and the format', async () => {
+    const s = setup();
+    const created = await s.service.create(OWNER, { ...FIELDS, tagIds: ['t1'] });
+    if ('error' in created) throw new Error('create failed');
+    const files = await s.service.exportAll(OWNER);
+    expect(files).toHaveLength(1);
+    expect(files[0]?.name).toBe('tarte-aux-pommes.md');
+    expect(files[0]?.markdown).toContain('tags: tag-one');
+    expect(files[0]?.markdown).toContain('format: 1');
+    expect(await s.service.exportAll('someone-else')).toEqual([]);
   });
 });

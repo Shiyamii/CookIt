@@ -1,5 +1,6 @@
 import {
   composeRecipeMarkdown,
+  type TagCategory,
   fold,
   parseRecipe,
   RECIPES_PAGE_SIZE,
@@ -82,6 +83,7 @@ export function createRecipesService(deps: {
   tags: {
     checkSelection(tagIds: readonly string[]): Promise<string[] | undefined>;
     idsOfSlugs(slugs: readonly string[]): Promise<string[]>;
+    catalog(): Promise<TagCategory[]>;
   };
   generateToken: () => string;
   newId?: () => string;
@@ -113,6 +115,7 @@ export function createRecipesService(deps: {
           : null,
       copiedFromId: row.copiedFromId,
       tagIds: row.tagIds,
+      incomplete: !row.hasSteps,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -142,6 +145,7 @@ export function createRecipesService(deps: {
     extraMeta: { ...document.extraMeta },
     bodyMarkdown: serializeBody(document, { locale: lang }),
     searchText: searchText(document),
+    hasSteps: document.stepGroups.some((group) => group.items.some((item) => item.kind === 'step')),
   });
 
   const slugFor = async (ownerId: string, title: string, current?: string) => {
@@ -214,8 +218,9 @@ export function createRecipesService(deps: {
   ): Promise<RecipePage> => {
     const found = await rows;
     return {
-      recipes: found.slice(0, RECIPES_PAGE_SIZE).map((row) => ({
+      recipes: found.slice(0, RECIPES_PAGE_SIZE).map(({ hasSteps, ...row }) => ({
         ...row,
+        incomplete: !hasSteps,
         updatedAt: row.updatedAt.toISOString(),
       })),
       hasMore: found.length > RECIPES_PAGE_SIZE,
@@ -356,6 +361,33 @@ export function createRecipesService(deps: {
         copiedFromId: row.id,
         tagIds: row.tagIds,
       });
+    },
+
+    /**
+     * "Export all my recipes" (plan §5.2): one `.md` file per recipe (`<slug>.md`), with the
+     * `tags:` line (neutral slugs) and the current `format:`.
+     */
+    async exportAll(userId: string): Promise<{ name: string; markdown: string }[]> {
+      const slugOf = new Map(
+        (await deps.tags.catalog()).flatMap((category) =>
+          category.tags.map((tag) => [tag.id, tag.slug] as const),
+        ),
+      );
+      return (await repository.listAllByOwner(userId)).map((row) => ({
+        name: `${row.slug}.md`,
+        markdown: composeRecipeMarkdown(
+          {
+            title: row.title,
+            description: row.description,
+            servings: row.servings,
+            source: row.sourceUrl ?? undefined,
+            extraMeta: row.extraMeta,
+            tags: row.tagIds.flatMap((id) => slugOf.get(id) ?? []),
+          },
+          row.bodyMarkdown,
+          { locale: row.lang, includeTags: true },
+        ),
+      }));
     },
 
     async listMine(userId: string, search: RecipeSearch): Promise<RecipePage> {

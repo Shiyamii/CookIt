@@ -244,6 +244,9 @@ test.describe('editor', () => {
   async function startRecipe(page: Page, title: string) {
     await page.goto('/recipes');
     await page.getByRole('link', { name: 'New recipe' }).click();
+    await page.getByRole('link', { name: /Full editor/ }).click();
+    // The editor is loaded on demand: wait for it (the previous page also has a Title field).
+    await expect(page.getByRole('heading', { name: 'New recipe' })).toBeVisible();
     await page.getByLabel('Title').fill(title);
     await page.getByLabel('Servings', { exact: true }).fill('4');
     const ingredient = page.getByTestId('ingredient-row').first();
@@ -330,7 +333,7 @@ test.describe('editor', () => {
     await page.getByRole('button', { name: 'Leave' }).click();
     await expect(page).toHaveURL(/\/gallery$/);
 
-    await page.goto('/recipes/new');
+    await page.goto('/recipes/new/editor');
     await page.getByRole('button', { name: 'Restore them' }).click();
     await expect(page.getByLabel('Title')).toHaveValue('Brouillon gardé');
   });

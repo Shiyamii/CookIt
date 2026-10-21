@@ -1,6 +1,7 @@
 import { RECIPE_VISIBILITIES } from '@cookit/shared';
 import { sql, type SQL } from 'drizzle-orm';
 import {
+  boolean,
   check,
   customType,
   index,
@@ -37,6 +38,8 @@ export const recipes = pgTable(
     sourceUrl: text('source_url'),
     // "Add to my library": the recipe this one was copied from (kept if the original goes).
     copiedFromId: text('copied_from_id'),
+    // No step yet: "to complete" in lists, cannot be cooked (derived from the body on save).
+    hasSteps: boolean('has_steps').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

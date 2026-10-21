@@ -266,7 +266,7 @@ export function useRecipeEditorViewModel() {
       }
       save.mutate();
     },
-    cancel: () => void navigate(isNew ? '/recipes' : `/recipes/${id}`),
+    cancel: () => void navigate(isNew ? '/recipes/new' : `/recipes/${id}`),
     // Draft left from a previous visit.
     draftSavedAt: draft?.savedAt,
     restoreDraft: () => {

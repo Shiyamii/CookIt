@@ -15,6 +15,8 @@ import { createTagsRepository } from './modules/tags/tags.repository';
 import { createTagsService } from './modules/tags/tags.service';
 import { createUnitsRepository } from './modules/units/units.repository';
 import { createUnitsService } from './modules/units/units.service';
+import { createImportService } from './modules/import/import.service';
+import { safeFetchHtml } from './lib/safe-fetch';
 import { createRateLimitRepository } from './modules/rate-limit/rate-limit.repository';
 import { createRateLimitService } from './modules/rate-limit/rate-limit.service';
 import { createSystemRepository } from './modules/system/system.repository';
@@ -54,6 +56,7 @@ export function createContainer(db: Database) {
       hashPassword,
     }),
     passwordReset,
+    importer: createImportService({ fetchHtml: (url) => safeFetchHtml(url) }),
     recipes: createRecipesService({
       repository: createRecipesRepository(db),
       origin: env.ORIGIN,
