@@ -162,7 +162,7 @@ argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` ch
 2. **Markdown parser + scaling** (pure module, no UI) with canonical serializer and round-trip tests. Units come from a catalog passed as a parameter (default catalog in `packages/shared`, FR + EN).
 3. **Accounts & invitations** — Better Auth, admin bootstrap, invites, admin pages, rate limiting.
    3b. **2FA & passkeys.**
-4. **Recipes** — CRUD, visual + markdown editors (lossless switch), visibilities, public gallery, "add to my library", search.
+4. **Recipes** — first set up **web unit tests** (`bun test` on the pure logic of `apps/web/src/features/*/model/`, resolving the `@/` alias), then CRUD, visual + markdown editors (lossless switch), visibilities, public gallery, "add to my library", search.
    4b. **Categories, tags & units** (admin pages; `units` table seeded from the shared catalog).
 5. **Creation & import/export** — quick create, wizard, markdown import, `.md`/zip export, URL import (JSON-LD) with SSRF protection.
    5b. **AI prompts** — import and translation prompts generated from code.
