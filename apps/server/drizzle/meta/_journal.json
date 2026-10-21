@@ -43,6 +43,13 @@
       "when": 1792576463008,
       "tag": "0005_recipes_has_steps",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792590800319,
+      "tag": "0006_cooking",
+      "breakpoints": true
     }
   ]
 }

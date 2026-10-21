@@ -21,6 +21,11 @@ export function MainNav() {
       <NavLink to="/gallery" className={linkClass}>
         {t('nav.gallery')}
       </NavLink>
+      {vm.signedIn && (
+        <NavLink to="/cook" className={linkClass}>
+          {t('nav.cook')}
+        </NavLink>
+      )}
     </nav>
   );
 }

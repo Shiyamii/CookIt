@@ -5,6 +5,8 @@ import { generateToken } from './lib/tokens';
 import { createAccountSecurityRepository } from './modules/account-security/account-security.repository';
 import { createAccountSecurityService } from './modules/account-security/account-security.service';
 import { createAuth } from './modules/auth/auth';
+import { createCookingRepository } from './modules/cooking/cooking.repository';
+import { createCookingService } from './modules/cooking/cooking.service';
 import { createInvitesRepository } from './modules/invites/invites.repository';
 import { createInvitesService } from './modules/invites/invites.service';
 import { createPasswordResetRepository } from './modules/password-reset/password-reset.repository';
@@ -56,6 +58,7 @@ export function createContainer(db: Database) {
       hashPassword,
     }),
     passwordReset,
+    cooking: createCookingService({ repository: createCookingRepository(db) }),
     importer: createImportService({ fetchHtml: (url) => safeFetchHtml(url) }),
     recipes: createRecipesService({
       repository: createRecipesRepository(db),

@@ -1,5 +1,15 @@
 import type { RecipeVisibility } from '@cookit/shared';
-import { Check, Copy, Download, Languages, Minus, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+  Check,
+  ChefHat,
+  Copy,
+  Download,
+  Languages,
+  Minus,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Markdown } from '@/components/Markdown';
@@ -161,6 +171,28 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
           </Button>
         )}
       </div>
+
+      {vm.canCook && (
+        <div className="grid gap-1.5">
+          {vm.incomplete ? (
+            <>
+              <Button size="lg" className="justify-self-start" disabled>
+                <ChefHat /> {t('recipes.cook')}
+              </Button>
+              <p className="text-sm text-muted-foreground">{t('recipes.cookIncomplete')}</p>
+            </>
+          ) : (
+            <Button size="lg" className="justify-self-start" asChild>
+              <Link to={vm.cookHref}>
+                <ChefHat /> {t('recipes.cook')}
+              </Link>
+            </Button>
+          )}
+        </div>
+      )}
+      {vm.signedIn && !vm.canCook && vm.canCopy && (
+        <p className="text-sm text-muted-foreground">{t('recipes.cookShared')}</p>
+      )}
 
       <RecipeContent recipe={recipe} durationText={vm.durationText} />
 

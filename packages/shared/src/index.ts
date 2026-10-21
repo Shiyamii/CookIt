@@ -1,6 +1,7 @@
 export const APP_NAME = 'CookIt';
 
 export * from './accounts';
+export * from './cooking';
 export * from './labels';
 export * from './locale';
 export * from './recipe/body';

@@ -35,6 +35,9 @@ const importPage = async () => ({
 const importAiPage = async () => ({
   Component: (await import('@/features/recipes/views/ImportPage')).ImportAiPage,
 });
+const cookPage = async () => ({
+  Component: (await import('@/features/cooking/views/CookPage')).CookPage,
+});
 const translationPage = async () => ({
   Component: (await import('@/features/recipes/views/TranslationPage')).TranslationPage,
 });
@@ -68,6 +71,11 @@ const router = createBrowserRouter([
       { path: 'gallery', element: <RecipeListPage kind="gallery" /> },
       // Unlisted recipes: `/shared#token=…`.
       { path: 'shared', element: <RecipePage source="shared" /> },
+      {
+        path: 'cook',
+        element: <RequireAccess level="user" />,
+        children: [{ index: true, lazy: cookPage }],
+      },
       {
         path: 'account',
         element: <RequireAccess level="user" />,

@@ -7,6 +7,7 @@ import { onError } from './http/errors';
 import { apiBodyLimit, noStore, sameOrigin, securityHeaders } from './http/security';
 import { createAccountSecurityController } from './modules/account-security/account-security.controller';
 import { createAuthController } from './modules/auth/auth.controller';
+import { createCookingController } from './modules/cooking/cooking.controller';
 import { sessionMiddleware } from './modules/auth/auth.middleware';
 import { createInvitesController } from './modules/invites/invites.controller';
 import { createPasswordResetController } from './modules/password-reset/password-reset.controller';
@@ -32,6 +33,7 @@ export function createApp(container: Container) {
   app.route('/', createUsersController(container));
   app.route('/', createRecipesController(container));
   app.route('/', createImportController(container));
+  app.route('/', createCookingController(container));
   app.route('/', createTagsController(container));
   app.route('/', createUnitsController(container));
 

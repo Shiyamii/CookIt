@@ -347,6 +347,7 @@ test.describe('security headers', () => {
         '/recipes/new/wizard',
         '/recipes/import',
         '/recipes/import/ai',
+        '/cook',
         // Unknown recipe: the translation page's chunk still loads (then "not found").
         '/recipes/00000000-0000-4000-8000-000000000000/translate/en',
         '/some/unknown/route',

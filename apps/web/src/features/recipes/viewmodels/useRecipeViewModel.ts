@@ -171,6 +171,19 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
     deleteRecipe: () => removal.mutate(),
     addToLibrary: () => copy.mutate(),
     incomplete: detail?.incomplete ?? false,
+    /**
+     * Cooking reads the recipe from its id: the owner's or a public one (an unlisted recipe of
+     * someone else is cooked from the reader's library).
+     */
+    canCook:
+      user !== null && detail !== undefined && (detail.isOwner || detail.visibility === 'public'),
+    cookHref: detail
+      ? `/cook?${new URLSearchParams({
+          recipe: detail.id,
+          servings: String(servings ?? document?.servings ?? detail.servings),
+          lang: detail.lang,
+        }).toString()}`
+      : '',
     /** The recipe as a `.md` file, with its tags (neutral slugs) and the format version. */
     exportMarkdown: () => {
       if (!detail) return;
