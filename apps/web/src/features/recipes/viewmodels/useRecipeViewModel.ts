@@ -1,7 +1,8 @@
-import type { RecipeVisibility } from '@cookit/shared';
+import type { Locale, RecipeVisibility } from '@cookit/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { errorCode } from '@/lib/api';
 import { useLinkToken } from '@/features/auth/viewmodels/useLinkToken';
 import { useSession } from '@/features/auth/viewmodels/useSession';
@@ -17,11 +18,13 @@ import {
   RECIPES_QUERY_KEY,
   setVisibility,
 } from '../model/recipes';
+import { missingLanguages, readingLanguage } from '../model/translation';
 
 /**
  * A recipe page: `/recipes/:id` (owner or public recipe) or `/shared#token=…` (unlisted share
  * link). Servings can be changed (quantities follow, timers don't); the owner manages visibility
- * and deletion; another signed-in user can add it to their library.
+ * and deletion; another signed-in user can add it to their library. Shown in the language
+ * chosen (`?lang=` when the page opens), else the interface's, else the base language.
  */
 export function useRecipeViewModel(source: 'id' | 'shared') {
   const { id = '' } = useParams();
@@ -33,13 +36,21 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string>();
+  const { i18n } = useTranslation();
+  const [searchParams] = useSearchParams();
+  // Kept in state, not in the URL: the share link carries its token in the fragment.
+  const [chosenLang, setChosenLang] = useState(() => searchParams.get('lang'));
+  const lang = readingLanguage(chosenLang, i18n.resolvedLanguage);
 
   const recipe = useQuery({
     queryKey:
       source === 'id'
-        ? [...RECIPES_QUERY_KEY, 'detail', id]
-        : [...RECIPES_QUERY_KEY, 'shared', token],
-    queryFn: () => (source === 'id' ? fetchRecipe(id) : fetchSharedRecipe(token)),
+        ? [...RECIPES_QUERY_KEY, 'detail', id, lang]
+        : [...RECIPES_QUERY_KEY, 'shared', token, lang],
+    queryFn: () => (source === 'id' ? fetchRecipe(id, lang) : fetchSharedRecipe(token, lang)),
+    // The same recipe in another language: keep showing it while the translation loads.
+    placeholderData: (previous) =>
+      source === 'shared' || previous?.id === id ? previous : undefined,
     enabled: source === 'id' ? id !== '' : token !== '',
     retry: false,
   });
@@ -120,6 +131,14 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
     recipe: display,
     tagGroups,
     lang: detail?.lang,
+    baseLang: detail?.baseLang,
+    /** Languages the recipe exists in (a choice is only offered when there are several). */
+    languages: detail?.languages ?? [],
+    chooseLanguage: (value: Locale) => setChosenLang(value),
+    /** Owner: languages to add a translation in. */
+    missingLanguages: detail?.isOwner ? missingLanguages(detail.languages) : [],
+    /** Shown in a translation (not the base language): edited through the translation screen. */
+    isTranslation: detail !== undefined && detail.lang !== detail.baseLang,
     ownerName: detail?.ownerName ?? '',
     isOwner: detail?.isOwner ?? false,
     canCopy: user !== null && detail !== undefined && !detail.isOwner,

@@ -52,6 +52,7 @@ function fakeRepository() {
     extraMeta: r.extraMeta,
     bodyMarkdown: r.bodyMarkdown,
     tagIds: r.tagIds,
+    translations: (r.translations ?? []).map((t) => ({ ...t })),
     createdAt: r.now,
     updatedAt: r.now,
     searchText: r.searchText,
@@ -105,6 +106,16 @@ function fakeRepository() {
     },
     async listAllByOwner(ownerId) {
       return [...rows.values()].filter((r) => r.ownerId === ownerId);
+    },
+    async saveTranslation(recipeId, lang, content) {
+      const row = rows.get(recipeId)!;
+      row.translations = [...row.translations.filter((t) => t.lang !== lang), { ...content, lang }];
+    },
+    async deleteTranslation(recipeId, lang) {
+      const row = rows.get(recipeId);
+      const before = row?.translations.length ?? 0;
+      if (row) row.translations = row.translations.filter((t) => t.lang !== lang);
+      return (row?.translations.length ?? 0) < before;
     },
   };
   return { repository, rows, state };
@@ -574,5 +585,143 @@ describe('export and "to complete"', () => {
     expect(files[0]?.markdown).toContain('tags: tag-one');
     expect(files[0]?.markdown).toContain('format: 1');
     expect(await s.service.exportAll('someone-else')).toEqual([]);
+  });
+});
+
+describe('translations', () => {
+  const EN =
+    '# Apple pie\n\nservings: 4\ntags: tag-one\n\n---\n\n### Base\n\n- 200 g flour\n- 2 eggs\n\n---\n\n1. Mix.\n2. Bake [10 min](timer:10m).\n';
+
+  test('a translation is saved without warning when the structure matches', async () => {
+    const s = setup();
+    const id = await created(s);
+    const result = await s.service.saveTranslation(id, OWNER, 'en', EN);
+    expect(result).toEqual({ updatedAt: expect.any(String), warnings: [] });
+    const row = s.rows.get(id)!;
+    expect(row.translations).toEqual([
+      expect.objectContaining({ lang: 'en', title: 'Apple pie', searchText: expect.any(String) }),
+    ]);
+    // Recipe-level data does not change: tags, servings.
+    expect(row.tagIds).toEqual([]);
+    expect(row.servings).toBe(4);
+  });
+
+  test('a structure mismatch is saved with readable warnings', async () => {
+    const s = setup();
+    const id = await created(s);
+    const result = await s.service.saveTranslation(
+      id,
+      OWNER,
+      'en',
+      EN.replace('2. Bake [10 min](timer:10m).\n', ''),
+    );
+    expect('warnings' in result && result.warnings.map((w) => w.code)).toEqual([
+      'translation_item_count',
+    ]);
+    expect(s.rows.get(id)!.translations).toHaveLength(1);
+  });
+
+  test('a translation that does not parse is refused', async () => {
+    const s = setup();
+    const id = await created(s);
+    const result = await s.service.saveTranslation(id, OWNER, 'en', 'no title');
+    expect(result).toMatchObject({ error: 'invalid_recipe' });
+    expect(s.rows.get(id)!.translations).toEqual([]);
+  });
+
+  test('the base language is not a translation; only the owner translates', async () => {
+    const s = setup();
+    const id = await created(s);
+    expect(await s.service.saveTranslation(id, OWNER, 'fr', EN)).toEqual({
+      error: 'base_language',
+    });
+    expect(await s.service.saveTranslation(id, OTHER, 'en', EN)).toEqual({ error: 'not_found' });
+    expect(await s.service.deleteTranslation(id, OWNER, 'fr')).toEqual({
+      error: 'base_language',
+    });
+  });
+
+  test('read in a language: that translation, else the base language', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.saveTranslation(id, OWNER, 'en', EN);
+    const en = await s.service.get(id, OWNER, 'en');
+    expect(en).toMatchObject({ lang: 'en', baseLang: 'fr', languages: ['fr', 'en'] });
+    expect('title' in en && en.title).toBe('Apple pie');
+    expect('body' in en && en.body).toContain('Bake');
+    const base = await s.service.get(id, OWNER);
+    expect(base).toMatchObject({ lang: 'fr', title: 'Tarte aux pommes' });
+    expect(await s.service.get(id, OTHER, 'en')).toEqual({ error: 'not_found' });
+  });
+
+  test('deleting a translation; a missing one is not found', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.saveTranslation(id, OWNER, 'en', EN);
+    expect(await s.service.deleteTranslation(id, OTHER, 'en')).toEqual({ error: 'not_found' });
+    expect(await s.service.deleteTranslation(id, OWNER, 'en')).toEqual({ ok: true });
+    expect(await s.service.deleteTranslation(id, OWNER, 'en')).toEqual({ error: 'not_found' });
+    expect(await s.service.get(id, OWNER, 'en')).toMatchObject({ lang: 'fr', languages: ['fr'] });
+  });
+
+  test('"add to my library" copies the translations', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.saveTranslation(id, OWNER, 'en', EN);
+    await s.service.setVisibility(id, OWNER, 'public');
+    const copy = await s.service.copy(id, OTHER, undefined);
+    if ('error' in copy) throw new Error('copy failed');
+    expect(await s.service.get(copy.id, OTHER, 'en')).toMatchObject({
+      lang: 'en',
+      title: 'Apple pie',
+      languages: ['fr', 'en'],
+    });
+  });
+
+  test('saving a translation keeps the recipe version, and replaces the previous translation', async () => {
+    const s = setup();
+    const id = await created(s);
+    const before = s.rows.get(id)!.updatedAt;
+    await s.service.saveTranslation(id, OWNER, 'en', EN);
+    await s.service.saveTranslation(id, OWNER, 'en', EN.replace('Apple pie', 'Pie'));
+    const row = s.rows.get(id)!;
+    expect(row.updatedAt).toEqual(before);
+    expect(row.translations).toHaveLength(1);
+    expect(row.translations[0]!.title).toBe('Pie');
+  });
+
+  test('a missing timer is reported as a warning', async () => {
+    const s = setup();
+    const id = await created(s);
+    const result = await s.service.saveTranslation(
+      id,
+      OWNER,
+      'en',
+      EN.replace('[10 min](timer:10m)', '10 min'),
+    );
+    expect('warnings' in result && result.warnings.map((w) => w.code)).toEqual([
+      'translation_timers',
+    ]);
+  });
+
+  test('a share link reads a translation too, else the base language', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.saveTranslation(id, OWNER, 'en', EN);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(await s.service.getShared(TOKEN, null, 'en')).toMatchObject({
+      lang: 'en',
+      title: 'Apple pie',
+    });
+    expect(await s.service.getShared(TOKEN, null)).toMatchObject({ lang: 'fr' });
+  });
+
+  test('a stranger cannot read or delete a translation of a private recipe', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.saveTranslation(id, OWNER, 'en', EN);
+    expect(await s.service.get(id, null, 'en')).toEqual({ error: 'not_found' });
+    expect(await s.service.deleteTranslation(id, OTHER, 'en')).toEqual({ error: 'not_found' });
+    expect(s.rows.get(id)!.translations).toHaveLength(1);
   });
 });

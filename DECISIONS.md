@@ -112,7 +112,7 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **`copied_from_id`** on recipes (not in the plan): "add to my library" remembers the original (no foreign key: the copy outlives it).
 - **Search**: `search_text` = title + description + ingredients with accents removed in code (Postgres `unaccent` is not immutable, so not usable in a generated column), indexed by a generated `tsvector` (French or English stemming per translation); each searched word is a prefix, all required.
 - **Optimistic concurrency** with `baseVersion` (the recipe's `updatedAt`): a save from a stale editor (another tab, another device) is a 409 with a "load the latest version" action, instead of silently overwriting.
-- **No cover image yet** (decided with the user: later phase, images need storage in Postgres and resizing). No tags (phase 4b) and only the base language (phase 5b).
+- **No cover image yet** (decided with the user: later phase, images need storage in Postgres and resizing). No tags (phase 4b) and only the base language (translations came in phase 5b).
 - **Deleting a user deletes their recipes** (cascade) for now; the plan's "choice of what happens to their recipes" comes with the admin pages of a later phase.
 - **Known limit**: CodeMirror on Android handles Enter through the real keyboard's input events, which Playwright's mobile emulation does not produce; the markdown editor is tested on desktop for typing.
 
@@ -139,3 +139,14 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Zod and shared code in one chunk** (Vite `advancedChunks`): with code splitting, the shared schemas were created before `jitless` was set, and Zod's `new Function` probe was reported by the CSP on every page.
 - **Untrusted page content is processed in linear time** (security review): a web page given to the import reaches shared code on the server, so group headings are detected with string checks (no backtracking regex: a line of 100 000 spaces took hours), JSON-LD blocks are found with an `indexOf` scan, and every text is bounded before any regex. Hostile inputs of that size now take a few milliseconds.
 - **SSRF hardening**: every IPv6 address whose first 64 bits are zero is refused (all forms embedding an IPv4 address), zones (`%eth0`) are stripped before checking, DNS resolution counts in the 10 s limit, refused responses are destroyed (not drained), and only our own error codes reach the client. Bun's `BlockList` panics on some overlapping IPv6 subnets: the zero-prefix rule is plain code.
+
+## Phase 5b: AI prompts and translations
+
+- **The prompt example is a real recipe parsed and re-serialized** (`promptExample`): the AI always sees the canonical form of the current format version, and a test parses the example taken out of each generated prompt. Its tags are taken from the database list (suitable ones if present), so the AI is never shown a tag that does not exist.
+- **The prompt is in the interface language; the recipe language is chosen separately** (the import page's language select): someone using the app in French can ask for an English recipe.
+- **AI answers are read from their longest code block**, or the whole text without one: assistants often add a sentence before or after.
+- **Translations are saved even when their structure differs**, with the warnings shown again after saving (plan §4); the cooking mode will decide on switching languages.
+- **A translation is the full document**, edited in the translation screen (a text area preloaded with the saved translation), not in the visual/markdown editors, which keep editing the base language. Servings, source and tags are the recipe's.
+- **Saving a translation does not touch the recipe's `updated_at`**: an editor open on the base language would otherwise get a false conflict. No `baseVersion` on translations (a replacement is explicit and rare).
+- **Lists, search and "export all" stay in the base language** for now; a single `.md` export is in the language shown. Importing files creates base-language recipes only.
+- **The chosen reading language is local state, not a URL change**: `/shared#token=…` keeps its token in the fragment, which a search-parameter navigation would drop. `?lang=` is only read when the page opens (links after saving a translation).

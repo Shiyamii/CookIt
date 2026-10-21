@@ -1,4 +1,5 @@
 import {
+  checkTranslationStructure,
   composeRecipeMarkdown,
   type TagCategory,
   fold,
@@ -17,7 +18,12 @@ import {
   type RecipeVisibility,
   type Unit,
 } from '@cookit/shared';
-import type { RecipeContent, RecipeRow, RecipesRepository } from './recipes.repository';
+import type {
+  RecipeContent,
+  RecipeRow,
+  RecipesRepository,
+  TranslationContent,
+} from './recipes.repository';
 
 /** A recipe that does not parse: the diagnostics say why (translated by the UI). */
 export type InvalidRecipe = { error: 'invalid_recipe'; diagnostics: Diagnostic[] };
@@ -25,9 +31,12 @@ export type NotFound = { error: 'not_found' };
 export type Conflict = { error: 'conflict' };
 /** Unknown tags, or two tags of a single-choice category. */
 export type InvalidTags = { error: 'invalid_tags' };
+/** The base language is changed by the editors, not as a translation. */
+export type BaseLanguage = { error: 'base_language' };
 
 const NOT_FOUND: NotFound = { error: 'not_found' };
 const INVALID_TAGS: InvalidTags = { error: 'invalid_tags' };
+const BASE_LANGUAGE: BaseLanguage = { error: 'base_language' };
 const SLUG_MAX = 80;
 const MAX_SEARCH_WORDS = 10;
 
@@ -95,17 +104,21 @@ export function createRecipesService(deps: {
 
   const shareUrl = (token: string) => `${deps.origin}/shared#token=${token}`;
 
-  const toDetail = (row: RecipeRow, viewerId: string | null): RecipeDetail => {
+  /** The recipe in `lang` when it has that translation, in its base language otherwise. */
+  const toDetail = (row: RecipeRow, viewerId: string | null, lang?: Locale): RecipeDetail => {
     const isOwner = row.ownerId === viewerId;
+    const shown = row.translations.find((translation) => translation.lang === lang) ?? row;
     return {
       id: row.id,
-      lang: row.lang,
-      title: row.title,
-      description: row.description,
+      lang: shown.lang,
+      baseLang: row.lang,
+      languages: [row.lang, ...row.translations.map((translation) => translation.lang)],
+      title: shown.title,
+      description: shown.description,
       servings: row.servings,
       source: row.sourceUrl,
-      extraMeta: row.extraMeta,
-      body: row.bodyMarkdown,
+      extraMeta: shown.extraMeta,
+      body: shown.bodyMarkdown,
       visibility: row.visibility,
       ownerName: row.ownerName,
       isOwner,
@@ -134,10 +147,7 @@ export function createRecipesService(deps: {
   const parseFields = (fields: RecipeFields, body: string, lang: Locale) =>
     parseDocument(composeRecipeMarkdown(fields, body, { locale: lang }));
 
-  const content = (document: RecipeDocument, lang: Locale, slug: string): RecipeContent => ({
-    slug,
-    servings: document.servings,
-    sourceUrl: document.source ?? null,
+  const translationContent = (document: RecipeDocument, lang: Locale): TranslationContent => ({
     title: document.title,
     description: document.description,
     // The parser builds it without prototype (no `__proto__` key can matter); Drizzle needs a
@@ -145,6 +155,13 @@ export function createRecipesService(deps: {
     extraMeta: { ...document.extraMeta },
     bodyMarkdown: serializeBody(document, { locale: lang }),
     searchText: searchText(document),
+  });
+
+  const content = (document: RecipeDocument, lang: Locale, slug: string): RecipeContent => ({
+    ...translationContent(document, lang),
+    slug,
+    servings: document.servings,
+    sourceUrl: document.source ?? null,
     hasSteps: document.stepGroups.some((group) => group.items.some((item) => item.kind === 'step')),
   });
 
@@ -170,7 +187,11 @@ export function createRecipesService(deps: {
     ownerId: string,
     document: RecipeDocument,
     lang: Locale,
-    options: { copiedFromId?: string | null; tagIds?: string[] } = {},
+    options: {
+      copiedFromId?: string | null;
+      tagIds?: string[];
+      translations?: (TranslationContent & { lang: Locale })[];
+    } = {},
   ): Promise<{ id: string }> => {
     // Two creations with the same title at once: the second one picks the next free slug.
     for (let attempt = 0; ; attempt++) {
@@ -183,12 +204,22 @@ export function createRecipesService(deps: {
         lang,
         copiedFromId: options.copiedFromId ?? null,
         tagIds: options.tagIds ?? [],
+        translations: options.translations,
         now: now(),
       });
       if (result === 'ok') return { id };
       if (attempt >= 2) throw new Error('No free slug');
     }
   };
+
+  /** Part 1 columns of the base language, as the editors and the parser see them. */
+  const baseFields = (row: RecipeRow): RecipeFields => ({
+    title: row.title,
+    description: row.description,
+    servings: row.servings,
+    source: row.sourceUrl ?? undefined,
+    extraMeta: row.extraMeta,
+  });
 
   /** The recipe if `userId` owns it (others get not_found, never forbidden). */
   const owned = async (id: string, userId: string) => {
@@ -263,19 +294,67 @@ export function createRecipesService(deps: {
       return insert(ownerId, parsed.document, input.lang, tags);
     },
 
-    /** A recipe as `viewerId` (null: anonymous) may read it from its id: owner or public. */
-    async get(id: string, viewerId: string | null): Promise<RecipeDetail | NotFound> {
+    /**
+     * A recipe as `viewerId` (null: anonymous) may read it from its id: owner or public. In `lang`
+     * when it has that translation, in its base language otherwise.
+     */
+    async get(
+      id: string,
+      viewerId: string | null,
+      lang?: Locale,
+    ): Promise<RecipeDetail | NotFound> {
       const row = await repository.findById(id);
       if (!row) return NOT_FOUND;
       if (row.ownerId !== viewerId && row.visibility !== 'public') return NOT_FOUND;
-      return toDetail(row, viewerId);
+      return toDetail(row, viewerId, lang);
     },
 
     /** A recipe from its share link: only while it is unlisted (the link is revoked otherwise). */
-    async getShared(token: string, viewerId: string | null): Promise<RecipeDetail | NotFound> {
+    async getShared(
+      token: string,
+      viewerId: string | null,
+      lang?: Locale,
+    ): Promise<RecipeDetail | NotFound> {
       const row = await repository.findByShareToken(token);
       if (!row || row.visibility !== 'unlisted') return NOT_FOUND;
-      return toDetail(row, viewerId);
+      return toDetail(row, viewerId, lang);
+    },
+
+    /**
+     * Adds or replaces the translation of a recipe in `lang` (plan §5.6): the full document, as
+     * pasted from an AI. Servings, source and tags stay the recipe's (a `tags:` line is ignored).
+     * A structure that differs from the base language is saved anyway, with warnings.
+     */
+    async saveTranslation(
+      id: string,
+      userId: string,
+      lang: Locale,
+      markdown: string,
+    ): Promise<
+      { updatedAt: string; warnings: Diagnostic[] } | NotFound | BaseLanguage | InvalidRecipe
+    > {
+      const row = await owned(id, userId);
+      if (!row) return NOT_FOUND;
+      if (lang === row.lang) return BASE_LANGUAGE;
+      const parsed = await parseDocument(markdown);
+      if ('error' in parsed) return parsed;
+      const base = await parseFields(baseFields(row), row.bodyMarkdown, row.lang);
+      const warnings =
+        'error' in base ? [] : checkTranslationStructure(base.document, parsed.document);
+      const at = now();
+      await repository.saveTranslation(id, lang, translationContent(parsed.document, lang), at);
+      return { updatedAt: at.toISOString(), warnings };
+    },
+
+    async deleteTranslation(
+      id: string,
+      userId: string,
+      lang: Locale,
+    ): Promise<{ ok: true } | NotFound | BaseLanguage> {
+      const row = await owned(id, userId);
+      if (!row) return NOT_FOUND;
+      if (lang === row.lang) return BASE_LANGUAGE;
+      return (await repository.deleteTranslation(id, lang)) ? { ok: true } : NOT_FOUND;
     },
 
     async update(id: string, userId: string, input: RecipeSaveInput) {
@@ -344,22 +423,13 @@ export function createRecipesService(deps: {
         (row.visibility === 'public' ||
           (row.visibility === 'unlisted' && token !== undefined && token === row.shareToken));
       if (!row || !readable || row.ownerId === userId) return NOT_FOUND;
-      const parsed = await parseFields(
-        {
-          title: row.title,
-          description: row.description,
-          servings: row.servings,
-          source: row.sourceUrl ?? undefined,
-          extraMeta: row.extraMeta,
-        },
-        row.bodyMarkdown,
-        row.lang,
-      );
+      const parsed = await parseFields(baseFields(row), row.bodyMarkdown, row.lang);
       if ('error' in parsed) return parsed;
-      // Tags are copied too (plan §4).
+      // Tags and translations are copied too (plan §4); translations as stored (canonical).
       return insert(userId, parsed.document, row.lang, {
         copiedFromId: row.id,
         tagIds: row.tagIds,
+        translations: row.translations,
       });
     },
 

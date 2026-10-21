@@ -32,6 +32,12 @@ const wizardPage = async () => ({
 const importPage = async () => ({
   Component: (await import('@/features/recipes/views/ImportPage')).ImportPage,
 });
+const importAiPage = async () => ({
+  Component: (await import('@/features/recipes/views/ImportPage')).ImportAiPage,
+});
+const translationPage = async () => ({
+  Component: (await import('@/features/recipes/views/TranslationPage')).TranslationPage,
+});
 
 const router = createBrowserRouter([
   {
@@ -52,7 +58,9 @@ const router = createBrowserRouter([
           { path: 'new/editor', lazy: editorPage },
           { path: 'new/wizard', lazy: wizardPage },
           { path: 'import', lazy: importPage },
+          { path: 'import/ai', lazy: importAiPage },
           { path: ':id/edit', lazy: editorPage },
+          { path: ':id/translate/:lang', lazy: translationPage },
         ],
       },
       // Readable without an account when public (the server decides).

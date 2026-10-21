@@ -1,5 +1,5 @@
 import type { RecipeVisibility } from '@cookit/shared';
-import { Check, Copy, Download, Minus, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Check, Copy, Download, Languages, Minus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Markdown } from '@/components/Markdown';
@@ -49,6 +49,26 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
           {vm.isOwner ? t('recipes.yours') : t('recipes.by', { name: vm.ownerName })}
           {vm.incomplete && <Badge variant="secondary">{t('recipes.incomplete')}</Badge>}
         </p>
+        {vm.languages.length > 1 && (
+          <div
+            role="group"
+            aria-label={t('recipes.translate.chooseLanguage')}
+            className="flex flex-wrap gap-1.5"
+          >
+            {vm.languages.map((language) => (
+              <Button
+                key={language}
+                size="sm"
+                variant={language === vm.lang ? 'default' : 'outline'}
+                aria-pressed={language === vm.lang}
+                className="rounded-full"
+                onClick={() => vm.chooseLanguage(language)}
+              >
+                {t(`language.${language}`)}
+              </Button>
+            ))}
+          </div>
+        )}
         {recipe.description && (
           <div className="text-muted-foreground">
             <Markdown text={recipe.description} />
@@ -189,9 +209,28 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
           <div className="flex flex-wrap gap-2">
             <Button asChild>
               <Link to={`/recipes/${vm.id}/edit`}>
-                <Pencil /> {t('recipes.edit')}
+                <Pencil />{' '}
+                {vm.isTranslation && vm.baseLang
+                  ? t('recipes.translate.editBase', { language: t(`language.${vm.baseLang}`) })
+                  : t('recipes.edit')}
               </Link>
             </Button>
+            {vm.isTranslation && vm.lang && (
+              <Button variant="outline" asChild>
+                <Link to={`/recipes/${vm.id}/translate/${vm.lang}`}>
+                  <Languages />{' '}
+                  {t('recipes.translate.editLink', { language: t(`language.${vm.lang}`) })}
+                </Link>
+              </Button>
+            )}
+            {vm.missingLanguages.map((language) => (
+              <Button key={language} variant="outline" asChild>
+                <Link to={`/recipes/${vm.id}/translate/${language}`}>
+                  <Languages />{' '}
+                  {t('recipes.translate.addLink', { language: t(`language.${language}`) })}
+                </Link>
+              </Button>
+            ))}
             <Button variant="destructive" onClick={vm.askDelete} disabled={vm.busy}>
               <Trash2 /> {t('recipes.delete')}
             </Button>

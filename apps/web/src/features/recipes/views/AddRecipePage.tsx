@@ -1,5 +1,5 @@
 import { SUPPORTED_LOCALES, type Locale } from '@cookit/shared';
-import { FileUp, ListChecks, PencilLine } from 'lucide-react';
+import { FileUp, ListChecks, PencilLine, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -94,7 +94,7 @@ export function AddRecipePage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <ModeLink
           to="/recipes/new/wizard"
           icon={<ListChecks />}
@@ -106,6 +106,12 @@ export function AddRecipePage() {
           icon={<FileUp />}
           title={t('recipes.add.importTitle')}
           text={t('recipes.add.importText')}
+        />
+        <ModeLink
+          to="/recipes/import/ai"
+          icon={<Sparkles />}
+          title={t('recipes.add.aiTitle')}
+          text={t('recipes.add.aiText')}
         />
         <ModeLink
           to="/recipes/new/editor"

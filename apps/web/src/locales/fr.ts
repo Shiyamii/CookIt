@@ -187,6 +187,8 @@ export const fr: Translations = {
       importText: 'Du markdown collé, un fichier .md, un zip, ou la page web d’une recette.',
       editorTitle: 'Éditeur complet',
       editorText: 'Partir d’une page vide, en visuel ou en markdown.',
+      aiTitle: 'Avec une IA',
+      aiText: 'Copier un prompt dans l’assistant IA de son choix, puis coller sa réponse.',
     },
     wizard: {
       title: 'Nouvelle recette, pas à pas',
@@ -208,12 +210,41 @@ export const fr: Translations = {
       finish: 'Enregistrer la recette',
       restart: 'Recommencer',
     },
+    ai: {
+      importText:
+        'CookIt n’intègre pas d’IA. Copiez ce prompt dans l’assistant de votre choix (ChatGPT, Claude, Gemini, un modèle local…), ajoutez la recette à la suite (texte ou photo), puis collez la réponse ci-dessous. Relisez l’aperçu : une IA peut se tromper sur une quantité.',
+      copyPrompt: 'Copier le prompt',
+      showPrompt: 'Voir le prompt',
+      prompt: 'Prompt',
+      answerLabel: 'Réponse de l’IA',
+      answerPlaceholder: 'Collez ici toute la réponse (son bloc de code est lu).',
+    },
+    translate: {
+      title: 'Ajouter une traduction ({{language}})',
+      editTitle: 'Traduction ({{language}})',
+      promptTitle: 'Prompt à copier',
+      promptText:
+        'Les recettes ne sont jamais traduites automatiquement. Copiez ce prompt dans l’assistant IA de votre choix : il contient la recette en {{from}} et la demande en {{to}}, avec la même structure.',
+      answerLabel: 'Recette traduite ({{language}})',
+      save: 'Enregistrer la traduction',
+      savedWithWarnings:
+        'Traduction enregistrée, mais sa structure diffère de l’original : le changement de langue en mode cuisine ne sera pas proposé pour cette recette.',
+      backToRecipe: 'Revenir à la recette',
+      delete: 'Supprimer la traduction',
+      deleteTitle: 'Supprimer la traduction ({{language}}) ?',
+      deleteText: 'La recette reste, dans ses autres langues.',
+      chooseLanguage: 'Langue de la recette',
+      editBase: 'Modifier l’original ({{language}})',
+      editLink: 'Modifier la traduction ({{language}})',
+      addLink: 'Ajouter une traduction ({{language}})',
+    },
     import: {
       title: 'Importer des recettes',
       tabs: {
         text: 'Coller',
         file: 'Fichier',
         url: 'Page web',
+        ai: 'Avec une IA',
       },
       pasteLabel: 'Recette au format markdown de CookIt',
       preview: 'Aperçu',
@@ -518,6 +549,7 @@ export const fr: Translations = {
     },
   },
   errors: {
+    base_language: 'C’est la langue d’origine de la recette : modifiez-la avec l’éditeur.',
     unknown: 'Une erreur est survenue. Réessayez.',
     invalid_token: 'Ce lien ne fonctionne plus. Demandez-en un nouveau.',
     username_taken: 'Ce nom d’utilisateur est déjà pris.',

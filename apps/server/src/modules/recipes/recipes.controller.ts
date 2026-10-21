@@ -1,12 +1,15 @@
 import {
   recipeCopyInputSchema,
   recipeCreateInputSchema,
+  recipeLangQuerySchema,
   recipeMarkdownCreateInputSchema,
   recipeMarkdownInputSchema,
   recipeSaveInputSchema,
   recipeSearchSchema,
+  recipeTranslationInputSchema,
   recipeVisibilityInputSchema,
   sharedRecipeInputSchema,
+  SUPPORTED_LOCALES,
 } from '@cookit/shared';
 import { strToU8, zipSync } from 'fflate';
 import { Hono, type Context } from 'hono';
@@ -19,11 +22,13 @@ import type { RateLimitService } from '../rate-limit/rate-limit.service';
 import type { RecipesService } from './recipes.service';
 
 const idSchema = z.uuid();
+const langSchema = z.enum(SUPPORTED_LOCALES);
 
 type ServiceError =
   | { error: 'not_found' }
   | { error: 'conflict' }
   | { error: 'invalid_tags' }
+  | { error: 'base_language' }
   | { error: 'invalid_recipe'; diagnostics: unknown[] };
 
 /** Service errors to HTTP; anything else is the success body. */
@@ -32,6 +37,7 @@ function respond<T extends object>(c: Context<AppEnv>, result: T | ServiceError,
     if (result.error === 'not_found') return c.json({ error: 'not_found' }, 404);
     if (result.error === 'conflict') return c.json({ error: 'conflict' }, 409);
     if (result.error === 'invalid_tags') return c.json({ error: 'invalid_tags' }, 400);
+    if (result.error === 'base_language') return c.json({ error: 'base_language' }, 400);
     return c.json(result, 422);
   }
   return c.json(result, status as 200);
@@ -63,7 +69,10 @@ export function createRecipesController(deps: {
   app.post('/api/v1/shared', rateLimit(deps.rateLimits, RATE_LIMITS.tokenCheckPerIp), async (c) => {
     const input = await parseJson(c, sharedRecipeInputSchema);
     if (!input.ok) return input.response;
-    return respond(c, await deps.recipes.getShared(input.data.token, c.var.user?.id ?? null));
+    return respond(
+      c,
+      await deps.recipes.getShared(input.data.token, c.var.user?.id ?? null, input.data.lang),
+    );
   });
 
   // "Export all my recipes": a zip of `.md` files (built in memory: a library is small).
@@ -79,10 +88,12 @@ export function createRecipesController(deps: {
     });
   });
 
-  // A recipe from its id: its owner, or anyone for a public recipe.
-  app.get('/api/v1/recipes/:id', recipeId, async (c) =>
-    respond(c, await deps.recipes.get(paramId(c), c.var.user?.id ?? null)),
-  );
+  // A recipe from its id: its owner, or anyone for a public recipe. `?lang=` picks a translation.
+  app.get('/api/v1/recipes/:id', recipeId, async (c) => {
+    const query = recipeLangQuerySchema.safeParse(c.req.query());
+    if (!query.success) return c.json({ error: 'invalid_input' }, 400);
+    return respond(c, await deps.recipes.get(paramId(c), c.var.user?.id ?? null, query.data.lang));
+  });
 
   app.use('/api/v1/recipes', requireUser);
   app.use('/api/v1/recipes/*', requireUser);
@@ -129,6 +140,26 @@ export function createRecipesController(deps: {
   app.delete('/api/v1/recipes/:id', recipeId, async (c) =>
     respond(c, await deps.recipes.delete(paramId(c), userId(c))),
   );
+
+  // Translations (other than the base language): add or replace, delete.
+  const paramLang = (c: Context<AppEnv>) => langSchema.safeParse(c.req.param('lang'));
+
+  app.put('/api/v1/recipes/:id/translations/:lang', recipeId, async (c) => {
+    const lang = paramLang(c);
+    if (!lang.success) return c.json({ error: 'not_found' }, 404);
+    const input = await parseJson(c, recipeTranslationInputSchema);
+    if (!input.ok) return input.response;
+    return respond(
+      c,
+      await deps.recipes.saveTranslation(paramId(c), userId(c), lang.data, input.data.markdown),
+    );
+  });
+
+  app.delete('/api/v1/recipes/:id/translations/:lang', recipeId, async (c) => {
+    const lang = paramLang(c);
+    if (!lang.success) return c.json({ error: 'not_found' }, 404);
+    return respond(c, await deps.recipes.deleteTranslation(paramId(c), userId(c), lang.data));
+  });
 
   // "Add to my library".
   app.post('/api/v1/recipes/:id/copy', recipeId, async (c) => {

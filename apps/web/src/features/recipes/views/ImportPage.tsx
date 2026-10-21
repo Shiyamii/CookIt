@@ -1,4 +1,5 @@
 import { SUPPORTED_LOCALES, type Locale } from '@cookit/shared';
+import { Check, Copy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +22,18 @@ import { RecipeContent } from './RecipeContent';
 type Vm = ReturnType<typeof useImportViewModel>;
 type Item = Vm['items'][number];
 
-/** Import recipes: markdown (pasted, `.md`, zip) or a web page; preview, tags, then save. */
-export function ImportPage() {
+/** "Import with an AI" (plan §5.2): the import page opened on its AI tab. */
+export function ImportAiPage() {
+  return <ImportPage initialTab="ai" />;
+}
+
+/**
+ * Import recipes: markdown (pasted, `.md`, zip), a web page or an AI's answer; preview, tags,
+ * then save.
+ */
+export function ImportPage({ initialTab = 'text' }: { initialTab?: ImportTab }) {
   const { t } = useTranslation();
-  const vm = useImportViewModel();
+  const vm = useImportViewModel(initialTab);
 
   return (
     <div className="grid grid-cols-1 gap-5">
@@ -37,6 +46,7 @@ export function ImportPage() {
               <TabsTrigger value="text">{t('recipes.import.tabs.text')}</TabsTrigger>
               <TabsTrigger value="file">{t('recipes.import.tabs.file')}</TabsTrigger>
               <TabsTrigger value="url">{t('recipes.import.tabs.url')}</TabsTrigger>
+              <TabsTrigger value="ai">{t('recipes.import.tabs.ai')}</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -98,6 +108,48 @@ export function ImportPage() {
                 onChange={(event) => void vm.readFile(event.target.files?.[0])}
               />
               <p className="text-sm text-muted-foreground">{t('recipes.import.fileHint')}</p>
+            </div>
+          )}
+          {vm.tab === 'ai' && (
+            <div className="grid gap-4">
+              <p className="text-sm text-muted-foreground">{t('recipes.ai.importText')}</p>
+              <div className="grid gap-2">
+                <Button className="justify-self-start" onClick={() => void vm.copyPrompt()}>
+                  {vm.copied ? <Check /> : <Copy />}
+                  {vm.copied ? t('common.copied') : t('recipes.ai.copyPrompt')}
+                </Button>
+                <details>
+                  <summary className="cursor-pointer text-sm font-medium">
+                    {t('recipes.ai.showPrompt')}
+                  </summary>
+                  <Textarea
+                    readOnly
+                    aria-label={t('recipes.ai.prompt')}
+                    rows={10}
+                    className="mt-2 font-mono text-xs wrap-anywhere"
+                    value={vm.prompt}
+                    onFocus={(event) => event.target.select()}
+                  />
+                </details>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="import-answer">{t('recipes.ai.answerLabel')}</Label>
+                <Textarea
+                  id="import-answer"
+                  rows={12}
+                  className="font-mono text-sm wrap-anywhere"
+                  placeholder={t('recipes.ai.answerPlaceholder')}
+                  value={vm.answer}
+                  onChange={(event) => vm.setAnswer(event.target.value)}
+                />
+                <Button
+                  className="justify-self-start"
+                  disabled={!vm.answer.trim()}
+                  onClick={vm.analyzeAnswer}
+                >
+                  {t('recipes.import.preview')}
+                </Button>
+              </div>
             </div>
           )}
           {vm.tab === 'url' && (

@@ -57,13 +57,15 @@ export function fetchGallery(
   return apiGet<RecipePage>(`/gallery${searchParams(q, page, tags)}`);
 }
 
-export function fetchRecipe(id: string): Promise<RecipeDetail> {
-  return apiGet<RecipeDetail>(`/recipes/${encodeURIComponent(id)}`);
+/** A recipe in `lang` if it has that translation, in its base language otherwise (or if omitted). */
+export function fetchRecipe(id: string, lang?: Locale): Promise<RecipeDetail> {
+  const query = lang ? `?lang=${encodeURIComponent(lang)}` : '';
+  return apiGet<RecipeDetail>(`/recipes/${encodeURIComponent(id)}${query}`);
 }
 
 /** An unlisted recipe from its share link (the token goes in the body, never in a URL). */
-export function fetchSharedRecipe(token: string): Promise<RecipeDetail> {
-  return apiPost<RecipeDetail>('/shared', { token });
+export function fetchSharedRecipe(token: string, lang?: Locale): Promise<RecipeDetail> {
+  return apiPost<RecipeDetail>('/shared', lang ? { token, lang } : { token });
 }
 
 export function createRecipe(input: RecipeCreateInput): Promise<{ id: string }> {
@@ -113,4 +115,24 @@ export async function deleteRecipe(id: string): Promise<void> {
 /** "Add to my library": the share token is needed when the recipe is unlisted. */
 export function copyRecipe(id: string, token?: string): Promise<{ id: string }> {
   return apiPost<{ id: string }>(`/recipes/${encodeURIComponent(id)}/copy`, token ? { token } : {});
+}
+
+/**
+ * Adds or replaces a translation (not the base language). Saved even when its structure differs
+ * from the base language: the warnings say how.
+ */
+export function saveTranslation(
+  id: string,
+  lang: Locale,
+  markdown: string,
+): Promise<{ updatedAt: string; warnings: Diagnostic[] }> {
+  return withDiagnostics(
+    apiPut(`/recipes/${encodeURIComponent(id)}/translations/${encodeURIComponent(lang)}`, {
+      markdown,
+    }),
+  );
+}
+
+export async function deleteTranslation(id: string, lang: Locale): Promise<void> {
+  await apiDelete(`/recipes/${encodeURIComponent(id)}/translations/${encodeURIComponent(lang)}`);
 }

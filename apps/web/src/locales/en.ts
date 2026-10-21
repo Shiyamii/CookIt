@@ -183,6 +183,8 @@ export const en = {
       importText: 'Markdown pasted, a .md file, a zip, or a recipe web page.',
       editorTitle: 'Full editor',
       editorText: 'Start from a blank page, visual or markdown.',
+      aiTitle: 'With an AI',
+      aiText: 'Copy a prompt into the AI assistant of your choice, then paste its answer.',
     },
     wizard: {
       title: 'New recipe, step by step',
@@ -204,12 +206,41 @@ export const en = {
       finish: 'Save the recipe',
       restart: 'Start over',
     },
+    ai: {
+      importText:
+        'CookIt has no AI built in. Copy this prompt into the assistant of your choice (ChatGPT, Claude, Gemini, a local model…), add the recipe after it (text or photo), then paste the answer below. Check the preview: an AI can get a quantity wrong.',
+      copyPrompt: 'Copy the prompt',
+      showPrompt: 'Show the prompt',
+      prompt: 'Prompt',
+      answerLabel: 'Answer of the AI',
+      answerPlaceholder: 'Paste the whole answer here (its code block is read).',
+    },
+    translate: {
+      title: 'Add a translation ({{language}})',
+      editTitle: 'Translation ({{language}})',
+      promptTitle: 'Prompt to copy',
+      promptText:
+        'Recipes are never translated automatically. Copy this prompt into the AI assistant of your choice: it contains the recipe in {{from}} and asks for it in {{to}}, with the same structure.',
+      answerLabel: 'Translated recipe ({{language}})',
+      save: 'Save the translation',
+      savedWithWarnings:
+        'Translation saved, but its structure differs from the original: switching language while cooking will not be offered for this recipe.',
+      backToRecipe: 'Back to the recipe',
+      delete: 'Delete the translation',
+      deleteTitle: 'Delete the translation ({{language}})?',
+      deleteText: 'The recipe stays, in its other languages.',
+      chooseLanguage: 'Language of the recipe',
+      editBase: 'Edit the original ({{language}})',
+      editLink: 'Edit the translation ({{language}})',
+      addLink: 'Add a translation ({{language}})',
+    },
     import: {
       title: 'Import recipes',
       tabs: {
         text: 'Paste',
         file: 'File',
         url: 'Web page',
+        ai: 'With an AI',
       },
       pasteLabel: 'Recipe in the CookIt markdown format',
       preview: 'Preview',
@@ -507,6 +538,7 @@ export const en = {
     },
   },
   errors: {
+    base_language: 'This is the original language of the recipe: change it with the editor.',
     unknown: 'Something went wrong. Please try again.',
     invalid_token: 'This link does not work anymore. Ask for a new one.',
     username_taken: 'This username is already taken.',

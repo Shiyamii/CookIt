@@ -1,11 +1,26 @@
 import type { Locale, RecipeVisibility } from '@cookit/shared';
-import { and, desc, eq, exists, like, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, exists, like, ne, sql, type SQL } from 'drizzle-orm';
 import type { Database } from '../../db';
 import { uniqueViolation } from '../../db/errors';
 import { user } from '../auth/auth.schema';
 import { recipes, recipeTags, recipeTranslations } from './recipes.schema';
 
-/** A recipe with its base-language translation and its owner's display name. */
+/** The language-dependent part of a recipe (plan §3), as stored. */
+export type TranslationContent = {
+  title: string;
+  description: string;
+  extraMeta: Record<string, string>;
+  bodyMarkdown: string;
+  searchText: string;
+};
+
+/** A translation other than the base language. */
+export type TranslationRow = TranslationContent & { lang: Locale };
+
+/**
+ * A recipe with its base-language translation, its other translations and its owner's display
+ * name.
+ */
 export type RecipeRow = {
   id: string;
   ownerId: string;
@@ -22,6 +37,7 @@ export type RecipeRow = {
   extraMeta: Record<string, string>;
   bodyMarkdown: string;
   tagIds: string[];
+  translations: TranslationRow[];
   hasSteps: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -59,6 +75,8 @@ export type NewRecipe = RecipeContent & {
   ownerId: string;
   lang: Locale;
   copiedFromId?: string | null;
+  /** Other languages, stored as given (a copy keeps the original's translations). */
+  translations?: (TranslationContent & { lang: Locale })[];
   now: Date;
 };
 
@@ -91,8 +109,17 @@ export type RecipesRepository = {
   delete(id: string): Promise<void>;
   listByOwner(ownerId: string, query: ListQuery): Promise<RecipeListRow[]>;
   listPublic(query: ListQuery): Promise<RecipeListRow[]>;
-  /** Every recipe of the owner, complete (export of all recipes), oldest first. */
-  listAllByOwner(ownerId: string): Promise<RecipeRow[]>;
+  /** Every recipe of the owner in its base language (export of all recipes), oldest first. */
+  listAllByOwner(ownerId: string): Promise<Omit<RecipeRow, 'translations'>[]>;
+  /** Creates or replaces a translation (never the base language: the service checks it). */
+  saveTranslation(
+    recipeId: string,
+    lang: Locale,
+    content: TranslationContent,
+    now: Date,
+  ): Promise<void>;
+  /** False when there was no such translation. */
+  deleteTranslation(recipeId: string, lang: Locale): Promise<boolean>;
 };
 
 /** The base-language translation of each recipe. */
@@ -148,7 +175,19 @@ export function createRecipesRepository(db: Database): RecipesRepository {
       .select({ tagId: recipeTags.tagId })
       .from(recipeTags)
       .where(eq(recipeTags.recipeId, row.id));
-    return { ...row, tagIds: tagRows.map((tag) => tag.tagId) };
+    const translations = await db
+      .select({
+        lang: sql<Locale>`${recipeTranslations.lang}`,
+        title: recipeTranslations.title,
+        description: recipeTranslations.description,
+        extraMeta: recipeTranslations.extraMeta,
+        bodyMarkdown: recipeTranslations.bodyMarkdown,
+        searchText: recipeTranslations.searchText,
+      })
+      .from(recipeTranslations)
+      .where(and(eq(recipeTranslations.recipeId, row.id), ne(recipeTranslations.lang, row.lang)))
+      .orderBy(recipeTranslations.lang);
+    return { ...row, tagIds: tagRows.map((tag) => tag.tagId), translations };
   };
 
   /** Replaces the tags of a recipe (inside the save's transaction). */
@@ -218,6 +257,11 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         searchText: recipe.searchText,
         updatedAt: recipe.now,
       });
+      for (const translation of recipe.translations ?? []) {
+        await tx
+          .insert(recipeTranslations)
+          .values({ ...translation, recipeId: recipe.id, updatedAt: recipe.now });
+      }
       await setTags(tx, recipe.id, recipe.tagIds);
     });
 
@@ -320,6 +364,24 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         ...row,
         tagIds: links.filter((link) => link.recipeId === row.id).map((link) => link.tagId),
       }));
+    },
+
+    async saveTranslation(recipeId, lang, content, now) {
+      await db
+        .insert(recipeTranslations)
+        .values({ ...content, recipeId, lang, updatedAt: now })
+        .onConflictDoUpdate({
+          target: [recipeTranslations.recipeId, recipeTranslations.lang],
+          set: { ...content, updatedAt: now },
+        });
+    },
+
+    async deleteTranslation(recipeId, lang) {
+      const deleted = await db
+        .delete(recipeTranslations)
+        .where(and(eq(recipeTranslations.recipeId, recipeId), eq(recipeTranslations.lang, lang)))
+        .returning({ lang: recipeTranslations.lang });
+      return deleted.length > 0;
     },
   };
 }

@@ -117,7 +117,17 @@ export const recipeVisibilityInputSchema = z
 /** An unlisted recipe's share token: 32 random bytes in base64url (as link tokens). */
 export const shareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 
-export const sharedRecipeInputSchema = z.object({ token: shareTokenSchema }).strict();
+export const sharedRecipeInputSchema = z
+  .object({ token: shareTokenSchema, lang: z.enum(SUPPORTED_LOCALES).optional() })
+  .strict();
+
+/** The language a recipe is read in (`?lang=`): that translation if it exists, else the base. */
+export const recipeLangQuerySchema = z.object({ lang: z.enum(SUPPORTED_LOCALES).optional() });
+
+/** A translation (plan §5.6): the full document in that language, pasted from an AI or edited. */
+export const recipeTranslationInputSchema = z
+  .object({ markdown: z.string().min(1).max(MAX_RECIPE_MARKDOWN_LENGTH) })
+  .strict();
 
 /** "Add to my library": the share token is needed for an unlisted recipe. */
 export const recipeCopyInputSchema = z.object({ token: shareTokenSchema.optional() }).strict();
@@ -171,10 +181,19 @@ export type RecipeSummary = {
 
 export type RecipePage = { recipes: RecipeSummary[]; hasMore: boolean };
 
-/** A recipe as read by the view and the editors (base language only until phase 5b). */
+/**
+ * A recipe as read by the view and the editors, in one of its languages (`lang`): the base
+ * language unless another translation was asked for and exists. Servings, source, visibility
+ * and tags are the recipe's, whatever the language.
+ */
 export type RecipeDetail = {
   id: string;
+  /** Language of the title, description, extra lines and body below. */
   lang: Locale;
+  /** The recipe's base language (the one the editors change). */
+  baseLang: Locale;
+  /** Every language the recipe exists in, base language first. */
+  languages: Locale[];
   title: string;
   description: string;
   servings: number;
@@ -197,7 +216,7 @@ export type RecipeDetail = {
 };
 
 /** Errors returned by the recipes API as `{ error }`, translated by the UI. */
-export const RECIPE_ERRORS = ['not_found', 'invalid_recipe', 'conflict'] as const;
+export const RECIPE_ERRORS = ['not_found', 'invalid_recipe', 'conflict', 'base_language'] as const;
 
 /**
  * The full markdown document of a recipe (format of §4) from its columns and body, for the

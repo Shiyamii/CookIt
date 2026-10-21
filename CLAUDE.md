@@ -167,6 +167,14 @@ When recipes are stored (phase 4): Zod schemas for the columns must refuse line 
 - `recipes.has_steps` (computed on every save) gives `incomplete` ("to complete") in lists and details.
 - Zod, `zod-config.ts` and `packages/shared` are forced into one chunk (`vite.config.ts`, `advancedChunks`): split across chunks, shared schemas were created before `jitless` was set and Zod's eval probe broke the CSP. The e2e CSP test visits every page, lazy ones included.
 
+## AI prompts and translations (phase 5b)
+
+- Prompts are generated in `packages/shared/src/prompts/` (`importPrompt`, `translationPrompt`), FR/EN after the interface language, never written in the UI. The import prompt lists the units (first alias in the output language) and the tag slugs of the database, and includes `promptExample(lang)`: `EXAMPLE_RECIPES` in canonical form (current `format:`), tested to parse without any diagnostic. `extractMarkdownBlock` reads an AI answer (its longest code block, else the whole text).
+- "Import with an AI" is the AI tab of the import page (`/recipes/import/ai`): the answer goes through the same preview and "Validate tags" step as any import; the recipe language select is the output language.
+- Translations: `PUT` / `DELETE /api/v1/recipes/:id/translations/:lang` (owner, never the base language: 400 `base_language`). A translation is the full document; servings, source and tags stay the recipe's (a `tags:` line is ignored). Structure differences (`checkTranslationStructure`) are warnings returned with the save, never a refusal. Saving a translation does not change `recipes.updated_at` (no editor conflict).
+- `GET /api/v1/recipes/:id?lang=` and `POST /shared { lang }` return that translation if it exists, else the base language; `RecipeDetail` has `lang` (shown), `baseLang` and `languages`. The editors always load the base language (no `lang`). The recipe page reads `?lang=` once, then the interface language; switching is local state (the share link keeps its token in the fragment). "Add to my library" copies the translations. Lists, search and exports stay in the base language.
+- `/recipes/:id/translate/:lang` (lazy): prompt, pasted answer previewed live with parser and structure diagnostics (`model/translation.ts`), an existing translation preloaded for hand corrections, delete with confirmation.
+
 ## Accounts (phase 3)
 
 - **Better Auth** (`apps/server/src/modules/auth/auth.ts`) handles sessions, sign-in (email or username), sign-out and password changes, mounted at `/api/v1/auth`. Only an **allowlist** of its routes is reachable (`auth.controller.ts`); `update-user` only accepts `name` / `locale` (`updateProfileInputSchema`). Its own sign-up is disabled.

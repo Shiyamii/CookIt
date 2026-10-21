@@ -1,4 +1,6 @@
 import {
+  extractMarkdownBlock,
+  importPrompt,
   isLocale,
   reviewTags,
   type Locale,
@@ -22,7 +24,7 @@ import {
 } from '../model/importing';
 import { createRecipeFromMarkdown, InvalidRecipeError, RECIPES_QUERY_KEY } from '../model/recipes';
 
-export type ImportTab = 'text' | 'file' | 'url';
+export type ImportTab = 'text' | 'file' | 'url' | 'ai';
 
 type Item = {
   id: string;
@@ -52,18 +54,21 @@ function initialChoice(categories: readonly TagCategory[], review: TagReview): s
  * Importing recipes (plan §5.2): markdown pasted, `.md` files or a zip, or a web page. Each
  * recipe gets a live preview with its errors, then the "Validate tags" step: recognized tags
  * (by id or by label in any language) are proposed checked, ambiguous ones ask to choose,
- * unknown ones are shown as ignored. Saved through the normal API, private.
+ * unknown ones are shown as ignored. Saved through the normal API, private. With an AI (no AI
+ * built in): a prompt to copy, generated from the format, then the answer pasted.
  */
-export function useImportViewModel() {
+export function useImportViewModel(initialTab: ImportTab = 'text') {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const catalog = useTagCatalog();
   const { units } = useUnitCatalog();
-  const [tab, setTab] = useState<ImportTab>('text');
+  const [tab, setTab] = useState<ImportTab>(initialTab);
   const [text, setText] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState('');
-  const [lang, setLang] = useState<Locale>(
+  const [lang, setLangState] = useState<Locale>(
     isLocale(i18n.resolvedLanguage) ? i18n.resolvedLanguage : 'fr',
   );
   const [items, setItems] = useState<Item[]>([]);
@@ -87,6 +92,14 @@ export function useImportViewModel() {
       }),
     );
   };
+
+  // In the interface language, asking for a recipe in the chosen language, with the tags and
+  // units of the database.
+  const interfaceLang: Locale = isLocale(i18n.resolvedLanguage) ? i18n.resolvedLanguage : 'fr';
+  const prompt = useMemo(
+    () => importPrompt({ locale: interfaceLang, lang, units, tagCategories: catalog.categories }),
+    [interfaceLang, lang, units, catalog.categories],
+  );
 
   const fromUrl = useMutation({
     mutationFn: () => importFromUrl(url.trim(), lang),
@@ -193,11 +206,30 @@ export function useImportViewModel() {
     url,
     setUrl,
     lang,
-    setLang,
+    setLang: (value: Locale) => {
+      setLangState(value);
+      setCopied(false);
+    },
     error,
     reading: reading || fromUrl.isPending,
     analyzeText: () => {
       if (text.trim()) load([{ name: '', markdown: text }]);
+    },
+    prompt,
+    copied,
+    copyPrompt: async () => {
+      try {
+        await navigator.clipboard.writeText(prompt);
+        setCopied(true);
+      } catch {
+        // No clipboard access: the prompt stays selectable.
+      }
+    },
+    answer,
+    setAnswer,
+    /** The AI's answer: its code block (or the whole text), previewed like any import. */
+    analyzeAnswer: () => {
+      if (answer.trim()) load([{ name: '', markdown: extractMarkdownBlock(answer) }]);
     },
     readFile: async (file: File | undefined) => {
       if (!file) return;
