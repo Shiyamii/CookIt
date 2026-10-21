@@ -5,3 +5,6 @@ export * from '../modules/auth/auth.schema';
 export * from '../modules/invites/invites.schema';
 export * from '../modules/rate-limit/rate-limit.schema';
 export * from '../modules/recipes/recipes.schema';
+export * from '../modules/system/system.schema';
+export * from '../modules/tags/tags.schema';
+export * from '../modules/units/units.schema';

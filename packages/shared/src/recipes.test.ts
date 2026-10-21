@@ -104,8 +104,16 @@ describe('input schemas', () => {
     expect(recipeCopyInputSchema.safeParse({ token: 'short' }).success).toBe(false);
   });
   test('search coerces and bounds the page', () => {
-    expect(recipeSearchSchema.parse({})).toEqual({ page: 1 });
-    expect(recipeSearchSchema.parse({ page: '3', q: '  tarte ' })).toEqual({ page: 3, q: 'tarte' });
+    expect(recipeSearchSchema.parse({})).toEqual({ page: 1, tags: [] });
+    expect(recipeSearchSchema.parse({ page: '3', q: '  tarte ' })).toEqual({
+      page: 3,
+      q: 'tarte',
+      tags: [],
+    });
+    expect(recipeSearchSchema.parse({ tags: 'dessert, ,vegetarien' }).tags).toEqual([
+      'dessert',
+      'vegetarien',
+    ]);
     for (const page of ['0', '-1', '1.5', '1001', 'abc']) {
       expect(recipeSearchSchema.safeParse({ page }).success).toBe(false);
     }

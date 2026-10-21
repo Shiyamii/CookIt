@@ -52,6 +52,23 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
             <Markdown text={recipe.description} />
           </div>
         )}
+        {vm.tagGroups.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5" aria-label={t('recipes.tags')}>
+            {vm.tagGroups.flatMap((group) =>
+              group.tags.map((tag) => (
+                <li key={tag.id}>
+                  <Link
+                    to={`/gallery?tags=${encodeURIComponent(tag.slug)}`}
+                    title={group.category}
+                    className="inline-block rounded-full bg-secondary px-2.5 py-0.5 text-sm text-secondary-foreground hover:underline"
+                  >
+                    {tag.label}
+                  </Link>
+                </li>
+              )),
+            )}
+          </ul>
+        )}
         {(recipe.source || recipe.extraMeta.length > 0) && (
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
             {recipe.source && (

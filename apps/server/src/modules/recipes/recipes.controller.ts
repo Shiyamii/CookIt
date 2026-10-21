@@ -22,6 +22,7 @@ const idSchema = z.uuid();
 type ServiceError =
   | { error: 'not_found' }
   | { error: 'conflict' }
+  | { error: 'invalid_tags' }
   | { error: 'invalid_recipe'; diagnostics: unknown[] };
 
 /** Service errors to HTTP; anything else is the success body. */
@@ -29,6 +30,7 @@ function respond<T extends object>(c: Context<AppEnv>, result: T | ServiceError,
   if ('error' in result) {
     if (result.error === 'not_found') return c.json({ error: 'not_found' }, 404);
     if (result.error === 'conflict') return c.json({ error: 'conflict' }, 409);
+    if (result.error === 'invalid_tags') return c.json({ error: 'invalid_tags' }, 400);
     return c.json(result, 422);
   }
   return c.json(result, status as 200);

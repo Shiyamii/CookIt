@@ -6,6 +6,7 @@ import type { Presentation } from './recipe/model';
 import { MAX_SERVINGS } from './recipe/presentation';
 import { serializePresentation } from './recipe/serialize';
 import { MAX_RECIPE_MARKDOWN_LENGTH } from './recipe/split';
+import { recipeTagIdsSchema } from './tags';
 
 // Recipes API (phase 4). Part 1 of a recipe lives in real columns; parts 2 and 3 in
 // `bodyMarkdown` (serializeBody). The full document is only composed for the markdown editor and
@@ -75,18 +76,29 @@ const baseVersion = z.iso.datetime({ offset: true }).optional();
 
 /** Visual editor: columns + body. `lang` only on creation (the recipe's base language). */
 export const recipeSaveInputSchema = recipeFieldsSchema
-  .extend({ body: recipeBodySchema, baseVersion })
+  .extend({ body: recipeBodySchema, baseVersion, tagIds: recipeTagIdsSchema.optional() })
   .strict();
 export type RecipeSaveInput = z.infer<typeof recipeSaveInputSchema>;
 
 export const recipeCreateInputSchema = recipeFieldsSchema
-  .extend({ body: recipeBodySchema, lang: z.enum(SUPPORTED_LOCALES) })
+  .extend({
+    body: recipeBodySchema,
+    lang: z.enum(SUPPORTED_LOCALES),
+    tagIds: recipeTagIdsSchema.optional(),
+  })
   .strict();
 export type RecipeCreateInput = z.infer<typeof recipeCreateInputSchema>;
 
-/** Markdown editor: the full document, split and parsed by the server. */
+/**
+ * Markdown editor: the full document, split and parsed by the server. Tags are never in the
+ * editable text (plan §4): the editor sends the ones chosen in its tag pickers, if any.
+ */
 export const recipeMarkdownInputSchema = z
-  .object({ markdown: z.string().min(1).max(MAX_RECIPE_MARKDOWN_LENGTH), baseVersion })
+  .object({
+    markdown: z.string().min(1).max(MAX_RECIPE_MARKDOWN_LENGTH),
+    baseVersion,
+    tagIds: recipeTagIdsSchema.optional(),
+  })
   .strict();
 export type RecipeMarkdownInput = z.infer<typeof recipeMarkdownInputSchema>;
 
@@ -94,6 +106,7 @@ export const recipeMarkdownCreateInputSchema = z
   .object({
     markdown: z.string().min(1).max(MAX_RECIPE_MARKDOWN_LENGTH),
     lang: z.enum(SUPPORTED_LOCALES),
+    tagIds: recipeTagIdsSchema.optional(),
   })
   .strict();
 
@@ -111,6 +124,18 @@ export const recipeCopyInputSchema = z.object({ token: shareTokenSchema.optional
 
 export const recipeSearchSchema = z.object({
   q: z.string().trim().max(RECIPE_SEARCH_MAX).optional(),
+  /** Tag slugs, comma-separated: recipes having all of them. */
+  tags: z
+    .string()
+    .max(1000)
+    .optional()
+    .transform((value) =>
+      (value ?? '')
+        .split(',')
+        .map((slug) => slug.trim())
+        .filter(Boolean)
+        .slice(0, 20),
+    ),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 export type RecipeSearch = z.infer<typeof recipeSearchSchema>;
@@ -147,6 +172,7 @@ export type RecipeDetail = {
   shareUrl: string | null;
   /** Set when this recipe was copied from another one ("add to my library"). */
   copiedFromId: string | null;
+  tagIds: string[];
   createdAt: string;
   updatedAt: string;
 };

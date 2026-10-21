@@ -31,20 +31,30 @@ async function withDiagnostics<T>(call: Promise<T>): Promise<T> {
   }
 }
 
-function searchParams(q: string, page: number): string {
+function searchParams(q: string, page: number, tags: readonly string[]): string {
   const params = new URLSearchParams();
   if (q.trim()) params.set('q', q.trim());
+  if (tags.length) params.set('tags', tags.join(','));
   if (page > 1) params.set('page', String(page));
   const query = params.toString();
   return query ? `?${query}` : '';
 }
 
-export function fetchMyRecipes(q: string, page: number): Promise<RecipePage> {
-  return apiGet<RecipePage>(`/recipes${searchParams(q, page)}`);
+/** Recipes matching the words `q` and having all the `tags` (slugs). */
+export function fetchMyRecipes(
+  q: string,
+  page: number,
+  tags: readonly string[],
+): Promise<RecipePage> {
+  return apiGet<RecipePage>(`/recipes${searchParams(q, page, tags)}`);
 }
 
-export function fetchGallery(q: string, page: number): Promise<RecipePage> {
-  return apiGet<RecipePage>(`/gallery${searchParams(q, page)}`);
+export function fetchGallery(
+  q: string,
+  page: number,
+  tags: readonly string[],
+): Promise<RecipePage> {
+  return apiGet<RecipePage>(`/gallery${searchParams(q, page, tags)}`);
 }
 
 export function fetchRecipe(id: string): Promise<RecipeDetail> {
@@ -60,8 +70,12 @@ export function createRecipe(input: RecipeCreateInput): Promise<{ id: string }> 
   return withDiagnostics(apiPost<{ id: string }>('/recipes', input));
 }
 
-export function createRecipeFromMarkdown(markdown: string, lang: Locale): Promise<{ id: string }> {
-  return withDiagnostics(apiPost<{ id: string }>('/recipes/markdown', { markdown, lang }));
+export function createRecipeFromMarkdown(
+  markdown: string,
+  lang: Locale,
+  tagIds: string[],
+): Promise<{ id: string }> {
+  return withDiagnostics(apiPost<{ id: string }>('/recipes/markdown', { markdown, lang, tagIds }));
 }
 
 export function saveRecipe(id: string, input: RecipeSaveInput): Promise<{ updatedAt: string }> {
@@ -74,11 +88,13 @@ export function saveRecipeMarkdown(
   id: string,
   markdown: string,
   baseVersion: string,
+  tagIds: string[],
 ): Promise<{ updatedAt: string }> {
   return withDiagnostics(
     apiPut<{ updatedAt: string }>(`/recipes/${encodeURIComponent(id)}/markdown`, {
       markdown,
       baseVersion,
+      tagIds,
     }),
   );
 }

@@ -2,11 +2,13 @@ import { serve } from '@hono/node-server';
 import { createApp } from './app';
 import { createContainer } from './container';
 import { client, db, runMigrations } from './db';
+import { runSeeds } from './db/seed';
 import { env } from './env';
 
 // Apply pending migrations before accepting traffic; a failure stops the process.
 await runMigrations();
 console.log('Database migrations applied');
+await runSeeds(db);
 
 const container = createContainer(db);
 

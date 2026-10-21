@@ -81,6 +81,41 @@ export function VisualEditor({ vm }: { vm: EditorVm }) {
           onChange={(event) => setField('source', event.target.value)}
         />
 
+        {vm.tagPickers.length > 0 && (
+          <fieldset className="grid gap-3">
+            <legend className="mb-1 text-sm font-medium">{t('recipes.tags')}</legend>
+            {vm.tagPickers.map((picker) => (
+              <div
+                key={picker.id}
+                role="group"
+                aria-label={picker.label}
+                className="grid gap-1.5"
+                data-testid="tag-picker"
+              >
+                <p className="text-sm text-muted-foreground">
+                  {picker.label}
+                  {!picker.multiple && ` · ${t('recipes.editor.oneTag')}`}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {picker.tags.map((tag) => (
+                    <Button
+                      key={tag.id}
+                      type="button"
+                      size="sm"
+                      variant={tag.selected ? 'default' : 'outline'}
+                      aria-pressed={tag.selected}
+                      className="rounded-full"
+                      onClick={() => vm.toggleTag(picker.id, tag.id)}
+                    >
+                      {tag.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </fieldset>
+        )}
+
         {recipe.extraMeta.length > 0 && (
           <fieldset className="grid gap-2">
             <legend className="mb-2 text-sm font-medium">{t('recipes.fields.extraMeta')}</legend>

@@ -168,6 +168,11 @@ export const en = {
   recipes: {
     ingredients: 'Ingredients',
     steps: 'Steps',
+    tags: 'Tags',
+    filters: {
+      title: 'Filter by tags',
+      clear: 'Clear the filters',
+    },
     noIngredients: 'No ingredients yet.',
     noSteps: 'No steps yet: this recipe is still to be completed.',
     stepNumber: 'Step {{n}}:',
@@ -280,6 +285,7 @@ export const en = {
       freeText: 'Free text',
       stepLinks: 'Timers and quantities',
       addTimer: 'Add a timer',
+      oneTag: 'one choice',
       markQuantity: 'Adjustable quantity',
       selectQuantity:
         'Select a quantity in the text first (e.g. "2 tbsp"): it will follow the servings.',
@@ -322,6 +328,68 @@ export const en = {
     translation_group_count: 'Not the same number of groups: {{found}} instead of {{expected}}.',
     translation_item_count: 'Group {{group}}: {{found}} items instead of {{expected}}.',
     translation_timers: 'Step {{step}}: the timers differ from the original.',
+  },
+  catalog: {
+    save: 'Save',
+    moveUp: 'Move up',
+    moveDown: 'Move down',
+    labelIn: 'Name ({{language}})',
+    slug: 'Identifier',
+    slugHint: 'Lowercase letters, digits and dashes; used in exports (e.g. plat-principal).',
+    invalid: {
+      labels: 'At least one name is needed.',
+      slug: 'Lowercase letters, digits and dashes only (e.g. plat-principal).',
+      unit: 'Check the fields: an identifier, at least one name, and aliases of 50 characters at most.',
+    },
+    tags: {
+      title: 'Categories and tags',
+      intro:
+        'The common list of tags, in categories. Users choose among them; the names are translated in each language.',
+      multiple: 'several tags per recipe',
+      single: 'one tag per recipe',
+      allowMultiple: 'Several tags of this category on one recipe',
+      category: 'Category',
+      categoryForm: 'Category',
+      tagForm: 'Tag',
+      addCategory: 'Add a category',
+      addTag: 'Add a tag',
+      editCategory: 'Edit the category',
+      deleteCategory: 'Delete the category (it must be empty)',
+      editTag: 'Edit the tag {{tag}}',
+      deleteTag: 'Delete the tag {{tag}}',
+      recipes_one: '{{count}} recipe',
+      recipes_other: '{{count}} recipes',
+      deleteTitle: 'Delete the tag "{{tag}}"?',
+      deleteUnused: 'No recipe uses it.',
+      deleteUsed_one:
+        '{{count}} recipe uses it: it loses this tag, unless you merge it into another tag.',
+      deleteUsed_other:
+        '{{count}} recipes use it: they lose this tag, unless you merge it into another tag.',
+      mergeInto: 'Merge into',
+      noMerge: 'Do not merge',
+      merge: 'Merge',
+      delete: 'Delete',
+    },
+    units: {
+      title: 'Units',
+      intro:
+        'Units are recognized in ingredient lines through their aliases, in any language, ignoring case, accents, dots and spaces. Changing a unit never changes recipe texts, only how quantities are recognized and rounded.',
+      add: 'Add a unit',
+      form: 'Unit',
+      edit: 'Edit the unit {{unit}}',
+      delete: 'Delete the unit {{unit}}',
+      aliasesIn: 'Ways of writing it ({{language}})',
+      aliasesPlaceholder: 'tbsp, tablespoon, tablespoons',
+      roundingLabel: 'Rounding when scaling',
+      rounding: {
+        decimal: 'Decimal (metric: 12.5 g, 250 ml)',
+        fraction: 'Fractions (cooking units: ½, ¼)',
+      },
+      deleteTitle: 'Delete the unit {{unit}}?',
+      deleteText:
+        'Recipe texts do not change; the unit is simply no longer recognized (its quantities are rounded as without unit).',
+      deleteConfirm: 'Delete',
+    },
   },
   admin: {
     invites: {
@@ -378,6 +446,13 @@ export const en = {
     unauthorized: 'Please sign in again.',
     conflict: 'This recipe was changed elsewhere (another tab or device) since you opened it.',
     invalid_recipe: 'The recipe could not be read.',
+    invalid_tags: 'These tags cannot go together (one tag only in some categories).',
+    slug_taken: 'This identifier is already used.',
+    alias_conflict: 'A way of writing it is already used by another unit',
+    tag_in_use: 'This tag is used by recipes.',
+    category_not_empty: 'This category still has tags: move or delete them first.',
+    single_choice_conflict:
+      'Some recipes would get two tags of a category that allows only one: change their tags first.',
     INVALID_CODE: 'Wrong code. Check the time on your phone and try again.',
     INVALID_BACKUP_CODE: 'Wrong or already used backup code.',
     TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: 'Too many wrong codes. Sign in again.',

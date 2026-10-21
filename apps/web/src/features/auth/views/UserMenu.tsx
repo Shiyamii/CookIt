@@ -1,4 +1,4 @@
-import { CircleUser, LogOut, Mail, ShieldCheck, Users } from 'lucide-react';
+import { CircleUser, LogOut, Mail, Ruler, ShieldCheck, Tags, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,16 @@ export function UserMenu() {
             <DropdownMenuItem asChild>
               <Link to="/admin/users">
                 <Users /> {t('admin.users.title')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/admin/tags">
+                <Tags /> {t('catalog.tags.title')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/admin/units">
+                <Ruler /> {t('catalog.units.title')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

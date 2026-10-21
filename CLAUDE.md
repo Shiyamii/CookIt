@@ -149,6 +149,14 @@ When recipes are stored (phase 4): Zod schemas for the columns must refuse line 
 - `tags:` line appears only in export/import, **never in the markdown editor**. Tags are list values (never free text), always go through a "Validate tags" step on import, and are never created by an import.
 - Translations of a recipe must share the same structure (groups, ingredient/step counts, timer durations); the server warns on mismatch.
 
+## Categories, tags and units (phase 4b)
+
+- Tables `tag_categories`, `tags` (slug unique across categories, `on delete restrict` from its category), `recipe_tags` (recipes domain, written in the recipe save transaction), `units`. Modules `modules/tags` and `modules/units`; shared schemas in `packages/shared/src/tags.ts` and `units/unit.ts` (`unitInputSchema`, `UnitEntry`).
+- **Starting data** (`DEFAULT_UNITS`, `DEFAULT_TAG_CATEGORIES`) is inserted once at startup by `src/db/seed.ts` and recorded in the `seeds` table: a restart never brings back what the admin deleted. A new seed gets a new name (`units-v2`…).
+- The units and tags services cache their catalog and replace it (a **new array**) after every change; the recipes service parses with `units.catalog()` and checks tag selections with the tags service (unknown tag, or two tags of a single-choice category → `invalid_tags`). Tags are saved by both editors (`tagIds` in every save body; omitted = unchanged) and copied by "add to my library".
+- `GET /api/v1/units` and `GET /api/v1/tags` are public (needed to read and scale public recipes); admin routes under `/api/v1/admin/units`, `/admin/tags`, `/admin/tag-categories`. Deleting a used tag needs `{ confirm: true }` or `{ mergeInto }` (409 `tag_in_use` with `recipeCount` otherwise); a category must be empty to be deleted; a duplicate normalized alias is a 409 `alias_conflict`.
+- Lists filter by tag slugs (`?tags=a,b`, all required). Labels are shown with `labelFor` (interface language, then the others, then the slug); the front reads the interface language with `i18n.resolvedLanguage` (`i18n.language` can be `en-US`).
+
 ## Accounts (phase 3)
 
 - **Better Auth** (`apps/server/src/modules/auth/auth.ts`) handles sessions, sign-in (email or username), sign-out and password changes, mounted at `/api/v1/auth`. Only an **allowlist** of its routes is reachable (`auth.controller.ts`); `update-user` only accepts `name` / `locale` (`updateProfileInputSchema`). Its own sign-up is disabled.

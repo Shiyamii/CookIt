@@ -43,6 +43,46 @@ export function RecipeListPage({ kind }: { kind: 'mine' | 'gallery' }) {
         />
       </div>
 
+      {vm.filterGroups.length > 0 && (
+        <details className="rounded-lg border px-3 py-2" open={vm.selectedTagCount > 0}>
+          <summary className="cursor-pointer py-1 text-sm font-medium">
+            {t('recipes.filters.title')}
+            {vm.selectedTagCount > 0 && ` (${vm.selectedTagCount})`}
+          </summary>
+          <div className="grid gap-3 py-2">
+            {vm.filterGroups.map((group) => (
+              <div key={group.id} className="grid gap-1.5">
+                <p className="text-sm text-muted-foreground">{group.label}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.tags.map((tag) => (
+                    <Button
+                      key={tag.slug}
+                      size="sm"
+                      variant={tag.selected ? 'default' : 'outline'}
+                      aria-pressed={tag.selected}
+                      className="rounded-full"
+                      onClick={() => vm.toggleTag(tag.slug)}
+                    >
+                      {tag.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {vm.selectedTagCount > 0 && (
+              <Button
+                variant="link"
+                size="sm"
+                className="justify-self-start"
+                onClick={vm.clearTags}
+              >
+                {t('recipes.filters.clear')}
+              </Button>
+            )}
+          </div>
+        </details>
+      )}
+
       {vm.loading && <p className="text-muted-foreground">{t('common.loading')}</p>}
       {vm.loadError && <p className="text-destructive">{t('errors.unknown')}</p>}
       {!vm.loading && !vm.loadError && vm.recipes.length === 0 && (

@@ -18,6 +18,7 @@ export * from './recipe/serialize';
 export * from './recipe/split';
 export * from './recipe/translation';
 export * from './recipes';
+export * from './tags';
 export * from './text';
 export * from './units/catalog';
 export * from './units/index-units';

@@ -11,6 +11,8 @@ export type Draft = {
   markdown: string;
   /** The recipe version the draft started from (none for a new recipe). */
   baseVersion?: string;
+  /** Tags chosen in the editor (they are not part of the markdown). */
+  tagIds?: string[];
   savedAt: string;
 };
 

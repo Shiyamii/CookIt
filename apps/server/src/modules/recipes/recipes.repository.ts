@@ -1,9 +1,9 @@
 import type { Locale, RecipeVisibility } from '@cookit/shared';
-import { and, desc, eq, like, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, exists, like, sql, type SQL } from 'drizzle-orm';
 import type { Database } from '../../db';
 import { uniqueViolation } from '../../db/errors';
 import { user } from '../auth/auth.schema';
-import { recipes, recipeTranslations } from './recipes.schema';
+import { recipes, recipeTags, recipeTranslations } from './recipes.schema';
 
 /** A recipe with its base-language translation and its owner's display name. */
 export type RecipeRow = {
@@ -21,6 +21,7 @@ export type RecipeRow = {
   description: string;
   extraMeta: Record<string, string>;
   bodyMarkdown: string;
+  tagIds: string[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -44,6 +45,7 @@ export type RecipeContent = {
 
 export type NewRecipe = RecipeContent & {
   id: string;
+  tagIds: string[];
   ownerId: string;
   lang: Locale;
   copiedFromId?: string | null;
@@ -53,6 +55,8 @@ export type NewRecipe = RecipeContent & {
 export type ListQuery = {
   /** A `to_tsquery` expression (built by the service from the words searched), if any. */
   tsquery?: string;
+  /** Recipes having all these tags. */
+  tagIds?: string[];
   limit: number;
   offset: number;
 };
@@ -71,7 +75,7 @@ export type RecipesRepository = {
   update(
     id: string,
     content: RecipeContent,
-    options: { baseVersion?: Date; now: Date },
+    options: { baseVersion?: Date; now: Date; tagIds?: string[] },
   ): Promise<'ok' | 'conflict' | 'not_found'>;
   setVisibility(id: string, visibility: RecipeVisibility, shareToken: string | null): Promise<void>;
   delete(id: string): Promise<void>;
@@ -118,20 +122,45 @@ const listColumns = {
 const searchConfig = sql`(case ${recipeTranslations.lang} when 'fr' then 'french'::regconfig else 'english'::regconfig end)`;
 
 export function createRecipesRepository(db: Database): RecipesRepository {
-  const findOne = async (where: SQL) => {
+  const findOne = async (where: SQL): Promise<RecipeRow | undefined> => {
     const [row] = await db
       .select(rowColumns)
       .from(recipes)
       .innerJoin(recipeTranslations, baseTranslation)
       .innerJoin(user, eq(user.id, recipes.ownerId))
       .where(where);
-    return row;
+    if (!row) return undefined;
+    const tagRows = await db
+      .select({ tagId: recipeTags.tagId })
+      .from(recipeTags)
+      .where(eq(recipeTags.recipeId, row.id));
+    return { ...row, tagIds: tagRows.map((tag) => tag.tagId) };
+  };
+
+  /** Replaces the tags of a recipe (inside the save's transaction). */
+  const setTags = async (
+    tx: Parameters<Parameters<Database['transaction']>[0]>[0],
+    recipeId: string,
+    tagIds: string[],
+  ) => {
+    await tx.delete(recipeTags).where(eq(recipeTags.recipeId, recipeId));
+    if (tagIds.length) {
+      await tx.insert(recipeTags).values(tagIds.map((tagId) => ({ recipeId, tagId })));
+    }
   };
 
   const list = (where: SQL | undefined, query: ListQuery) => {
     const matches = query.tsquery
       ? sql`${recipeTranslations.search} @@ to_tsquery(${searchConfig}, ${query.tsquery})`
       : undefined;
+    const tagged = (query.tagIds ?? []).map((tagId) =>
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(recipeTags)
+          .where(and(eq(recipeTags.recipeId, recipes.id), eq(recipeTags.tagId, tagId))),
+      ),
+    );
     const order = query.tsquery
       ? [
           desc(
@@ -145,7 +174,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
       .from(recipes)
       .innerJoin(recipeTranslations, baseTranslation)
       .innerJoin(user, eq(user.id, recipes.ownerId))
-      .where(and(where, matches))
+      .where(and(where, matches, ...tagged))
       .orderBy(...order, recipes.id)
       .limit(query.limit)
       .offset(query.offset);
@@ -174,6 +203,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         searchText: recipe.searchText,
         updatedAt: recipe.now,
       });
+      await setTags(tx, recipe.id, recipe.tagIds);
     });
 
   return {
@@ -238,6 +268,8 @@ export function createRecipesRepository(db: Database): RecipesRepository {
           .where(
             and(eq(recipeTranslations.recipeId, id), eq(recipeTranslations.lang, current.baseLang)),
           );
+        // Tags only change when given (a save that does not know them keeps them).
+        if (options.tagIds) await setTags(tx, id, options.tagIds);
         return 'ok';
       });
     },

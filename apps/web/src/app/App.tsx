@@ -3,6 +3,8 @@ import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { SecurityPage } from '@/features/account/views/SecurityPage';
 import { InvitesPage } from '@/features/admin/views/InvitesPage';
+import { TagsAdminPage } from '@/features/catalog/views/TagsAdminPage';
+import { UnitsAdminPage } from '@/features/catalog/views/UnitsAdminPage';
 import { UsersPage } from '@/features/admin/views/UsersPage';
 import { LoginPage } from '@/features/auth/views/LoginPage';
 import { RegisterPage } from '@/features/auth/views/RegisterPage';
@@ -58,6 +60,8 @@ const router = createBrowserRouter([
         children: [
           { path: 'invites', element: <InvitesPage /> },
           { path: 'users', element: <UsersPage /> },
+          { path: 'tags', element: <TagsAdminPage /> },
+          { path: 'units', element: <UnitsAdminPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

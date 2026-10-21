@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router';
 import { errorCode } from '@/lib/api';
 import { useLinkToken } from '@/features/auth/viewmodels/useLinkToken';
 import { useSession } from '@/features/auth/viewmodels/useSession';
+import { useTagCatalog, useUnitCatalog } from '@/features/catalog/viewmodels/useCatalogs';
 import { displayRecipe, durationText, parseDetail, sourceLink } from '../model/display';
 import {
   copyRecipe,
@@ -42,12 +43,37 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
   });
   const detail = recipe.data;
 
-  const document = useMemo(() => (detail ? parseDetail(detail) : undefined), [detail]);
+  // Read and scaled with the unit catalog of the database (the built-in one if it failed).
+  const { units, failed: unitsFailed } = useUnitCatalog();
+  const unitsReady = units !== undefined || unitsFailed;
+  const document = useMemo(
+    () => (detail && unitsReady ? parseDetail(detail, units) : undefined),
+    [detail, units, unitsReady],
+  );
   const shownServings = servings ?? document?.servings ?? 1;
   const display = useMemo(
-    () => (document && detail ? displayRecipe(document, shownServings, detail.lang) : undefined),
-    [document, detail, shownServings],
+    () =>
+      document && detail ? displayRecipe(document, shownServings, detail.lang, units) : undefined,
+    [document, detail, shownServings, units],
   );
+
+  // Tags of the recipe, by category, in the interface language.
+  const catalog = useTagCatalog();
+  const tagGroups = useMemo(() => {
+    const ids = new Set(detail?.tagIds ?? []);
+    return catalog.categories
+      .map((category) => ({
+        category: catalog.label(category.labels, category.slug),
+        tags: category.tags
+          .filter((tag) => ids.has(tag.id))
+          .map((tag) => ({
+            id: tag.id,
+            slug: tag.slug,
+            label: catalog.label(tag.labels, tag.slug),
+          })),
+      }))
+      .filter((group) => group.tags.length > 0);
+  }, [catalog, detail?.tagIds]);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: RECIPES_QUERY_KEY });
 
@@ -84,11 +110,13 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
     onError: (failure) => setError(errorCode(failure)),
   });
 
-  const missing = (source === 'shared' && token === '') || recipe.isError || (detail && !document);
+  const missing =
+    (source === 'shared' && token === '') || recipe.isError || (detail && unitsReady && !document);
 
   return {
-    status: missing ? 'not_found' : recipe.isPending ? 'loading' : 'ready',
+    status: missing ? 'not_found' : recipe.isPending || !unitsReady ? 'loading' : 'ready',
     recipe: display,
+    tagGroups,
     lang: detail?.lang,
     ownerName: detail?.ownerName ?? '',
     isOwner: detail?.isOwner ?? false,

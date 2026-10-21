@@ -13,6 +13,7 @@ import {
   unique,
 } from 'drizzle-orm/pg-core';
 import { user } from '../auth/auth.schema';
+import { tags } from '../tags/tags.schema';
 
 const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' });
 
@@ -84,5 +85,22 @@ export const recipeTranslations = pgTable(
     primaryKey({ columns: [table.recipeId, table.lang] }),
     index('recipe_translations_search_idx').using('gin', table.search),
     check('recipe_translations_lang_check', sql`${table.lang} in ('fr', 'en')`),
+  ],
+);
+
+/** Tags belong to the recipe, not to a translation (plan §3). */
+export const recipeTags = pgTable(
+  'recipe_tags',
+  {
+    recipeId: text('recipe_id')
+      .notNull()
+      .references(() => recipes.id, { onDelete: 'cascade' }),
+    tagId: text('tag_id')
+      .notNull()
+      .references(() => tags.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.recipeId, table.tagId] }),
+    index('recipe_tags_tag_idx').on(table.tagId),
   ],
 );

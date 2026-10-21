@@ -171,6 +171,11 @@ export const fr: Translations = {
   recipes: {
     ingredients: 'Ingrédients',
     steps: 'Étapes',
+    tags: 'Tags',
+    filters: {
+      title: 'Filtrer par tags',
+      clear: 'Effacer les filtres',
+    },
     noIngredients: 'Pas encore d’ingrédients.',
     noSteps: 'Pas encore d’étapes : cette recette est à compléter.',
     stepNumber: 'Étape {{n}} :',
@@ -286,6 +291,7 @@ export const fr: Translations = {
       freeText: 'Texte libre',
       stepLinks: 'Minuteurs et quantités',
       addTimer: 'Ajouter un minuteur',
+      oneTag: 'un seul choix',
       markQuantity: 'Quantité ajustable',
       selectQuantity:
         'Sélectionnez d’abord une quantité dans le texte (par ex. « 2 c. à soupe ») : elle suivra les portions.',
@@ -329,6 +335,69 @@ export const fr: Translations = {
     translation_group_count: 'Pas le même nombre de groupes : {{found}} au lieu de {{expected}}.',
     translation_item_count: 'Groupe {{group}} : {{found}} éléments au lieu de {{expected}}.',
     translation_timers: 'Étape {{step}} : les minuteurs diffèrent de l’original.',
+  },
+  catalog: {
+    save: 'Enregistrer',
+    moveUp: 'Monter',
+    moveDown: 'Descendre',
+    labelIn: 'Nom ({{language}})',
+    slug: 'Identifiant',
+    slugHint:
+      'Lettres minuscules, chiffres et tirets ; utilisé dans les exports (par ex. plat-principal).',
+    invalid: {
+      labels: 'Au moins un nom est nécessaire.',
+      slug: 'Lettres minuscules, chiffres et tirets uniquement (par ex. plat-principal).',
+      unit: 'Vérifiez les champs : un identifiant, au moins un nom, et des écritures de 50 caractères au maximum.',
+    },
+    tags: {
+      title: 'Catégories et tags',
+      intro:
+        'La liste commune des tags, rangés en catégories. Les utilisateurs choisissent parmi eux ; les noms sont traduits dans chaque langue.',
+      multiple: 'plusieurs tags par recette',
+      single: 'un tag par recette',
+      allowMultiple: 'Plusieurs tags de cette catégorie sur une même recette',
+      category: 'Catégorie',
+      categoryForm: 'Catégorie',
+      tagForm: 'Tag',
+      addCategory: 'Ajouter une catégorie',
+      addTag: 'Ajouter un tag',
+      editCategory: 'Modifier la catégorie',
+      deleteCategory: 'Supprimer la catégorie (elle doit être vide)',
+      editTag: 'Modifier le tag {{tag}}',
+      deleteTag: 'Supprimer le tag {{tag}}',
+      recipes_one: '{{count}} recette',
+      recipes_other: '{{count}} recettes',
+      deleteTitle: 'Supprimer le tag « {{tag}} » ?',
+      deleteUnused: 'Aucune recette ne l’utilise.',
+      deleteUsed_one:
+        '{{count}} recette l’utilise : elle perd ce tag, sauf si vous le fusionnez dans un autre tag.',
+      deleteUsed_other:
+        '{{count}} recettes l’utilisent : elles perdent ce tag, sauf si vous le fusionnez dans un autre tag.',
+      mergeInto: 'Fusionner dans',
+      noMerge: 'Ne pas fusionner',
+      merge: 'Fusionner',
+      delete: 'Supprimer',
+    },
+    units: {
+      title: 'Unités',
+      intro:
+        'Les unités sont reconnues dans les lignes d’ingrédients grâce à leurs écritures, dans n’importe quelle langue, sans tenir compte de la casse, des accents, des points ni des espaces. Modifier une unité ne change jamais le texte des recettes, seulement la reconnaissance et l’arrondi des quantités.',
+      add: 'Ajouter une unité',
+      form: 'Unité',
+      edit: 'Modifier l’unité {{unit}}',
+      delete: 'Supprimer l’unité {{unit}}',
+      aliasesIn: 'Façons de l’écrire ({{language}})',
+      aliasesPlaceholder: 'c. à soupe, cuillère à soupe, CaS',
+      roundingLabel: 'Arrondi à la mise à l’échelle',
+      rounding: {
+        decimal: 'Décimal (métrique : 12,5 g, 250 ml)',
+        fraction: 'Fractions (unités de cuisine : ½, ¼)',
+      },
+      deleteTitle: 'Supprimer l’unité {{unit}} ?',
+      deleteText:
+        'Le texte des recettes ne change pas ; l’unité n’est simplement plus reconnue (ses quantités sont arrondies comme sans unité).',
+      deleteConfirm: 'Supprimer',
+    },
   },
   admin: {
     invites: {
@@ -386,6 +455,14 @@ export const fr: Translations = {
     conflict:
       'Cette recette a été modifiée ailleurs (autre onglet ou appareil) depuis que vous l’avez ouverte.',
     invalid_recipe: 'La recette n’a pas pu être lue.',
+    invalid_tags: 'Ces tags ne vont pas ensemble (un seul tag dans certaines catégories).',
+    slug_taken: 'Cet identifiant est déjà utilisé.',
+    alias_conflict: 'Une façon de l’écrire est déjà utilisée par une autre unité',
+    tag_in_use: 'Ce tag est utilisé par des recettes.',
+    category_not_empty:
+      'Cette catégorie contient encore des tags : déplacez-les ou supprimez-les d’abord.',
+    single_choice_conflict:
+      'Des recettes auraient deux tags d’une catégorie qui n’en permet qu’un : changez d’abord leurs tags.',
     INVALID_CODE: 'Code incorrect. Vérifiez l’heure de votre téléphone et réessayez.',
     INVALID_BACKUP_CODE: 'Code de secours incorrect ou déjà utilisé.',
     TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: 'Trop de codes incorrects. Reconnectez-vous.',

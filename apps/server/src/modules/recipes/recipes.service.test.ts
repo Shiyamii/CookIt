@@ -27,7 +27,11 @@ const FIELDS = {
   lang: 'fr' as const,
 };
 const DOC = '# Tarte\n\nportions: 4\n\n---\n\n- 1 oeuf\n\n---\n\n1. Cuire.\n';
-const search = (partial: Partial<RecipeSearch> = {}): RecipeSearch => ({ page: 1, ...partial });
+const search = (partial: Partial<RecipeSearch> = {}): RecipeSearch => ({
+  page: 1,
+  tags: [],
+  ...partial,
+});
 
 function fakeRepository() {
   const rows = new Map<string, RecipeRow & { searchText: string }>();
@@ -47,6 +51,7 @@ function fakeRepository() {
     description: r.description,
     extraMeta: r.extraMeta,
     bodyMarkdown: r.bodyMarkdown,
+    tagIds: r.tagIds,
     createdAt: r.now,
     updatedAt: r.now,
     searchText: r.searchText,
@@ -109,7 +114,19 @@ function setup() {
   const service = createRecipesService({
     repository: fake.repository,
     origin: ORIGIN,
-    units: () => DEFAULT_UNITS,
+    units: async () => DEFAULT_UNITS,
+    tags: {
+      // Tags `t1`… exist; `single-a` and `single-b` share a single-choice category.
+      async checkSelection(tagIds) {
+        const unique = [...new Set(tagIds)];
+        const known = unique.every((id) => /^t\d+$|^single-[ab]$/.test(id));
+        const singles = unique.filter((id) => id.startsWith('single-')).length;
+        return known && singles <= 1 ? unique : undefined;
+      },
+      async idsOfSlugs(slugs) {
+        return slugs.filter((slug) => slug.startsWith('tag-')).map((slug) => slug.slice(4));
+      },
+    },
     generateToken: () => (tokens++ === 0 ? TOKEN : 'U'.repeat(43)),
     newId: () => `id-${++n}`,
     now: () => new Date((clock += 1000)),
@@ -468,6 +485,7 @@ describe('lists', () => {
     await s.service.gallery(search({ page: 3, q: 'Crème' }));
     expect(s.state.lastList).toEqual({
       tsquery: 'creme:*',
+      tagIds: [],
       limit: RECIPES_PAGE_SIZE + 1,
       offset: 2 * RECIPES_PAGE_SIZE,
     });
@@ -478,5 +496,40 @@ describe('lists', () => {
     const page = await s.service.listMine(OWNER, search());
     expect(page.recipes).toHaveLength(RECIPES_PAGE_SIZE);
     expect(page.hasMore).toBe(true);
+  });
+});
+
+describe('tags', () => {
+  test('are checked and saved with the recipe, and copied with it', async () => {
+    const s = setup();
+    const created = await s.service.create(OWNER, { ...FIELDS, tagIds: ['t1', 't2'] });
+    if ('error' in created) throw new Error('create failed');
+    expect(s.rows.get(created.id)?.tagIds).toEqual(['t1', 't2']);
+    await s.service.setVisibility(created.id, OWNER, 'public');
+    const copy = await s.service.copy(created.id, 'someone-else', undefined);
+    if ('error' in copy) throw new Error('copy failed');
+    expect(s.rows.get(copy.id)?.tagIds).toEqual(['t1', 't2']);
+  });
+
+  test('unknown tags or two tags of a single-choice category are refused', async () => {
+    const s = setup();
+    expect(await s.service.create(OWNER, { ...FIELDS, tagIds: ['nope'] })).toEqual({
+      error: 'invalid_tags',
+    });
+    expect(await s.service.create(OWNER, { ...FIELDS, tagIds: ['single-a', 'single-b'] })).toEqual({
+      error: 'invalid_tags',
+    });
+  });
+
+  test('a filter on an unknown tag matches nothing (without asking the repository)', async () => {
+    const s = setup();
+    await created(s);
+    expect(await s.service.listMine(OWNER, search({ tags: ['unknown'] }))).toEqual({
+      recipes: [],
+      hasMore: false,
+    });
+    expect(s.state.lastList).toBeUndefined();
+    await s.service.listMine(OWNER, search({ tags: ['tag-t1'] }));
+    expect(s.state.lastList?.tagIds).toEqual(['t1']);
   });
 });

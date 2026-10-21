@@ -34,3 +34,9 @@ export const unitSchema = z.object({
 });
 
 export type Unit = z.infer<typeof unitSchema>;
+
+/** What the admin sends to create or change a unit. */
+export const unitInputSchema = unitSchema.strict();
+
+/** A unit of the `units` table (the parser only needs `Unit`). */
+export type UnitEntry = Unit & { id: string; position: number };

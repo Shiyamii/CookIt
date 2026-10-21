@@ -115,3 +115,13 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **No cover image yet** (decided with the user: later phase, images need storage in Postgres and resizing). No tags (phase 4b) and only the base language (phase 5b).
 - **Deleting a user deletes their recipes** (cascade) for now; the plan's "choice of what happens to their recipes" comes with the admin pages of a later phase.
 - **Known limit**: CodeMirror on Android handles Enter through the real keyboard's input events, which Playwright's mobile emulation does not produce; the markdown editor is tested on desktop for typing.
+
+## Phase 4b: categories, tags and units
+
+- **Starting data inserted at startup, once** (`seeds` table) rather than in a SQL migration: the catalogs stay defined once, in `packages/shared` (also used by the parser tests); a restart never recreates what the admin deleted. Advisory lock against two instances starting together.
+- **Starting categories**: dish type (one tag per recipe), diet and cuisine (several). The admin changes this with the "multiple" option.
+- **`recipe_tags` in the recipes domain**: tags are written in the same transaction as the recipe save; the tags service only checks the selection. A save without `tagIds` leaves the tags as they are.
+- **A category must be empty to be deleted** (`on delete restrict`): its tags are moved (edit → category) or deleted first, each with its own confirmation. Deleting a used tag needs a confirmation or a merge into another tag (its recipes get that tag; merging into a single-choice category is not re-checked).
+- **Units and tags catalogs are public read-only routes**: public recipes are read and scaled without an account. Cached by the services (one process) and by the front (5 minutes, refreshed after admin edits).
+- **Admin ordering with up/down buttons** (no drag and drop on admin pages): short lists, and it keeps dnd-kit in the editor chunk only.
+- **Tag pickers as toggle buttons** (`aria-pressed`) for single and multiple categories; a single-choice category replaces the previous tag. A filter on an unknown tag slug matches nothing.

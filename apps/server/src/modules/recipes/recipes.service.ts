@@ -22,8 +22,11 @@ import type { RecipeContent, RecipeRow, RecipesRepository } from './recipes.repo
 export type InvalidRecipe = { error: 'invalid_recipe'; diagnostics: Diagnostic[] };
 export type NotFound = { error: 'not_found' };
 export type Conflict = { error: 'conflict' };
+/** Unknown tags, or two tags of a single-choice category. */
+export type InvalidTags = { error: 'invalid_tags' };
 
 const NOT_FOUND: NotFound = { error: 'not_found' };
+const INVALID_TAGS: InvalidTags = { error: 'invalid_tags' };
 const SLUG_MAX = 80;
 const MAX_SEARCH_WORDS = 10;
 
@@ -73,8 +76,13 @@ function searchText(document: RecipeDocument): string {
 export function createRecipesService(deps: {
   repository: RecipesRepository;
   origin: string;
-  /** The unit catalog for parsing (the `units` table from phase 4b). */
-  units: () => readonly Unit[];
+  /** The unit catalog for parsing (the `units` table, units service). */
+  units: () => Promise<readonly Unit[]>;
+  /** Tag catalog checks (tags service). */
+  tags: {
+    checkSelection(tagIds: readonly string[]): Promise<string[] | undefined>;
+    idsOfSlugs(slugs: readonly string[]): Promise<string[]>;
+  };
   generateToken: () => string;
   newId?: () => string;
   now?: () => Date;
@@ -104,14 +112,17 @@ export function createRecipesService(deps: {
           ? shareUrl(row.shareToken)
           : null,
       copiedFromId: row.copiedFromId,
+      tagIds: row.tagIds,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
   };
 
   /** Parses the document; the canonical columns and body come from the parsed recipe. */
-  const parseDocument = (markdown: string): { document: RecipeDocument } | InvalidRecipe => {
-    const result = parseRecipe(markdown, { units: deps.units() });
+  const parseDocument = async (
+    markdown: string,
+  ): Promise<{ document: RecipeDocument } | InvalidRecipe> => {
+    const result = parseRecipe(markdown, { units: await deps.units() });
     if (!result.ok) return { error: 'invalid_recipe', diagnostics: result.diagnostics };
     return { document: result.document };
   };
@@ -142,11 +153,20 @@ export function createRecipesService(deps: {
     return freeSlug(base, await repository.slugsStartingWith(ownerId, base));
   };
 
+  /** The tags to save: checked, or undefined when none were given. */
+  const checkTags = async (
+    tagIds: readonly string[] | undefined,
+  ): Promise<{ tagIds?: string[] } | InvalidTags> => {
+    if (tagIds === undefined) return {};
+    const checked = await deps.tags.checkSelection(tagIds);
+    return checked ? { tagIds: checked } : INVALID_TAGS;
+  };
+
   const insert = async (
     ownerId: string,
     document: RecipeDocument,
     lang: Locale,
-    copiedFromId: string | null = null,
+    options: { copiedFromId?: string | null; tagIds?: string[] } = {},
   ): Promise<{ id: string }> => {
     // Two creations with the same title at once: the second one picks the next free slug.
     for (let attempt = 0; ; attempt++) {
@@ -157,7 +177,8 @@ export function createRecipesService(deps: {
         id,
         ownerId,
         lang,
-        copiedFromId,
+        copiedFromId: options.copiedFromId ?? null,
+        tagIds: options.tagIds ?? [],
         now: now(),
       });
       if (result === 'ok') return { id };
@@ -175,12 +196,13 @@ export function createRecipesService(deps: {
     row: RecipeRow,
     document: RecipeDocument,
     baseVersion: string | undefined,
+    tagIds: string[] | undefined,
   ): Promise<{ updatedAt: string } | NotFound | Conflict> => {
     const at = now();
     const result = await repository.update(
       row.id,
       content(document, row.lang, await slugFor(row.ownerId, document.title, row.slug)),
-      { baseVersion: baseVersion ? new Date(baseVersion) : undefined, now: at },
+      { baseVersion: baseVersion ? new Date(baseVersion) : undefined, now: at, tagIds },
     );
     if (result === 'not_found') return NOT_FOUND;
     if (result === 'conflict') return { error: 'conflict' };
@@ -200,24 +222,40 @@ export function createRecipesService(deps: {
     };
   };
 
-  // One more row than a page tells whether there is a next page.
-  const listQuery = (search: RecipeSearch) => ({
-    tsquery: searchQuery(search.q),
-    limit: RECIPES_PAGE_SIZE + 1,
-    offset: (search.page - 1) * RECIPES_PAGE_SIZE,
-  });
+  /**
+   * The list query, or undefined when a filtered tag does not exist (nothing can match). One
+   * more row than a page tells whether there is a next page.
+   */
+  const listQuery = async (search: RecipeSearch) => {
+    const tagIds = await deps.tags.idsOfSlugs(search.tags);
+    if (tagIds.length < new Set(search.tags).size) return undefined;
+    return {
+      tsquery: searchQuery(search.q),
+      tagIds,
+      limit: RECIPES_PAGE_SIZE + 1,
+      offset: (search.page - 1) * RECIPES_PAGE_SIZE,
+    };
+  };
+  const EMPTY_PAGE: RecipePage = { recipes: [], hasMore: false };
 
   return {
     async create(ownerId: string, input: RecipeCreateInput) {
-      const parsed = parseFields(input, input.body, input.lang);
+      const tags = await checkTags(input.tagIds);
+      if ('error' in tags) return tags;
+      const parsed = await parseFields(input, input.body, input.lang);
       if ('error' in parsed) return parsed;
-      return insert(ownerId, parsed.document, input.lang);
+      return insert(ownerId, parsed.document, input.lang, tags);
     },
 
-    async createFromMarkdown(ownerId: string, input: { markdown: string; lang: Locale }) {
-      const parsed = parseDocument(input.markdown);
+    async createFromMarkdown(
+      ownerId: string,
+      input: { markdown: string; lang: Locale; tagIds?: string[] },
+    ) {
+      const tags = await checkTags(input.tagIds);
+      if ('error' in tags) return tags;
+      const parsed = await parseDocument(input.markdown);
       if ('error' in parsed) return parsed;
-      return insert(ownerId, parsed.document, input.lang);
+      return insert(ownerId, parsed.document, input.lang, tags);
     },
 
     /** A recipe as `viewerId` (null: anonymous) may read it from its id: owner or public. */
@@ -238,21 +276,25 @@ export function createRecipesService(deps: {
     async update(id: string, userId: string, input: RecipeSaveInput) {
       const row = await owned(id, userId);
       if (!row) return NOT_FOUND;
-      const parsed = parseFields(input, input.body, row.lang);
+      const tags = await checkTags(input.tagIds);
+      if ('error' in tags) return tags;
+      const parsed = await parseFields(input, input.body, row.lang);
       if ('error' in parsed) return parsed;
-      return save(row, parsed.document, input.baseVersion);
+      return save(row, parsed.document, input.baseVersion, tags.tagIds);
     },
 
     async updateFromMarkdown(
       id: string,
       userId: string,
-      input: { markdown: string; baseVersion?: string },
+      input: { markdown: string; baseVersion?: string; tagIds?: string[] },
     ) {
       const row = await owned(id, userId);
       if (!row) return NOT_FOUND;
-      const parsed = parseDocument(input.markdown);
+      const tags = await checkTags(input.tagIds);
+      if ('error' in tags) return tags;
+      const parsed = await parseDocument(input.markdown);
       if ('error' in parsed) return parsed;
-      return save(row, parsed.document, input.baseVersion);
+      return save(row, parsed.document, input.baseVersion, tags.tagIds);
     },
 
     /**
@@ -297,7 +339,7 @@ export function createRecipesService(deps: {
         (row.visibility === 'public' ||
           (row.visibility === 'unlisted' && token !== undefined && token === row.shareToken));
       if (!row || !readable || row.ownerId === userId) return NOT_FOUND;
-      const parsed = parseFields(
+      const parsed = await parseFields(
         {
           title: row.title,
           description: row.description,
@@ -309,15 +351,21 @@ export function createRecipesService(deps: {
         row.lang,
       );
       if ('error' in parsed) return parsed;
-      return insert(userId, parsed.document, row.lang, row.id);
+      // Tags are copied too (plan §4).
+      return insert(userId, parsed.document, row.lang, {
+        copiedFromId: row.id,
+        tagIds: row.tagIds,
+      });
     },
 
-    listMine(userId: string, search: RecipeSearch): Promise<RecipePage> {
-      return page(repository.listByOwner(userId, listQuery(search)));
+    async listMine(userId: string, search: RecipeSearch): Promise<RecipePage> {
+      const query = await listQuery(search);
+      return query ? page(repository.listByOwner(userId, query)) : EMPTY_PAGE;
     },
 
-    gallery(search: RecipeSearch): Promise<RecipePage> {
-      return page(repository.listPublic(listQuery(search)));
+    async gallery(search: RecipeSearch): Promise<RecipePage> {
+      const query = await listQuery(search);
+      return query ? page(repository.listPublic(query)) : EMPTY_PAGE;
     },
   };
 }

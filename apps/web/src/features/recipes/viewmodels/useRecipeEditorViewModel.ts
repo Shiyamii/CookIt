@@ -6,6 +6,7 @@ import { useBlocker, useNavigate, useParams } from 'react-router';
 import { errorCode } from '@/lib/api';
 import { displayRecipe, durationText } from '../model/display';
 import { useSession } from '@/features/auth/viewmodels/useSession';
+import { useTagCatalog, useUnitCatalog } from '@/features/catalog/viewmodels/useCatalogs';
 import {
   clearDraft,
   clearOtherUsersDrafts,
@@ -79,10 +80,17 @@ export function useRecipeEditorViewModel() {
   const [mode, setMode] = useState<EditorMode>('visual');
   // The markdown editor's text (its source of truth while it is open).
   const [markdown, setMarkdown] = useState('');
-  const [lang, setLang] = useState<Locale>(isLocale(i18n.language) ? i18n.language : 'fr');
+  const [lang, setLang] = useState<Locale>(
+    isLocale(i18n.resolvedLanguage) ? i18n.resolvedLanguage : 'fr',
+  );
   const [baseVersion, setBaseVersion] = useState<string>();
   // What was last loaded or saved: "unsaved changes" compare against it.
   const [savedMarkdown, setSavedMarkdown] = useState<string>();
+  // Tags are chosen with pickers, never in the markdown (plan §4); saved by both editors.
+  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [savedTagIds, setSavedTagIds] = useState<string[]>([]);
+  const { units, failed: unitsFailed } = useUnitCatalog();
+  const catalog = useTagCatalog();
   const [draft, setDraft] = useState<Draft>();
   const [switchError, setSwitchError] = useState<Diagnostic[]>();
   const [invalid, setInvalid] = useState<InvalidField[]>([]);
@@ -93,12 +101,15 @@ export function useRecipeEditorViewModel() {
   // Once loaded (and again after reloading the stored recipe): start from the stored recipe, or
   // an empty one, and offer a draft left from last time. Done while rendering, keyed on the
   // loaded version (React's pattern for state derived from props).
-  const loaded = isNew || detail !== undefined;
+  // The unit catalog is needed to read the recipe (the built-in one if it failed).
+  const loaded = (isNew || detail !== undefined) && (units !== undefined || unitsFailed);
   const loadedVersion = isNew ? 'new' : detail?.updatedAt;
   const [startedFrom, setStartedFrom] = useState<string>();
   if (loaded && startedFrom !== loadedVersion) {
     setStartedFrom(loadedVersion);
-    const start = detail ? fromDetail(detail) : emptyRecipe();
+    const start = detail ? fromDetail(detail, units) : emptyRecipe();
+    setTagIds(detail?.tagIds ?? []);
+    setSavedTagIds(detail?.tagIds ?? []);
     const startLang = detail?.lang ?? lang;
     dispatch({ type: 'replace', recipe: start });
     setLang(startLang);
@@ -116,12 +127,14 @@ export function useRecipeEditorViewModel() {
   useEffect(() => clearOtherUsersDrafts(userId), [userId]);
 
   const current = mode === 'markdown' ? markdown : toMarkdown(recipe, lang);
-  const dirty = savedMarkdown !== undefined && current !== savedMarkdown;
+  const tagsChanged =
+    tagIds.length !== savedTagIds.length || tagIds.some((tagId) => !savedTagIds.includes(tagId));
+  const dirty = savedMarkdown !== undefined && (current !== savedMarkdown || tagsChanged);
 
   // Live diagnostics of the markdown editor.
   const markdownCheck = useMemo(
-    () => (mode === 'markdown' ? fromMarkdown(markdown) : undefined),
-    [mode, markdown],
+    () => (mode === 'markdown' ? fromMarkdown(markdown, units) : undefined),
+    [mode, markdown, units],
   );
 
   // The draft follows the edits (after a short pause).
@@ -131,11 +144,12 @@ export function useRecipeEditorViewModel() {
       saveDraft(draftKey, {
         markdown: current,
         baseVersion,
+        tagIds,
         savedAt: new Date().toISOString(),
       });
     }, DRAFT_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [dirty, current, draftKey, baseVersion]);
+  }, [dirty, current, draftKey, baseVersion, tagIds]);
 
   // Leaving the page (or the site) with unsaved changes asks first.
   const blocker = useBlocker(({ currentLocation, nextLocation }) => {
@@ -153,7 +167,7 @@ export function useRecipeEditorViewModel() {
     setSwitchError(undefined);
     if (target === mode) return;
     if (mode === 'markdown') {
-      const parsed = fromMarkdown(markdown);
+      const parsed = fromMarkdown(markdown, units);
       if (!parsed.ok) {
         setSwitchError(parsed.diagnostics);
         return;
@@ -174,15 +188,15 @@ export function useRecipeEditorViewModel() {
   const save = useMutation({
     mutationFn: async (): Promise<string> => {
       if (mode === 'markdown') {
-        if (isNew) return (await createRecipeFromMarkdown(markdown, lang)).id;
-        await saveRecipeMarkdown(id, markdown, baseVersion ?? '');
+        if (isNew) return (await createRecipeFromMarkdown(markdown, lang, tagIds)).id;
+        await saveRecipeMarkdown(id, markdown, baseVersion ?? '', tagIds);
         return id;
       }
       const fields = toFields(recipe);
       if (!fields.ok) throw new Error('invalid_fields');
       const body = toBody(recipe, lang);
-      if (isNew) return (await createRecipe({ ...fields.fields, body, lang })).id;
-      await saveRecipe(id, { ...fields.fields, body, baseVersion });
+      if (isNew) return (await createRecipe({ ...fields.fields, body, lang, tagIds })).id;
+      await saveRecipe(id, { ...fields.fields, body, baseVersion, tagIds });
       return id;
     },
     onMutate: () => {
@@ -199,11 +213,27 @@ export function useRecipeEditorViewModel() {
   // The preview shows the recipe as its page will (undefined while it cannot be read).
   const preview = useMemo(() => {
     if (mode !== 'preview') return undefined;
-    const result = parseRecipe(toMarkdown(recipe, lang));
-    return result.ok ? displayRecipe(result.document, result.document.servings, lang) : undefined;
-  }, [mode, recipe, lang]);
+    const result = parseRecipe(toMarkdown(recipe, lang), { units });
+    return result.ok
+      ? displayRecipe(result.document, result.document.servings, lang, units)
+      : undefined;
+  }, [mode, recipe, lang, units]);
 
-  const suggestions = useMemo(() => unitSuggestions(lang), [lang]);
+  const suggestions = useMemo(() => unitSuggestions(lang, units), [lang, units]);
+
+  // Tag pickers: one per category, single or multiple choice.
+  const tagPickers = catalog.categories
+    .filter((category) => category.tags.length > 0)
+    .map((category) => ({
+      id: category.id,
+      label: catalog.label(category.labels, category.slug),
+      multiple: category.multiple,
+      tags: category.tags.map((tag) => ({
+        id: tag.id,
+        label: catalog.label(tag.labels, tag.slug),
+        selected: tagIds.includes(tag.id),
+      })),
+    }));
 
   return {
     status: !isNew && existing.isError ? 'not_found' : loaded ? 'ready' : 'loading',
@@ -241,7 +271,8 @@ export function useRecipeEditorViewModel() {
     draftSavedAt: draft?.savedAt,
     restoreDraft: () => {
       if (!draft) return;
-      const parsed = fromMarkdown(draft.markdown);
+      if (draft.tagIds) setTagIds(draft.tagIds);
+      const parsed = fromMarkdown(draft.markdown, units);
       if (parsed.ok) {
         dispatch({ type: 'replace', recipe: parsed.recipe });
         setMode('visual');
@@ -268,7 +299,20 @@ export function useRecipeEditorViewModel() {
     stay: () => blocker.reset?.(),
     leave: () => blocker.proceed?.(),
     // Helpers for the rows of the visual editor.
-    ingredientParts: (raw: string) => ingredientParts(raw),
+    ingredientParts: (raw: string) => ingredientParts(raw, units),
+    tagPickers,
+    /** Single-choice categories keep one tag (choosing it again removes it). */
+    toggleTag: (categoryId: string, tagId: string) => {
+      const category = catalog.categories.find((c) => c.id === categoryId);
+      if (!category) return;
+      setTagIds((current) => {
+        if (current.includes(tagId)) return current.filter((id) => id !== tagId);
+        const others = category.multiple
+          ? current
+          : current.filter((id) => !category.tags.some((tag) => tag.id === id));
+        return [...others, tagId];
+      });
+    },
     unitSuggestions: suggestions,
     joinIngredient: (parts: IngredientParts) => joinIngredient(parts),
     stepChips,

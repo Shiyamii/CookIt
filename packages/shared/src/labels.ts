@@ -11,7 +11,8 @@ export const labelString = (max: number) =>
     .trim()
     .min(1)
     .max(max)
-    .refine((value) => !/[\p{Cc}\p{Bidi_Control}]/u.test(value), {
+    // Line and paragraph separators (U+2028, U+2029) too: a label must stay on one line.
+    .refine((value) => !/[\p{Cc}\p{Bidi_Control}\p{Zl}\p{Zp}]/u.test(value), {
       message: 'Control characters are not allowed',
     });
 
