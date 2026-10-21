@@ -590,7 +590,64 @@ export const en = {
         'Up to 5 recipes can be cooked at once: finish or remove one before adding another.',
     },
   },
+  push: {
+    title: 'Notifications',
+    intro:
+      'Get a notification when a cooking timer ends, even with the page closed or the phone locked.',
+    thisDevice: 'This device',
+    badgeOn: 'On',
+    badgeOff: 'Off',
+    enable: 'Turn on notifications',
+    disable: 'Turn off',
+    test: 'Send a test',
+    testSent_one: 'Test sent to {{count}} device.',
+    testSent_other: 'Test sent to {{count}} devices.',
+    devices: 'Devices receiving your notifications',
+    current: 'This device',
+    unknownDevice: 'Unknown device',
+    status: {
+      on: 'This device gets a notification when a timer ends.',
+      off: 'Notifications are off on this device: a timer ending with the page closed goes unnoticed.',
+      denied: 'Notifications are blocked for this site in the browser settings.',
+      ios_install:
+        'On iPhone and iPad, notifications only work once CookIt is added to the home screen and opened from there.',
+      unsupported: 'This browser cannot receive notifications.',
+      not_configured: 'Notifications are not set up on this server (ask the administrator).',
+      error: 'The notification state could not be read.',
+    },
+    notice: {
+      off: 'Notifications are off: you will not be warned of a finished timer when this page is closed.',
+      denied:
+        'Notifications are blocked in this browser: timers only ring while this page is open.',
+      ios_install:
+        'To be warned with the page closed, add CookIt to the home screen and open it from there.',
+      unsupported:
+        'This browser cannot get notifications: timers only ring while this page is open.',
+      error: 'The notification state could not be read.',
+    },
+    help: {
+      link: 'Help',
+      title: 'How to get them',
+      iosTitle: 'iPhone and iPad (iOS 16.4 or later)',
+      ios: 'Open CookIt in Safari.\nTap Share, then "Add to Home Screen".\nOpen CookIt from its icon on the home screen and sign in.\nOpen this page and tap "Turn on notifications", then allow them.',
+      androidTitle: 'Android',
+      android:
+        'Tap "Turn on notifications" and allow them. Keep the battery saver from stopping the browser if notifications come late.',
+      computerTitle: 'Computer',
+      computer:
+        'Tap "Turn on notifications" and allow them. The browser must be running (it may be in the background) to show them.',
+      blockedTitle: 'Blocked by mistake?',
+      blocked:
+        'Allow notifications for this site in the browser settings (the icon left of the address), then reload the page.',
+      limitsTitle: 'Limits',
+      limits:
+        'The notification uses the default system sound and does not repeat. A device offline for more than 10 minutes does not get it.',
+    },
+  },
   errors: {
+    push_failed: 'Notifications could not be turned on on this device. Try again later.',
+    unsupported_push_service: 'This browser uses a push service CookIt does not accept.',
+    push_not_configured: 'Notifications are not set up on this server.',
     base_language: 'This is the original language of the recipe: change it with the editor.',
     unknown: 'Something went wrong. Please try again.',
     invalid_token: 'This link does not work anymore. Ask for a new one.',

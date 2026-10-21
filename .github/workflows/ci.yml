@@ -55,6 +55,10 @@ jobs:
           -e ORIGIN=http://localhost:3000
           -e BETTER_AUTH_SECRET=ci-secret-not-used-anywhere-else-0123456789
           -e RATE_LIMIT_FACTOR=50
+          -e VAPID_PUBLIC_KEY=BDAjrN6hd_Hc2OHdE4nTIkhbrxCeqaWwfmbDbbbaT8CNS2jjPYZqqSZMkYles-Qon2UFknP0Gj47chgAx4ThjDI
+          -e VAPID_PRIVATE_KEY=zQTQQENw_38kQ1zDvLJrGKyd8S4RW1cVT5joaH1Ovkc
+          -e VAPID_SUBJECT=mailto:ci@example.com
+          -e PUSH_TEST_ENDPOINT_ORIGIN=http://localhost:4567
           cookit:ci
       - name: Wait for the app
         run: |
@@ -80,6 +84,8 @@ jobs:
         env:
           # The global setup runs the rescue CLI in this container to get the first-admin link.
           E2E_CONTAINER: cookit
+          # The push sink as the app container sees it (host network).
+          E2E_PUSH_ORIGIN: http://localhost:4567
         run: bun run test:e2e
       - name: Upload Playwright report
         if: failure()

@@ -15,6 +15,11 @@ export const RATE_LIMITS = {
   passkeySignInPerIp: { name: 'passkey-sign-in:ip', limit: 60, windowSeconds: 10 * 60 },
   // Each import makes the server fetch a page: kept low.
   importUrlPerIp: { name: 'import-url:ip', limit: 20, windowSeconds: 10 * 60 },
+  // Each test notification makes the server call the push services.
+  pushTestPerAccount: { name: 'push-test:account', limit: 10, windowSeconds: 10 * 60 },
+  pushSubscribePerAccount: { name: 'push-subscribe:account', limit: 30, windowSeconds: 10 * 60 },
+  // Every cooking event is a save (about one a second at most while cooking).
+  cookSavePerAccount: { name: 'cook-save:account', limit: 600, windowSeconds: 10 * 60 },
 } satisfies Record<string, RateLimitRule>;
 
 /**

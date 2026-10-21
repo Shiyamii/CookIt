@@ -1,4 +1,5 @@
 import { request } from '@playwright/test';
+import { startPushSink } from './push-sink';
 import { ADMIN, ADMIN_STATE, BASE_URL, cli, ORIGIN_HEADER, tokenOf } from './support';
 
 /**
@@ -6,6 +7,7 @@ import { ADMIN, ADMIN_STATE, BASE_URL, cli, ORIGIN_HEADER, tokenOf } from './sup
  * - no admin yet: a first-admin link from the CLI (`setup-link`), then sign-up;
  * - otherwise: a reset link for `e2e_admin` (`admin:reset-link`), then a new password.
  * The signed-in admin session is saved for the tests (`ADMIN_STATE`).
+ * Also starts the stand-in push service for the whole run (closed by the returned teardown).
  */
 export default async function globalSetup() {
   const api = await request.newContext({ baseURL: BASE_URL, extraHTTPHeaders: ORIGIN_HEADER });
@@ -51,4 +53,7 @@ export default async function globalSetup() {
   if (!locale.ok()) throw new Error(`Admin locale reset failed: ${locale.status()}`);
   await api.storageState({ path: ADMIN_STATE });
   await api.dispose();
+
+  const sink = await startPushSink();
+  return () => new Promise<void>((resolve) => sink.close(() => resolve()));
 }

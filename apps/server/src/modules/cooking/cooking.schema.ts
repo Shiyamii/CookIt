@@ -59,6 +59,8 @@ export const timers = pgTable(
       .notNull()
       .default('running'),
     notifiedAt: timestamp('notified_at', { withTimezone: true }),
+    // Taken by a scheduler run that is sending it; retried by a later run once the lease expires.
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

@@ -106,6 +106,14 @@ export function useCookViewModel() {
     setSearchParams({}, { replace: true });
   }, [snapshot.ready, start, full, sync, setSearchParams, userId]);
 
+  // Opened from a timer's notification: show its recipe.
+  const show = searchParams.get('show');
+  useEffect(() => {
+    if (!show || start) return;
+    activeRecipe.set(userId, show);
+    setSearchParams({}, { replace: true });
+  }, [show, start, userId, setSearchParams]);
+
   const items = snapshot.state?.items ?? NO_ITEMS;
   const item = items.find((entry) => entry.recipeId === chosen) ?? items[0];
 

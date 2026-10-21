@@ -94,6 +94,7 @@ export function createCookingRepository(db: Database): CookingRepository {
                 // A new end time (+1 min) is a new notification to send.
                 status: sql`case when ${timers.endsAt} = excluded.ends_at then ${timers.status} else 'running' end`,
                 notifiedAt: sql`case when ${timers.endsAt} = excluded.ends_at then ${timers.notifiedAt} else null end`,
+                claimedAt: sql`case when ${timers.endsAt} = excluded.ends_at then ${timers.claimedAt} else null end`,
               },
             });
         }

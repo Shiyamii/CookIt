@@ -3,7 +3,8 @@ import { createApp } from './app';
 import { createContainer } from './container';
 import { client, db, runMigrations } from './db';
 import { runSeeds } from './db/seed';
-import { env } from './env';
+import { env, vapid } from './env';
+import { startPushScheduler } from './modules/push/push.scheduler';
 
 // Apply pending migrations before accepting traffic; a failure stops the process.
 await runMigrations();
@@ -26,12 +27,16 @@ const purgeExpired = () =>
 const purge = setInterval(() => void purgeExpired().catch(() => {}), 3600_000);
 purge.unref();
 
+if (!vapid) console.warn('VAPID keys not set: push notifications are off');
+const scheduler = startPushScheduler(container.push);
+
 const server = serve({ fetch: createApp(container).fetch, port: env.PORT }, (info) => {
   console.log(`CookIt server listening on port ${info.port}`);
 });
 
 function shutdown() {
   server.close(async () => {
+    await scheduler.stop();
     await client.end();
     process.exit(0);
   });

@@ -172,3 +172,19 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **The shown recipe is a choice of the device**, kept in localStorage (`cookit:cook:active:<user>`, cleared at sign-out), not in the server state: switching tabs is not an event of the session (plan §5.3 lists the events to save), and two devices can each follow a different recipe.
 - **A new color is the first one not used** by the session, so removing a recipe frees its color.
 - **"Finish" on the last step takes that recipe out** of the session (with its timers); with a single recipe it ends the session as before. "Stop cooking" always ends the whole session.
+
+## Phase 8: Web Push
+
+- **Push endpoints limited to the browsers' push services** (FCM, Mozilla, Apple, Windows), https on the default port: a subscription is a URL the server will POST to, so any other host would be an SSRF. A browser with another push service would be refused (`unsupported_push_service`).
+- **`web-push` builds the request, our `fetch` sends it** (`generateRequestDetails`): timeout, no redirects, and the plain-http test sink of the e2e tests works (the library's transport is https only).
+- **Claim, commit, then send** (deviation from the plan's "lock, send, mark" in one transaction, after the security review): holding row locks during network sends blocked cooking saves on the same timers and, with the extra pool connections the sends needed, could freeze the server. Timers get a `claimed_at` lease (2 min): a crash before `markNotified` lets a later run send again (resent rather than lost). Sends have a 10 s timeout, batches are 50 timers, at most 10 per user and run.
+- **Rate limits per account** on cooking saves (600 / 10 min), subscriptions (30 / 10 min) and test notifications: a user re-arming timers cannot make the server flood the push services (which would throttle the instance for everyone).
+- **Timers that ended before the server knew them are not sent** (`ends_at <= created_at`: started and finished offline, the device rang itself). Timers of disabled users are marked without sending.
+- **VAPID keys are optional**: without them notifications are off and the app works; both keys or neither, the dev pair refused for an https origin. Subject defaults to `mailto:ADMIN_EMAIL`, else the https `ORIGIN`.
+- **TTL of 10 minutes**: a timer notification that could not reach the device by then is no longer useful.
+- **Hand-written service worker** (`public/sw.js`) and a minimal manifest in phase 8: notifications need a service worker, and iOS only allows them in an app added to the home screen (`display: standalone`). Phase 9 (PWA, `vite-plugin-pwa`) will take them over with caching and icons.
+- **The permission is read through the Permissions API** (`Notification.permission` as fallback): headless Chromium reports `denied` there even when granted.
+- **Sign-out unsubscribes this browser** (server then browser) before signing out, so the next person on the browser never gets the previous account's notifications; a subscription re-sent by another account changes hands only with the same keys (the same browser): knowing someone's endpoint is not enough to take their notifications away. `PUSH_TEST_ENDPOINT_ORIGIN` is refused with an https `ORIGIN`.
+- **E2E push sink + `PUSH_TEST_ENDPOINT_ORIGIN`** (tests only, like `RATE_LIMIT_FACTOR`): the real chain (scheduler, VAPID, encryption, HTTP) is checked by decrypting what the app sent; the restart criterion runs in a separate Playwright project after the others, since it stops the container.
+- **`web-push` added** to the server (imposed by the plan; it brings `http_ece`, `jws`, `asn1.js`).
+- **README configuration table**: the `WEBAUTHN_RP_ID` / `WEBAUTHN_RP_NAME` rows of the plan were removed: passkeys take their domain from `ORIGIN` (phase 3b), these variables do not exist.

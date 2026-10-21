@@ -1,5 +1,5 @@
 import type { Database } from './db';
-import { env } from './env';
+import { env, vapid } from './env';
 import { hashPassword, verifyPassword } from './lib/password';
 import { generateToken } from './lib/tokens';
 import { createAccountSecurityRepository } from './modules/account-security/account-security.repository';
@@ -19,6 +19,9 @@ import { createUnitsRepository } from './modules/units/units.repository';
 import { createUnitsService } from './modules/units/units.service';
 import { createImportService } from './modules/import/import.service';
 import { safeFetchHtml } from './lib/safe-fetch';
+import { createPushSender, isPushEndpoint } from './lib/web-push';
+import { createPushRepository } from './modules/push/push.repository';
+import { createPushService } from './modules/push/push.service';
 import { createRateLimitRepository } from './modules/rate-limit/rate-limit.repository';
 import { createRateLimitService } from './modules/rate-limit/rate-limit.service';
 import { createSystemRepository } from './modules/system/system.repository';
@@ -59,6 +62,12 @@ export function createContainer(db: Database) {
     }),
     passwordReset,
     cooking: createCookingService({ repository: createCookingRepository(db) }),
+    push: createPushService({
+      repository: createPushRepository(db),
+      sender: vapid ? createPushSender(vapid) : undefined,
+      publicKey: vapid?.publicKey,
+      isPushEndpoint: (endpoint) => isPushEndpoint(endpoint, env.PUSH_TEST_ENDPOINT_ORIGIN),
+    }),
     importer: createImportService({ fetchHtml: (url) => safeFetchHtml(url) }),
     recipes: createRecipesService({
       repository: createRecipesRepository(db),

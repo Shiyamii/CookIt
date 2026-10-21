@@ -1,4 +1,4 @@
-import { CircleUser, LogOut, Mail, Ruler, ShieldCheck, Tags, Users } from 'lucide-react';
+import { Bell, CircleUser, LogOut, Mail, Ruler, ShieldCheck, Tags, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,11 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link to="/account/security">
             <ShieldCheck /> {t('account.security.title')}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/account/notifications">
+            <Bell /> {t('push.title')}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

@@ -21,10 +21,12 @@
     "fflate": "0.8.3",
     "hono": "^4.13.13",
     "postgres": "^3.4.9",
+    "web-push": "^3.6.7",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "@types/web-push": "^3.6.4",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15"
   }

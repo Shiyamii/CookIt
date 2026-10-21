@@ -18,7 +18,14 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'mobile', use: { ...devices['Pixel 7'] } },
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: '**/restart.e2e.ts' },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: '**/restart.e2e.ts' },
+    // Stops and starts the app container: alone, once every other test is done.
+    {
+      name: 'restart',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: '**/restart.e2e.ts',
+      dependencies: ['mobile', 'desktop'],
+    },
   ],
 });

@@ -601,7 +601,67 @@ export const fr: Translations = {
         'Jusqu’à 5 recettes à la fois : terminez-en ou retirez-en une avant d’en ajouter une autre.',
     },
   },
+  push: {
+    title: 'Notifications',
+    intro:
+      'Recevez une notification quand un minuteur se termine, même page fermée ou téléphone verrouillé.',
+    thisDevice: 'Cet appareil',
+    badgeOn: 'Activées',
+    badgeOff: 'Désactivées',
+    enable: 'Activer les notifications',
+    disable: 'Désactiver',
+    test: 'Envoyer un test',
+    testSent_one: 'Test envoyé à {{count}} appareil.',
+    testSent_other: 'Test envoyé à {{count}} appareils.',
+    devices: 'Appareils qui reçoivent vos notifications',
+    current: 'Cet appareil',
+    unknownDevice: 'Appareil inconnu',
+    status: {
+      on: 'Cet appareil reçoit une notification quand un minuteur se termine.',
+      off: 'Les notifications sont désactivées sur cet appareil : un minuteur qui se termine page fermée passe inaperçu.',
+      denied: 'Les notifications sont bloquées pour ce site dans les réglages du navigateur.',
+      ios_install:
+        'Sur iPhone et iPad, les notifications ne marchent qu’une fois CookIt ajouté à l’écran d’accueil et ouvert depuis celui-ci.',
+      unsupported: 'Ce navigateur ne peut pas recevoir de notifications.',
+      not_configured:
+        'Les notifications ne sont pas configurées sur ce serveur (demandez à l’administrateur).',
+      error: 'L’état des notifications n’a pas pu être lu.',
+    },
+    notice: {
+      off: 'Notifications désactivées : rien ne vous avertit d’un minuteur terminé si cette page est fermée.',
+      denied:
+        'Notifications bloquées dans ce navigateur : les minuteurs ne sonnent que si cette page est ouverte.',
+      ios_install:
+        'Pour recevoir les alertes page fermée, ajoutez CookIt à l’écran d’accueil et ouvrez-le depuis celui-ci.',
+      unsupported:
+        'Ce navigateur ne reçoit pas de notifications : les minuteurs ne sonnent que si cette page est ouverte.',
+      error: 'L’état des notifications n’a pas pu être lu.',
+    },
+    help: {
+      link: 'Aide',
+      title: 'Comment les recevoir',
+      iosTitle: 'iPhone et iPad (iOS 16.4 ou plus récent)',
+      ios: 'Ouvrez CookIt dans Safari.\nTouchez Partager, puis « Sur l’écran d’accueil ».\nOuvrez CookIt depuis son icône sur l’écran d’accueil et connectez-vous.\nOuvrez cette page, touchez « Activer les notifications », puis autorisez-les.',
+      androidTitle: 'Android',
+      android:
+        'Touchez « Activer les notifications » et autorisez-les. Si elles arrivent en retard, empêchez l’économiseur de batterie d’arrêter le navigateur.',
+      computerTitle: 'Ordinateur',
+      computer:
+        'Cliquez sur « Activer les notifications » et autorisez-les. Le navigateur doit être lancé (même en arrière-plan) pour les afficher.',
+      blockedTitle: 'Bloquées par erreur ?',
+      blocked:
+        'Autorisez les notifications pour ce site dans les réglages du navigateur (l’icône à gauche de l’adresse), puis rechargez la page.',
+      limitsTitle: 'Limites',
+      limits:
+        'La notification utilise le son par défaut du système et ne se répète pas. Un appareil hors ligne plus de 10 minutes ne la reçoit pas.',
+    },
+  },
   errors: {
+    push_failed:
+      'Les notifications n’ont pas pu être activées sur cet appareil. Réessayez plus tard.',
+    unsupported_push_service:
+      'Ce navigateur utilise un service de notifications que CookIt n’accepte pas.',
+    push_not_configured: 'Les notifications ne sont pas configurées sur ce serveur.',
     base_language: 'C’est la langue d’origine de la recette : modifiez-la avec l’éditeur.',
     unknown: 'Une erreur est survenue. Réessayez.',
     invalid_token: 'Ce lien ne fonctionne plus. Demandez-en un nouveau.',

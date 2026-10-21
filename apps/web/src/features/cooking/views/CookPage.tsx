@@ -23,6 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { PushNotice } from '@/features/push/views/PushNotice';
 import { useCookViewModel } from '../viewmodels/useCookViewModel';
 
 type Vm = ReturnType<typeof useCookViewModel>;
@@ -80,6 +81,7 @@ export function CookPage() {
       )}
 
       {vm.timers.length > 0 && <TimerBar vm={vm} />}
+      <PushNotice />
 
       {vm.recipeStatus === 'loading' && (
         <p className="text-muted-foreground">{t('common.loading')}</p>

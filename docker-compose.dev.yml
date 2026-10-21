@@ -23,6 +23,14 @@ services:
       BETTER_AUTH_SECRET: dev-secret-change-me-dev-secret-change-me
       # End-to-end tests all come from one IP: loosen the rate limits (never in production).
       RATE_LIMIT_FACTOR: '50'
+      # Development keys only (refused with an https ORIGIN).
+      VAPID_PUBLIC_KEY: BDAjrN6hd_Hc2OHdE4nTIkhbrxCeqaWwfmbDbbbaT8CNS2jjPYZqqSZMkYles-Qon2UFknP0Gj47chgAx4ThjDI
+      VAPID_PRIVATE_KEY: zQTQQENw_38kQ1zDvLJrGKyd8S4RW1cVT5joaH1Ovkc
+      VAPID_SUBJECT: mailto:dev@example.com
+      # End-to-end tests: the push sink run by Playwright on the host (never in production).
+      PUSH_TEST_ENDPOINT_ORIGIN: http://host.docker.internal:4567
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     ports:
       - '3000:3000'
     depends_on:

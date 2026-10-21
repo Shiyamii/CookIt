@@ -19,6 +19,10 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       # Behind the reverse proxy: the client IP (rate limiting) comes from X-Forwarded-For.
       TRUST_PROXY: ${TRUST_PROXY:-true}
+      # Web Push (timer notifications): node dist/cli.js push:vapid-keys. Unset: no notifications.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     expose:
       - '3000'
     depends_on:

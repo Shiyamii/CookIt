@@ -8,6 +8,7 @@ import { apiBodyLimit, noStore, sameOrigin, securityHeaders } from './http/secur
 import { createAccountSecurityController } from './modules/account-security/account-security.controller';
 import { createAuthController } from './modules/auth/auth.controller';
 import { createCookingController } from './modules/cooking/cooking.controller';
+import { createPushController } from './modules/push/push.controller';
 import { sessionMiddleware } from './modules/auth/auth.middleware';
 import { createInvitesController } from './modules/invites/invites.controller';
 import { createPasswordResetController } from './modules/password-reset/password-reset.controller';
@@ -34,6 +35,7 @@ export function createApp(container: Container) {
   app.route('/', createRecipesController(container));
   app.route('/', createImportController(container));
   app.route('/', createCookingController(container));
+  app.route('/', createPushController(container));
   app.route('/', createTagsController(container));
   app.route('/', createUnitsController(container));
 

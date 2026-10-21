@@ -1,0 +1,7 @@
+{
+  "name": "CookIt",
+  "short_name": "CookIt",
+  "start_url": "/cook",
+  "scope": "/",
+  "display": "standalone"
+}

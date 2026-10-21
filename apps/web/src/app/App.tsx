@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { SecurityPage } from '@/features/account/views/SecurityPage';
+import { NotificationsPage } from '@/features/push/views/NotificationsPage';
 import { InvitesPage } from '@/features/admin/views/InvitesPage';
 import { TagsAdminPage } from '@/features/catalog/views/TagsAdminPage';
 import { UnitsAdminPage } from '@/features/catalog/views/UnitsAdminPage';
@@ -79,7 +80,10 @@ const router = createBrowserRouter([
       {
         path: 'account',
         element: <RequireAccess level="user" />,
-        children: [{ path: 'security', element: <SecurityPage /> }],
+        children: [
+          { path: 'security', element: <SecurityPage /> },
+          { path: 'notifications', element: <NotificationsPage /> },
+        ],
       },
       {
         path: 'admin',

@@ -13,7 +13,7 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 - **Serving scaling** with readable rounding and clean fractions (½, ¼, ⅓).
 - **Cooking mode**: one step at a time, large buttons, ingredient checklist, screen kept awake, one-tap timers, several recipes at once.
 - **Multi-recipe sessions**: cook several dishes in parallel, with a shared timer bar where each timer is labeled with its dish.
-- **Web Push notifications** when a timer ends, scheduled by the server.
+- **Web Push notifications** when a timer ends, sent by the server even with every page closed.
 - **Many ways to add a recipe**: quick create, step-by-step wizard (paste ingredients/steps, automatic duration detection), markdown paste or file/zip upload, URL import (schema.org JSON-LD), or a ready-to-copy prompt for the AI assistant of your choice.
 - **Translations**: each recipe can have a French and an English version; the UI is in French and English.
 - **Tags** organized in categories, managed by the admin.
@@ -144,6 +144,8 @@ bun run parse my-recipe.md --canonical   # canonical form, as exported
 
 **Cooking mode**: "Cook" on a recipe opens one step at a time with large buttons, the ingredients to check in a drawer (quantities follow the servings), and timers started with a tap on the durations of a step (+1 min, cancel; a sound and a vibration when one ends while the page is open). The screen stays on. Progress is saved on the server at every action and kept in the browser during network cuts: reloading the page or opening it on another device finds the same step and timers. Several recipes can be cooked at once (up to 5): one card per recipe with its color, its step and its next timer, and one timer bar for all of them, in the order they end, each timer naming its dish.
 
+**Notifications**: from the account menu (or the notice in the cooking mode), turn on notifications on each device: when a timer ends, the server sends a notification with the dish and the timer name, even with the page closed or the phone locked; a tap opens the cooking mode on that recipe. On iPhone and iPad (iOS 16.4+), add CookIt to the home screen first and turn them on from there; the Notifications page explains it for each system.
+
 **AI prompts** (no AI built in): "Import with an AI" gives a prompt to copy into the assistant of your choice, generated from the recipe format (with your tag list and units); paste the answer back, check the preview, save. On a recipe, "Add a translation" does the same for another language: the prompt holds the recipe, the pasted translation is checked live against the original (same groups, ingredients, steps and timers). A recipe is read in your interface language when it has that translation, and its page lets you switch languages.
 
 The admin manages **Categories and tags** and **Units** from the account menu. Units are data: their ways of writing (`c. à soupe`, `CaS`, `tbsp`…) are recognized in any language and decide how quantities are rounded; changing them never changes recipe texts.
@@ -174,20 +176,20 @@ Each user can turn on **two-step verification** (authenticator app + 10 single-u
 | Variable                                 | Description                                                                                                                                   |
 | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`                           | PostgreSQL connection string                                                                                                                  |
-| `ORIGIN`                                 | Public HTTPS URL of the app (used for CSRF checks and secure cookies)                                                                         |
+| `ORIGIN`                                 | Public HTTPS URL of the app (CSRF checks, secure cookies; its domain is the passkeys' domain)                                                 |
 | `BETTER_AUTH_SECRET`                     | Session signing secret: `openssl rand -base64 32`. Also encrypts 2FA secrets: changing it turns 2FA off in practice (users need a reset link) |
 | `ADMIN_EMAIL`                            | Optional: email pre-filled on the first-admin page                                                                                            |
 | `TRUST_PROXY`                            | `true` behind one reverse proxy (client IP from `X-Forwarded-For`)                                                                            |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keys                                                                                                                                 |
-| `VAPID_SUBJECT`                          | Contact for the push service (e.g. `mailto:you@example.com`)                                                                                  |
-| `WEBAUTHN_RP_ID`                         | Public domain, without scheme (changing it invalidates existing passkeys)                                                                     |
-| `WEBAUTHN_RP_NAME`                       | Display name shown when registering a passkey                                                                                                 |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keys for the timer notifications. Unset: no notifications. Keep them: new keys make every device turn notifications on again         |
+| `VAPID_SUBJECT`                          | Contact for the push services: `mailto:you@example.com` or an https URL (default: `ADMIN_EMAIL`, else `ORIGIN`)                               |
 
-Generate VAPID keys with:
+Generate the VAPID keys once, with the image (or `npx web-push generate-vapid-keys`):
 
 ```sh
-npx web-push generate-vapid-keys
+docker run --rm --entrypoint node shiyamii/cookit:latest -e "console.log(require('web-push').generateVAPIDKeys())"
 ```
+
+In a running container, `node dist/cli.js push:vapid-keys` prints a new pair too.
 
 ## Releases
 
@@ -220,7 +222,7 @@ docker compose -f docker-compose.yml -f docker-compose.ports.yml up -d
 Either:
 
 - **Docker Compose resource** pointing to `deploy/docker-compose.yml`: set the variables in the UI, then give the `app` service a domain such as `https://cookit.example.com:3000` (`:3000` is the container port); or
-- **Docker image** `shiyamii/cookit:<version>` plus a separate **PostgreSQL** resource, with `DATABASE_URL` set to that database, `ORIGIN`, `BETTER_AUTH_SECRET` and `TRUST_PROXY=true`.
+- **Docker image** `shiyamii/cookit:<version>` plus a separate **PostgreSQL** resource, with `DATABASE_URL` set to that database, `ORIGIN`, `BETTER_AUTH_SECRET`, `TRUST_PROXY=true` and the VAPID keys.
 
 Use `/healthz` as the healthcheck path (port 3000). HTTPS is handled by Coolify's proxy.
 

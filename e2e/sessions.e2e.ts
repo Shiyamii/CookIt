@@ -339,6 +339,7 @@ test.describe('security headers', () => {
         '/admin/tags',
         '/admin/units',
         '/account/security',
+        '/account/notifications',
         '/recipes',
         '/gallery',
         // Lazily loaded pages (their own chunks).
