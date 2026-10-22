@@ -15,7 +15,7 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 - **Multi-recipe sessions**: cook several dishes in parallel, with a shared timer bar where each timer is labeled with its dish.
 - **Web Push notifications** when a timer ends, sent by the server even with every page closed.
 - **Many ways to add a recipe**: quick create, step-by-step wizard (paste ingredients/steps, automatic duration detection), markdown paste or file/zip upload, URL import (schema.org JSON-LD), or a ready-to-copy prompt for the AI assistant of your choice.
-- **Translations**: each recipe can have a French and an English version; the UI is in French and English.
+- **Translations**: each recipe can have a French, an English and a Hungarian version; the UI is in French, English and Hungarian.
 - **Tags** organized in categories, managed by the admin.
 - **Installable PWA**, mobile first, works offline for the pages and recipes already opened, cooking mode included.
 

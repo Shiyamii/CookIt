@@ -64,8 +64,9 @@ describe('translationPreview edge cases', () => {
 
 describe('missingLanguages', () => {
   test('the supported languages the recipe does not have yet', () => {
-    expect(missingLanguages(['fr'])).toEqual(['en']);
-    expect(missingLanguages(['en', 'fr'])).toEqual([]);
+    expect(missingLanguages(['fr'])).toEqual(['en', 'hu']);
+    expect(missingLanguages(['hu', 'fr'])).toEqual(['en']);
+    expect(missingLanguages(['en', 'fr', 'hu'])).toEqual([]);
   });
 });
 

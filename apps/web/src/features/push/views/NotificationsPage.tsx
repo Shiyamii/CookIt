@@ -88,6 +88,7 @@ export function NotificationsPage() {
         <HelpBlock title={t('push.help.iosTitle')} steps={t('push.help.ios')} />
         <HelpBlock title={t('push.help.androidTitle')} steps={t('push.help.android')} />
         <HelpBlock title={t('push.help.computerTitle')} steps={t('push.help.computer')} />
+        <HelpBlock title={t('push.help.braveTitle')} steps={t('push.help.brave')} />
         <HelpBlock title={t('push.help.blockedTitle')} steps={t('push.help.blocked')} />
         <HelpBlock title={t('push.help.limitsTitle')} steps={t('push.help.limits')} />
       </section>

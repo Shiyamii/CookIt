@@ -220,7 +220,7 @@ describe('serializePresentation', () => {
 describe('serializeBody with serializePresentation', () => {
   const markdown = fixture('crepes.md');
 
-  test.each(['fr', 'en'] as const)(
+  test.each(['fr', 'en', 'hu'] as const)(
     'recomposing parts 1 and 2-3 gives the full document (%s)',
     (locale) => {
       const document = parseOk(markdown);

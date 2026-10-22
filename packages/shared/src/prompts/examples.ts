@@ -75,4 +75,38 @@ source: https://example.com/crepes
 2. Cook each crêpe [1 min 30 s](timer:1m30s "first side"), then [1 min](timer:1m) on the other side.
 3. Top with the rest of the butter and the sugar.
 `,
+  hu: `# Sós vajas palacsinta
+
+> Egyszerű tészta, pihentetés után még jobb.
+
+adag: 4
+source: https://example.com/crepes
+
+---
+
+### Tészta
+
+- 25 dkg liszt
+- 3 tojás
+- 5 dl tej
+- 1 csipet só
+
+### Töltelék
+
+- 6 dkg sós vaj
+- 2-3 ek cukor
+
+---
+
+### Tészta
+
+1. Keverd össze a lisztet a sóval, add hozzá a tojásokat, majd folyamatos keverés mellett apránként a tejet.
+2. Pihentesd a tésztát [1 óra](timer:1h "a tészta pihentetése").
+
+### Sütés
+
+1. Olvassz fel [2 dkg](q:) vajat egy forró serpenyőben.
+2. Süsd a palacsintákat [1 perc 30 mp](timer:1m30s "első oldal"), majd [1 perc](timer:1m) a másik oldalukon.
+3. Töltsd meg a maradék vajjal és a cukorral.
+`,
 };

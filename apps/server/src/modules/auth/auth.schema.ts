@@ -35,7 +35,7 @@ export const user = pgTable(
   // The enums are only TypeScript types otherwise.
   (table) => [
     check('user_role_check', sql`${table.role} in ('admin', 'user')`),
-    check('user_locale_check', sql`${table.locale} in ('fr', 'en')`),
+    check('user_locale_check', sql`${table.locale} in ('fr', 'en', 'hu')`),
   ],
 );
 

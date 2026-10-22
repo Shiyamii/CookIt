@@ -14,10 +14,15 @@ const LEASE_SECONDS = 120;
 /** A notification the device could not get within 10 minutes is no longer worth showing. */
 const TTL_SECONDS = 600;
 
-const FINISHED: Record<string, string> = { fr: 'Minuteur terminé', en: 'Timer finished' };
+const FINISHED: Record<string, string> = {
+  fr: 'Minuteur terminé',
+  en: 'Timer finished',
+  hu: 'Lejárt az időzítő',
+};
 const TEST: Record<string, { title: string; body: string }> = {
   fr: { title: 'CookIt', body: 'Les notifications fonctionnent sur cet appareil.' },
   en: { title: 'CookIt', body: 'Notifications work on this device.' },
+  hu: { title: 'CookIt', body: 'Az értesítések működnek ezen az eszközön.' },
 };
 
 /** What a finished timer shows: the dish, then the timer's name (plan §5.4). */

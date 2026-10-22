@@ -7,12 +7,14 @@
 export type PastedGroup = { name?: string; items: string[] };
 
 const BULLET = /^\s*(?:[-*•·▪◦‣–—+]|\d{1,3}\s*[.)]|\(\d{1,3}\))\s+/u;
-const STEP_WORD = /^\s*(?:étape|etape|step)\s*\d{1,3}\s*[:.)-]?\s*/iu;
+// `Étape 3`, `Step 3`, `3. lépés` (Hungarian puts the number first).
+const STEP_WORD =
+  /^\s*(?:(?:étape|etape|step|lépés|lepes)\s*\d{1,3}|\d{1,3}\.\s*(?:lépés|lepes))\s*[:.)-]?\s*/iu;
 /** Longest pasted text read (beyond: ignored), so every pass stays cheap on hostile input. */
 const MAX_PASTE = 200_000;
 const MAX_GROUP_NAME = 60;
 const NUMBERED =
-  /^\s*(?:\d{1,3}\s*[.)]|\(\d{1,3}\)|(?:étape|etape|step)\s*\d{1,3}[:.)-]?)(?:\s|$)/iu;
+  /^\s*(?:\d{1,3}\s*[.)]|\(\d{1,3}\)|(?:étape|etape|step|lépés|lepes)\s*\d{1,3}[:.)-]?)(?:\s|$)/iu;
 
 /**
  * A group heading: `## Pour la sauce` (markdown heading) or a short line ending with `:`
@@ -70,7 +72,7 @@ export function splitIngredients(text: string): PastedGroup[] {
 }
 
 /**
- * Steps: when the text is numbered (`1.`, `2)`, `Étape 3`), each number starts a step and the
+ * Steps: when the text is numbered (`1.`, `2)`, `Étape 3`, `3. lépés`), each number starts a step and the
  * following lines continue it; otherwise each paragraph (or each line, when there is no blank
  * line) is a step.
  */

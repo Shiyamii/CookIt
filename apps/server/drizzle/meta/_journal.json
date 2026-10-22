@@ -57,6 +57,13 @@
       "when": 1792611232879,
       "tag": "0007_push",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792658247909,
+      "tag": "0008_hungarian",
+      "breakpoints": true
     }
   ]
 }

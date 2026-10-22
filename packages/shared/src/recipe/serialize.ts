@@ -17,6 +17,7 @@ const CONTINUATION_INDENT = '    ';
 const PART_HEADINGS: Record<Locale, { ingredients: string; steps: string }> = {
   fr: { ingredients: 'Ingrédients', steps: 'Étapes' },
   en: { ingredients: 'Ingredients', steps: 'Steps' },
+  hu: { ingredients: 'Hozzávalók', steps: 'Elkészítés' },
 };
 
 /**

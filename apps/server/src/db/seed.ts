@@ -1,5 +1,10 @@
-import { DEFAULT_TAG_CATEGORIES, DEFAULT_UNITS } from '@cookit/shared';
-import { sql } from 'drizzle-orm';
+import {
+  DEFAULT_TAG_CATEGORIES,
+  DEFAULT_UNITS,
+  findAliasConflicts,
+  type Unit,
+} from '@cookit/shared';
+import { eq, sql } from 'drizzle-orm';
 import { seeds } from '../modules/system/system.schema';
 import { tagCategories, tags } from '../modules/tags/tags.schema';
 import { units } from '../modules/units/units.schema';
@@ -52,7 +57,83 @@ const SEEDS: { name: string; run: (tx: Tx) => Promise<void> }[] = [
       }
     },
   },
+  {
+    // Instances created before Hungarian: its labels and aliases are added to the starting units,
+    // categories and tags that still exist (never over what the admin wrote), and the units and
+    // tag new with it are created. An alias another unit already has is left out.
+    name: 'hungarian-v1',
+    async run(tx) {
+      const rows = await tx.select().from(units);
+      const catalog: Unit[] = rows.map(({ slug, rounding, labels, aliases }) => ({
+        slug,
+        rounding,
+        labels,
+        aliases,
+      }));
+      for (const unit of DEFAULT_UNITS) {
+        const row = rows.find((candidate) => candidate.slug === unit.slug);
+        const others = catalog.filter((other) => other.slug !== unit.slug);
+        const free = (unit.aliases.hu ?? []).filter(
+          (alias) =>
+            findAliasConflicts([...others, { ...unit, aliases: { hu: [alias] } }]).length === 0,
+        );
+        if (!row) {
+          if (!NEW_WITH_HUNGARIAN.units.includes(unit.slug)) continue;
+          const aliases = { ...unit.aliases, hu: free };
+          if (findAliasConflicts([...catalog, { ...unit, aliases }]).length) continue;
+          await tx.insert(units).values({
+            id: crypto.randomUUID(),
+            slug: unit.slug,
+            rounding: unit.rounding,
+            position: catalog.length,
+            labels: unit.labels,
+            aliases,
+          });
+          catalog.push({ ...unit, aliases });
+          continue;
+        }
+        await tx
+          .update(units)
+          .set({
+            labels: { ...row.labels, hu: row.labels.hu ?? unit.labels.hu },
+            aliases: { ...row.aliases, hu: row.aliases.hu ?? free },
+          })
+          .where(eq(units.id, row.id));
+      }
+
+      const categories = await tx.select().from(tagCategories);
+      const tagRows = await tx.select().from(tags);
+      for (const category of DEFAULT_TAG_CATEGORIES) {
+        const row = categories.find((candidate) => candidate.slug === category.slug);
+        if (!row) continue;
+        await tx
+          .update(tagCategories)
+          .set({ labels: { ...row.labels, hu: row.labels.hu ?? category.labels.hu } })
+          .where(eq(tagCategories.id, row.id));
+        for (const tag of category.tags) {
+          const existing = tagRows.find((candidate) => candidate.slug === tag.slug);
+          if (existing) {
+            await tx
+              .update(tags)
+              .set({ labels: { ...existing.labels, hu: existing.labels.hu ?? tag.labels.hu } })
+              .where(eq(tags.id, existing.id));
+          } else if (NEW_WITH_HUNGARIAN.tags.includes(tag.slug)) {
+            await tx.insert(tags).values({
+              id: crypto.randomUUID(),
+              categoryId: row.id,
+              slug: tag.slug,
+              position: tagRows.filter((other) => other.categoryId === row.id).length,
+              labels: tag.labels,
+            });
+          }
+        }
+      }
+    },
+  },
 ];
+
+/** Starting units and tags added with Hungarian (`hungarian-v1` creates them on older instances). */
+const NEW_WITH_HUNGARIAN = { units: ['dkg', 'tete'], tags: ['hongroise'] };
 
 export async function runSeeds(db: Database): Promise<void> {
   await db.transaction(async (tx) => {

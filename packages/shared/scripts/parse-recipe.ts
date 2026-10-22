@@ -1,5 +1,5 @@
 // Tooling only (not shipped): shows what the parser reads from a recipe file.
-// Usage: bun run parse <file.md> [--servings N] [--lang fr|en] [--json | --canonical]
+// Usage: bun run parse <file.md> [--servings N] [--lang fr|en|hu] [--json | --canonical]
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import {
@@ -26,7 +26,7 @@ const [file] = positionals;
 const locale = values.lang;
 if (!file || !isLocale(locale)) {
   console.error(
-    'Usage: bun run parse <file.md> [--servings N] [--lang fr|en] [--json | --canonical]',
+    'Usage: bun run parse <file.md> [--servings N] [--lang fr|en|hu] [--json | --canonical]',
   );
   process.exit(1);
 }

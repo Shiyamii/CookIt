@@ -8,6 +8,7 @@ import {
   fetchPushDevices,
   fetchPushKey,
   PUSH_QUERY_KEY,
+  PushSubscribeError,
   pushStatus,
   readBrowserPush,
   sendTestPush,
@@ -15,6 +16,7 @@ import {
 
 /** A refusal of the server, or the browser failing to subscribe (push service unreachable…). */
 const failure = (error: unknown) => {
+  if (error instanceof PushSubscribeError) return error.code;
   const code = errorCode(error);
   return code === 'unknown' ? 'push_failed' : code;
 };

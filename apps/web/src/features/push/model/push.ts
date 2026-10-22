@@ -87,6 +87,21 @@ const supported = () =>
   'PushManager' in window &&
   'Notification' in window;
 
+/**
+ * The browser refused to subscribe (its push service is off or unreachable). Brave turns it off
+ * by default: its users are told which setting to change.
+ */
+export class PushSubscribeError extends Error {
+  constructor(readonly code: 'push_failed' | 'push_failed_brave') {
+    super(code);
+  }
+}
+
+async function isBrave(): Promise<boolean> {
+  const brave = (navigator as Navigator & { brave?: { isBrave?: () => Promise<boolean> } }).brave;
+  return (await brave?.isBrave?.().catch(() => false)) ?? false;
+}
+
 async function currentSubscription(): Promise<PushSubscription | null> {
   if (!supported()) return null;
   const registration = await navigator.serviceWorker.getRegistration();
@@ -143,10 +158,18 @@ export async function enablePush(publicKey: string): Promise<'on' | 'denied'> {
     await subscription.unsubscribe();
     subscription = null;
   }
-  subscription ??= await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: key,
-  });
+  if (!subscription) {
+    try {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: key,
+      });
+    } catch (error) {
+      // The browser's own reason (e.g. "push service error"), for whoever opens the console.
+      console.warn('Push subscription failed:', error);
+      throw new PushSubscribeError((await isBrave()) ? 'push_failed_brave' : 'push_failed');
+    }
+  }
   await saveSubscription(subscription);
   return 'on';
 }

@@ -19,6 +19,7 @@ export const fr: Translations = {
     label: 'Langue',
     fr: 'Français',
     en: 'English',
+    hu: 'Magyar',
   },
   theme: {
     label: 'Thème',
@@ -652,6 +653,9 @@ export const fr: Translations = {
       computerTitle: 'Ordinateur',
       computer:
         'Cliquez sur « Activer les notifications » et autorisez-les. Le navigateur doit être lancé (même en arrière-plan) pour les afficher.',
+      braveTitle: 'Brave',
+      brave:
+        'Brave coupe les notifications push par défaut. Ouvrez brave://settings/privacy, activez « Utiliser les services Google pour la messagerie push », redémarrez Brave, puis réessayez.',
       blockedTitle: 'Bloquées par erreur ?',
       blocked:
         'Autorisez les notifications pour ce site dans les réglages du navigateur (l’icône à gauche de l’adresse), puis rechargez la page.',
@@ -663,6 +667,8 @@ export const fr: Translations = {
   errors: {
     push_failed:
       'Les notifications n’ont pas pu être activées sur cet appareil. Réessayez plus tard.',
+    push_failed_brave:
+      'Brave bloque les notifications push : activez « Utiliser les services Google pour la messagerie push » dans brave://settings/privacy, redémarrez Brave, puis réessayez.',
     unsupported_push_service:
       'Ce navigateur utilise un service de notifications que CookIt n’accepte pas.',
     push_not_configured: 'Les notifications ne sont pas configurées sur ce serveur.',

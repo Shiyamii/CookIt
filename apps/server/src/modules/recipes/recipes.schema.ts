@@ -53,14 +53,14 @@ export const recipes = pgTable(
       'recipes_visibility_check',
       sql`${table.visibility} in ('private', 'unlisted', 'public')`,
     ),
-    check('recipes_base_lang_check', sql`${table.baseLang} in ('fr', 'en')`),
+    check('recipes_base_lang_check', sql`${table.baseLang} in ('fr', 'en', 'hu')`),
     check('recipes_servings_check', sql`${table.servings} between 1 and 1000`),
   ],
 );
 
-/** Search configuration of a translation's language (stemming: `pâtes` finds `pâte`). */
+/** Search configuration of a translation's language (stemming: `pâtes` finds `pâte`, `tojást` finds `tojás`). */
 const searchConfig = (lang: SQL) =>
-  sql`(case ${lang} when 'fr' then 'french'::regconfig else 'english'::regconfig end)`;
+  sql`(case ${lang} when 'fr' then 'french'::regconfig when 'hu' then 'hungarian'::regconfig else 'english'::regconfig end)`;
 
 /**
  * The language-dependent part of a recipe. `bodyMarkdown` holds parts 2 and 3 (ingredients and
@@ -87,7 +87,7 @@ export const recipeTranslations = pgTable(
   (table) => [
     primaryKey({ columns: [table.recipeId, table.lang] }),
     index('recipe_translations_search_idx').using('gin', table.search),
-    check('recipe_translations_lang_check', sql`${table.lang} in ('fr', 'en')`),
+    check('recipe_translations_lang_check', sql`${table.lang} in ('fr', 'en', 'hu')`),
   ],
 );
 

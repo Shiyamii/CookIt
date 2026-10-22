@@ -2,8 +2,9 @@ import { MAX_TIMER_SECONDS } from '../recipe/inline';
 
 /**
  * Durations written in a step (`10 min`, `1h30`, `1 heure 30`, `45 secondes`, `2 à 3 minutes`),
- * found without AI (plan §5.2), to be proposed as timers the user accepts or refuses. French and
- * English. A range proposes its high value and keeps the low one for the user to choose.
+ * found without AI (plan §5.2), to be proposed as timers the user accepts or refuses. French,
+ * English and Hungarian (`10 perc`, `1 óra 30 perc`, `20 percig`: the case endings are part of the
+ * word). A range proposes its high value and keeps the low one for the user to choose.
  */
 export type DetectedDuration = {
   /** Position of the duration in the text. */
@@ -17,10 +18,12 @@ export type DetectedDuration = {
 };
 
 const NUMBER = String.raw`\d+(?:[.,]\d+)?`;
-const HOURS = String.raw`h(?:eures?|ours?|rs?)?`;
-const MINUTES = String.raw`min(?:ute)?s?|mn`;
-const SECONDS = String.raw`s(?:ec(?:onde)?s?|econds?)?`;
-const RANGE = String.raw`\s*(?:-|–|à|a|to|or|ou)\s*`;
+/** Hungarian case endings of a duration word: `percig` (for), `percet`, `órán át`, `órája`… */
+const HU_CASE = String.raw`(?:ig|et|at|ot|re|ra|en|on|nyi|ja|je|ján|jén|n|t)?`;
+const HOURS = String.raw`h(?:eures?|ours?|rs?)?|[óo]r[aá]${HU_CASE}`;
+const MINUTES = String.raw`min(?:ute)?s?|mn|perc${HU_CASE}`;
+const SECONDS = String.raw`s(?:ec(?:onde)?s?|econds?)?|m[áa]sodperc${HU_CASE}|mp`;
+const RANGE = String.raw`\s*(?:-|–|à|a|to|or|ou|vagy)\s*`;
 
 // Each alternative is anchored on word boundaries; units are whole words (`10 m` is not minutes).
 const DURATION = new RegExp(
@@ -41,8 +44,10 @@ function number(text: string): number {
 
 function unitSeconds(unit: string): number {
   const u = unit.toLowerCase();
-  if (u.startsWith('h')) return 3600;
-  if (u.startsWith('m')) return 60;
+  if (u.startsWith('h') || u.startsWith('ó') || u.startsWith('o')) return 3600;
+  // `mp` and `másodperc` are seconds, `perc` is minutes.
+  if (u === 'mp' || u.startsWith('más') || u.startsWith('mas')) return 1;
+  if (u.startsWith('m') || u.startsWith('p')) return 60;
   return 1;
 }
 

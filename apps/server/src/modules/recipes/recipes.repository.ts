@@ -160,7 +160,7 @@ const listColumns = {
   updatedAt: recipes.updatedAt,
 };
 
-const searchConfig = sql`(case ${recipeTranslations.lang} when 'fr' then 'french'::regconfig else 'english'::regconfig end)`;
+const searchConfig = sql`(case ${recipeTranslations.lang} when 'fr' then 'french'::regconfig when 'hu' then 'hungarian'::regconfig else 'english'::regconfig end)`;
 
 export function createRecipesRepository(db: Database): RecipesRepository {
   const findOne = async (where: SQL): Promise<RecipeRow | undefined> => {

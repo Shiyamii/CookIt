@@ -110,7 +110,7 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Markdown rendering from the syntax tree** (`mdast-util-from-markdown`, already used by the parser) instead of react-markdown: no HTML string, link scheme allowlist, images as text, iterative text extraction (deeply nested hostile input).
 - **Share links in the URL fragment** (`/shared#token=…`) like invites, but the token stays in the address (a share link is reopened and bookmarked). It only works while the recipe is unlisted; leaving "unlisted" deletes it, so going back gives a new link (security review: a leaked link can always be cut off). Stored in plain text: the owner must be able to copy it again.
 - **`copied_from_id`** on recipes (not in the plan): "add to my library" remembers the original (no foreign key: the copy outlives it).
-- **Search**: `search_text` = title + description + ingredients with accents removed in code (Postgres `unaccent` is not immutable, so not usable in a generated column), indexed by a generated `tsvector` (French or English stemming per translation); each searched word is a prefix, all required.
+- **Search**: `search_text` = title + description + ingredients with accents removed in code (Postgres `unaccent` is not immutable, so not usable in a generated column), indexed by a generated `tsvector` (French, English or Hungarian stemming per translation); each searched word is a prefix, all required.
 - **Optimistic concurrency** with `baseVersion` (the recipe's `updatedAt`): a save from a stale editor (another tab, another device) is a 409 with a "load the latest version" action, instead of silently overwriting.
 - **No cover image yet** (decided with the user: later phase, images need storage in Postgres and resizing). No tags (phase 4b) and only the base language (translations came in phase 5b).
 - **Deleting a user deletes their recipes** (cascade) for now; the plan's "choice of what happens to their recipes" comes with the admin pages of a later phase.
@@ -200,3 +200,13 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Theme contrast fixes** (WCAG AA, Lighthouse): light `--muted-foreground` darker, dark `--destructive` lighter, `text-primary` no longer used for text (the tweakcn primary is a light sage).
 - **Cooking mode on a phone**: "Remove from cooking" and "Stop cooking" moved to a menu ("⋯") next to the recipe title, the recipe cards use the full width; the notification notice puts its buttons under the text.
 - **Lighthouse is run by hand** (`npx lighthouse`), not added to the repository: version 12 no longer has a PWA category; installability and offline use are covered by `e2e/pwa.e2e.ts`.
+
+## Phase 9b: Hungarian
+
+- **Added after phase 9, before deployment, at the user's request** (with images, a home page and later a shopping list: phases 9b–9e).
+- **Informal "te" form** in the Hungarian UI, as most Hungarian apps; Hungarian quotation marks („…”).
+- **Two new starting units**, common in Hungarian recipes: `dkg` (dekagramm, metric rounding) and `tete` (`fej`/`tête`/`head`, fraction rounding). `kk` (kávéskanál) is an alias of the teaspoon: scaling only needs the rounding, and Hungarian recipes use both words for the same spoon.
+- **Canonical keys stay `source`, `format`, `tags`** in Hungarian (accepted as `forrás`, `formátum`, `címkék`); only servings has its own word (`adag`), like `portions` in French.
+- **`hungarian-v1` seed** for existing instances (labels and aliases added where missing, new units and the `hongroise` tag created once), rather than editing `units-v1`/`tags-v1`, which already ran.
+- **The migration drops and re-adds the generated `search` column** (drizzle-kit's way to change its expression), so it re-creates its GIN index by hand: the generated file lacked it.
+- **Brave**: its push service is off by default and `subscribe` fails with a generic error; the app detects Brave (`navigator.brave`) and names the setting to turn on, and the help page has a Brave section. The browser's own error is logged to the console.

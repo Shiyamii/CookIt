@@ -13,10 +13,14 @@ export type MetaField = (typeof META_FIELDS)[number];
  * the serializer. Adding a language means adding its keys here.
  */
 export const META_KEYS: Record<MetaField, Record<Locale, readonly string[]>> = {
-  servings: { fr: ['portions', 'personnes', 'parts'], en: ['servings', 'serves', 'yield'] },
-  source: { fr: ['source'], en: ['source'] },
-  format: { fr: ['format'], en: ['format'] },
-  tags: { fr: ['tags', 'étiquettes'], en: ['tags'] },
+  servings: {
+    fr: ['portions', 'personnes', 'parts'],
+    en: ['servings', 'serves', 'yield'],
+    hu: ['adag', 'adagok', 'személy', 'fő'],
+  },
+  source: { fr: ['source'], en: ['source'], hu: ['source', 'forrás'] },
+  format: { fr: ['format'], en: ['format'], hu: ['format', 'formátum'] },
+  tags: { fr: ['tags', 'étiquettes'], en: ['tags'], hu: ['tags', 'címkék'] },
 };
 
 const fieldByKey = new Map<string, MetaField>(

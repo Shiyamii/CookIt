@@ -17,6 +17,7 @@ export const en = {
     label: 'Language',
     fr: 'Français',
     en: 'English',
+    hu: 'Magyar',
   },
   theme: {
     label: 'Theme',
@@ -640,6 +641,9 @@ export const en = {
       computerTitle: 'Computer',
       computer:
         'Tap "Turn on notifications" and allow them. The browser must be running (it may be in the background) to show them.',
+      braveTitle: 'Brave',
+      brave:
+        'Brave turns push notifications off by default. Open brave://settings/privacy, turn on "Use Google services for push messaging", restart Brave, then try again.',
       blockedTitle: 'Blocked by mistake?',
       blocked:
         'Allow notifications for this site in the browser settings (the icon left of the address), then reload the page.',
@@ -650,6 +654,8 @@ export const en = {
   },
   errors: {
     push_failed: 'Notifications could not be turned on on this device. Try again later.',
+    push_failed_brave:
+      'Brave blocks push notifications: turn on "Use Google services for push messaging" in brave://settings/privacy, restart Brave, then try again.',
     unsupported_push_service: 'This browser uses a push service CookIt does not accept.',
     push_not_configured: 'Notifications are not set up on this server.',
     base_language: 'This is the original language of the recipe: change it with the editor.',
