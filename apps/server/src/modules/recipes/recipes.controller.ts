@@ -1,6 +1,8 @@
 import {
   recipeCopyInputSchema,
   recipeCreateInputSchema,
+  recipeImageOrderInputSchema,
+  recipeImageUploadSchema,
   recipeLangQuerySchema,
   recipeMarkdownCreateInputSchema,
   recipeMarkdownInputSchema,
@@ -15,7 +17,8 @@ import { strToU8, zipSync } from 'fflate';
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import type { AppEnv } from '../../http/app-env';
-import { parseJson } from '../../http/validate';
+import { parseForm, parseJson } from '../../http/validate';
+import { sendImage } from '../../http/images';
 import { requireUser } from '../auth/auth.middleware';
 import { rateLimit, RATE_LIMITS } from '../rate-limit/rate-limit.middleware';
 import type { RateLimitService } from '../rate-limit/rate-limit.service';
@@ -29,15 +32,23 @@ type ServiceError =
   | { error: 'conflict' }
   | { error: 'invalid_tags' }
   | { error: 'base_language' }
+  | { error: 'invalid_image' }
+  | { error: 'too_many_images' }
+  | { error: 'storage_full' }
+  | { error: 'invalid_order' }
   | { error: 'invalid_recipe'; diagnostics: unknown[] };
+
+const BAD_REQUEST = new Set(['invalid_tags', 'base_language', 'invalid_image', 'invalid_order']);
 
 /** Service errors to HTTP; anything else is the success body. */
 function respond<T extends object>(c: Context<AppEnv>, result: T | ServiceError, status = 200) {
   if ('error' in result) {
     if (result.error === 'not_found') return c.json({ error: 'not_found' }, 404);
     if (result.error === 'conflict') return c.json({ error: 'conflict' }, 409);
-    if (result.error === 'invalid_tags') return c.json({ error: 'invalid_tags' }, 400);
-    if (result.error === 'base_language') return c.json({ error: 'base_language' }, 400);
+    if (result.error === 'too_many_images' || result.error === 'storage_full') {
+      return c.json({ error: result.error }, 409);
+    }
+    if (BAD_REQUEST.has(result.error)) return c.json({ error: result.error }, 400);
     return c.json(result, 422);
   }
   return c.json(result, status as 200);
@@ -57,6 +68,19 @@ export function createRecipesController(deps: {
     if (!idSchema.safeParse(c.req.param('id')).success) return c.json({ error: 'not_found' }, 404);
     await next();
   };
+
+  // Photos, read like static files (`/images/…`, not the API: they may be cached). Who may see
+  // one is decided by the service from its recipe.
+  for (const size of ['full', 'thumb'] as const) {
+    const path = size === 'full' ? '/images/recipes/:imageId' : '/images/recipes/:imageId/thumb';
+    app.get(path, async (c) => {
+      const imageId = idSchema.safeParse(c.req.param('imageId'));
+      if (!imageId.success) return c.notFound();
+      const image = await deps.recipes.readImage(imageId.data, c.var.user?.id ?? null, size);
+      if ('error' in image) return c.notFound();
+      return sendImage(c, image, `${imageId.data}-${size}`);
+    });
+  }
 
   // Public gallery: no account needed.
   app.get('/api/v1/gallery', async (c) => {
@@ -161,12 +185,46 @@ export function createRecipesController(deps: {
     return respond(c, await deps.recipes.deleteTranslation(paramId(c), userId(c), lang.data));
   });
 
-  // "Add to my library".
-  app.post('/api/v1/recipes/:id/copy', recipeId, async (c) => {
-    const input = await parseJson(c, recipeCopyInputSchema);
+  // Photos of a recipe (owner only): add one, change their order, delete one.
+  app.post(
+    '/api/v1/recipes/:id/images',
+    recipeId,
+    rateLimit(deps.rateLimits, RATE_LIMITS.imageUploadPerAccount, (c) => c.var.user?.id),
+    async (c) => {
+      const input = await parseForm(c, recipeImageUploadSchema);
+      if (!input.ok) return input.response;
+      const upload = {
+        image: new Uint8Array(await input.data.image.arrayBuffer()),
+        thumb: new Uint8Array(await input.data.thumb.arrayBuffer()),
+      };
+      return respond(c, await deps.recipes.addImage(paramId(c), userId(c), upload), 201);
+    },
+  );
+
+  app.put('/api/v1/recipes/:id/images', recipeId, async (c) => {
+    const input = await parseJson(c, recipeImageOrderInputSchema);
     if (!input.ok) return input.response;
-    return respond(c, await deps.recipes.copy(paramId(c), userId(c), input.data.token), 201);
+    return respond(c, await deps.recipes.orderImages(paramId(c), userId(c), input.data.ids));
   });
+
+  app.delete('/api/v1/recipes/:id/images/:imageId', recipeId, async (c) => {
+    const imageId = idSchema.safeParse(c.req.param('imageId'));
+    if (!imageId.success) return c.json({ error: 'not_found' }, 404);
+    return respond(c, await deps.recipes.deleteImage(paramId(c), userId(c), imageId.data));
+  });
+
+  // "Add to my library".
+  // Each copy stores the recipe's photos again: limited per account.
+  app.post(
+    '/api/v1/recipes/:id/copy',
+    recipeId,
+    rateLimit(deps.rateLimits, RATE_LIMITS.recipeCopyPerAccount, (c) => c.var.user?.id),
+    async (c) => {
+      const input = await parseJson(c, recipeCopyInputSchema);
+      if (!input.ok) return input.response;
+      return respond(c, await deps.recipes.copy(paramId(c), userId(c), input.data.token), 201);
+    },
+  );
 
   return app;
 }

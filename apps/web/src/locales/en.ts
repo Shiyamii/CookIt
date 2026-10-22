@@ -11,6 +11,7 @@ export const en = {
     copy: 'Copy',
     copied: 'Copied',
     close: 'Close',
+    save: 'Save',
     cancel: 'Cancel',
   },
   language: {
@@ -102,6 +103,18 @@ export const en = {
     },
   },
   account: {
+    profile: {
+      title: 'Profile',
+      picture: 'Profile picture',
+      add: 'Add a picture',
+      change: 'Change the picture',
+      remove: 'Remove',
+      name: 'Display name',
+      nameHint:
+        'Shown on your recipes and in the menu. Your username ({{username}}) does not change.',
+      nameRequired: 'Enter a name (100 characters at most).',
+      saved: 'Name saved.',
+    },
     security: {
       title: 'Security',
       recovery:
@@ -168,6 +181,26 @@ export const en = {
     },
   },
   recipes: {
+    photos: {
+      title: 'Photos',
+      count: '{{n}}/{{max}}',
+      hint: 'The first photo is the cover, shown in lists. Pictures are resized before sending.',
+      add: 'Add photos',
+      uploading: 'Sending photo {{n}} of {{total}}…',
+      skipped_one: '{{count}} photo was left out: {{max}} at most per recipe.',
+      skipped_other: '{{count}} photos were left out: {{max}} at most per recipe.',
+      number: 'Photo {{n}}',
+      cover: 'Cover',
+      makeCover: 'Make cover',
+      makeCoverOf: 'Make cover: photo {{n}}',
+      earlier: 'Move photo {{n}} earlier',
+      later: 'Move photo {{n}} later',
+      delete: 'Delete photo {{n}}',
+      open: 'Open photo {{n}} of {{total}}: {{title}}',
+      viewer: '{{title}}: photo {{n}} of {{total}}',
+      previous: 'Previous photo',
+      next: 'Next photo',
+    },
     ingredients: 'Ingredients',
     steps: 'Steps',
     incomplete: 'To complete',
@@ -264,6 +297,12 @@ export const en = {
       save_other: 'Save {{count}} recipes',
       startOver: 'Start over',
       errors: {
+        invalid_image: 'This picture was refused by the server. Try another one.',
+        storage_full: 'Your photos take all the space allowed (500 MB): delete some first.',
+        too_many_images: 'This recipe already has 6 photos: delete one first.',
+        invalid_order: 'The photos changed meanwhile. Try again.',
+        image_unreadable: 'This file cannot be read as a picture.',
+        image_too_big: 'This picture is too big.',
         invalid_url: 'This address is not valid (http or https, standard port).',
         blocked_address: 'This address cannot be reached from CookIt (local or private network).',
         fetch_failed: 'The page could not be loaded.',

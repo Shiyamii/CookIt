@@ -6,6 +6,8 @@
  */
 
 export const OFFLINE_API_CACHE = 'cookit-api';
+/** Pictures already seen (recipe photos, profile pictures): a URL never changes its picture. */
+export const OFFLINE_IMAGES_CACHE = 'cookit-images';
 /** Message from the page: someone signed out or in, drop the account's kept answers. */
 export const CLEAR_OFFLINE_DATA = 'cookit:clear-offline-data';
 
@@ -21,4 +23,10 @@ const OFFLINE_API = [
 
 export function isOfflineApi(pathname: string): boolean {
   return OFFLINE_API.some((pattern) => pattern.test(pathname));
+}
+
+const IMAGE = /^\/images\/(?:recipes\/[0-9a-f-]{36}(?:\/thumb)?|avatars\/[0-9a-f-]{36})$/;
+
+export function isImage(pathname: string): boolean {
+  return IMAGE.test(pathname);
 }

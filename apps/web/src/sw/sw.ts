@@ -7,13 +7,20 @@ import {
 } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { NetworkFirst } from 'workbox-strategies';
-import { CLEAR_OFFLINE_DATA, OFFLINE_API_CACHE, isOfflineApi } from './offline-api';
+import {
+  CLEAR_OFFLINE_DATA,
+  OFFLINE_API_CACHE,
+  OFFLINE_IMAGES_CACHE,
+  isImage,
+  isOfflineApi,
+} from './offline-api';
 
 /**
  * Service worker (plan §5.4, §5.5), built by vite-plugin-pwa (`injectManifest`):
  * - the app itself (HTML, scripts, styles, fonts) is precached: it opens without network;
  * - the API reads needed to open a recipe and cook it (`isOfflineApi`) are kept from the
  *   last time they were read: network first, the copy when the network is down;
+ * - pictures already seen are kept (a picture's URL never shows another picture);
  * - Web Push notifications of finished timers, and a tap opening the cooking mode.
  */
 
@@ -29,10 +36,10 @@ self.addEventListener('activate', (event) => {
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Client-side routes: the app's page, never the API, health check or static files.
+// Client-side routes: the app's page, never the API, health check, pictures or static files.
 registerRoute(
   new NavigationRoute(createHandlerBoundToURL('/index.html'), {
-    denylist: [/^\/api\//, /^\/healthz/],
+    denylist: [/^\/api\//, /^\/healthz/, /^\/images\//],
   }),
 );
 
@@ -46,7 +53,7 @@ let generation = 0;
 
 const clearOfflineData = async () => {
   generation += 1;
-  await caches.delete(OFFLINE_API_CACHE);
+  await Promise.all([caches.delete(OFFLINE_API_CACHE), caches.delete(OFFLINE_IMAGES_CACHE)]);
 };
 
 self.addEventListener('message', (event) => {
@@ -85,6 +92,31 @@ registerRoute(
         },
       },
       new ExpirationPlugin({ maxEntries: 300, maxAgeSeconds: 14 * 24 * 3600 }),
+    ],
+  }),
+);
+
+// Pictures: network first like the API (a revoked photo is a 404 as soon as there is network;
+// public ones come from the browser's HTTP cache anyway), the kept copy offline.
+registerRoute(
+  ({ url, request, sameOrigin }) => sameOrigin && request.method === 'GET' && isImage(url.pathname),
+  new NetworkFirst({
+    cacheName: OFFLINE_IMAGES_CACHE,
+    networkTimeoutSeconds: 5,
+    plugins: [
+      {
+        requestWillFetch: async ({ request, state }) => {
+          if (state) state.generation = generation;
+          return request;
+        },
+        cacheWillUpdate: async ({ response, state }) =>
+          response.status === 200 && state?.generation === generation ? response : null,
+      },
+      new ExpirationPlugin({
+        maxEntries: 300,
+        maxAgeSeconds: 30 * 24 * 3600,
+        purgeOnQuotaError: true,
+      }),
     ],
   }),
 );

@@ -1,4 +1,4 @@
-import { CLEAR_OFFLINE_DATA, OFFLINE_API_CACHE } from '@/sw/offline-api';
+import { CLEAR_OFFLINE_DATA, OFFLINE_API_CACHE, OFFLINE_IMAGES_CACHE } from '@/sw/offline-api';
 
 /**
  * The installable app (plan §5.5): the service worker (src/sw/sw.ts) keeps the app and the
@@ -20,7 +20,7 @@ export async function clearOfflineData(): Promise<void> {
   try {
     // The service worker also ignores the answers of requests still in flight.
     navigator.serviceWorker?.controller?.postMessage(CLEAR_OFFLINE_DATA);
-    await caches.delete(OFFLINE_API_CACHE);
+    await Promise.all([caches.delete(OFFLINE_API_CACHE), caches.delete(OFFLINE_IMAGES_CACHE)]);
   } catch {
     // No Cache Storage (insecure context, blocked): nothing was kept.
   }

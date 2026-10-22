@@ -1,13 +1,15 @@
 import type {
   Diagnostic,
   Locale,
+  RecipeImage,
   RecipeCreateInput,
   RecipeDetail,
   RecipePage,
   RecipeSaveInput,
   RecipeVisibility,
 } from '@cookit/shared';
-import { ApiError, apiDelete, apiGet, apiPost, apiPut } from '@/lib/api';
+import { ApiError, apiDelete, apiGet, apiPost, apiPut, apiUpload } from '@/lib/api';
+import { preparePhoto } from '@/lib/images';
 
 export const RECIPES_QUERY_KEY = ['recipes'] as const;
 
@@ -135,4 +137,22 @@ export function saveTranslation(
 
 export async function deleteTranslation(id: string, lang: Locale): Promise<void> {
   await apiDelete(`/recipes/${encodeURIComponent(id)}/translations/${encodeURIComponent(lang)}`);
+}
+
+/** Adds a photo after the others (resized in the browser, with its thumbnail). */
+export async function uploadRecipeImage(id: string, file: Blob): Promise<RecipeImage> {
+  const { image, thumb } = await preparePhoto(file);
+  const form = new FormData();
+  form.append('image', image);
+  form.append('thumb', thumb);
+  return apiUpload<RecipeImage>('POST', `/recipes/${encodeURIComponent(id)}/images`, form);
+}
+
+export async function deleteRecipeImage(id: string, imageId: string): Promise<void> {
+  await apiDelete(`/recipes/${encodeURIComponent(id)}/images/${encodeURIComponent(imageId)}`);
+}
+
+/** New order of the photos: all of them, the cover first. */
+export async function orderRecipeImages(id: string, ids: string[]): Promise<void> {
+  await apiPut(`/recipes/${encodeURIComponent(id)}/images`, { ids });
 }

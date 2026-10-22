@@ -1,9 +1,9 @@
 import type { Locale, RecipeVisibility } from '@cookit/shared';
-import { and, desc, eq, exists, like, ne, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, like, ne, sql, type SQL } from 'drizzle-orm';
 import type { Database } from '../../db';
 import { uniqueViolation } from '../../db/errors';
 import { user } from '../auth/auth.schema';
-import { recipes, recipeTags, recipeTranslations } from './recipes.schema';
+import { recipeImages, recipes, recipeTags, recipeTranslations } from './recipes.schema';
 
 /** The language-dependent part of a recipe (plan §3), as stored. */
 export type TranslationContent = {
@@ -18,13 +18,15 @@ export type TranslationContent = {
 export type TranslationRow = TranslationContent & { lang: Locale };
 
 /**
- * A recipe with its base-language translation, its other translations and its owner's display
- * name.
+ * A recipe with its base-language translation, its other translations, its photos and its
+ * owner's display name and picture.
  */
 export type RecipeRow = {
   id: string;
   ownerId: string;
   ownerName: string;
+  /** URL of the owner's profile picture. */
+  ownerImage: string | null;
   slug: string;
   lang: Locale;
   servings: number;
@@ -38,6 +40,8 @@ export type RecipeRow = {
   bodyMarkdown: string;
   tagIds: string[];
   translations: TranslationRow[];
+  /** Photos, cover first. */
+  imageIds: string[];
   hasSteps: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -52,9 +56,10 @@ export type RecipeListRow = Pick<
   | 'servings'
   | 'visibility'
   | 'ownerName'
+  | 'ownerImage'
   | 'hasSteps'
   | 'updatedAt'
->;
+> & { coverId: string | null };
 
 /** What a save writes: the columns of part 1 and the body. */
 export type RecipeContent = {
@@ -77,7 +82,20 @@ export type NewRecipe = RecipeContent & {
   copiedFromId?: string | null;
   /** Other languages, stored as given (a copy keeps the original's translations). */
   translations?: (TranslationContent & { lang: Locale })[];
+  /** A copy: the recipe whose photos are copied too. */
+  copyImagesFrom?: string;
   now: Date;
+};
+
+/** A photo to add: the full picture and its thumbnail, of the same type. */
+export type NewImage = { id: string; contentType: string; data: Buffer; thumb: Buffer };
+
+/** A photo as served, with what deciding who may see it needs. */
+export type StoredImage = {
+  contentType: string;
+  data: Buffer;
+  ownerId: string;
+  visibility: RecipeVisibility;
 };
 
 export type ListQuery = {
@@ -105,12 +123,21 @@ export type RecipesRepository = {
     content: RecipeContent,
     options: { baseVersion?: Date; now: Date; tagIds?: string[] },
   ): Promise<'ok' | 'conflict' | 'not_found'>;
-  setVisibility(id: string, visibility: RecipeVisibility, shareToken: string | null): Promise<void>;
+  /**
+   * With `renewImageIds`, the photos get new ids (new URLs): the old ones stop working, like the
+   * old share link.
+   */
+  setVisibility(
+    id: string,
+    visibility: RecipeVisibility,
+    shareToken: string | null,
+    options?: { renewImageIds?: boolean },
+  ): Promise<void>;
   delete(id: string): Promise<void>;
   listByOwner(ownerId: string, query: ListQuery): Promise<RecipeListRow[]>;
   listPublic(query: ListQuery): Promise<RecipeListRow[]>;
   /** Every recipe of the owner in its base language (export of all recipes), oldest first. */
-  listAllByOwner(ownerId: string): Promise<Omit<RecipeRow, 'translations'>[]>;
+  listAllByOwner(ownerId: string): Promise<Omit<RecipeRow, 'translations' | 'imageIds'>[]>;
   /** Creates or replaces a translation (never the base language: the service checks it). */
   saveTranslation(
     recipeId: string,
@@ -120,6 +147,17 @@ export type RecipesRepository = {
   ): Promise<void>;
   /** False when there was no such translation. */
   deleteTranslation(recipeId: string, lang: Locale): Promise<boolean>;
+  /** Adds a photo after the others; `too_many` when the recipe already has `max`. */
+  addImage(recipeId: string, image: NewImage, max: number): Promise<'ok' | 'too_many'>;
+  /** False when the recipe has no such photo. */
+  deleteImage(recipeId: string, imageId: string): Promise<boolean>;
+  /** New order of the photos; `mismatch` unless `ids` are exactly the recipe's photos. */
+  orderImages(recipeId: string, ids: string[]): Promise<'ok' | 'mismatch'>;
+  findImage(imageId: string, size: 'full' | 'thumb'): Promise<StoredImage | undefined>;
+  /** Bytes of the photos (pictures and thumbnails) of every recipe of the owner. */
+  imageBytesOfOwner(ownerId: string): Promise<number>;
+  /** Bytes of the photos of one recipe. */
+  imageBytesOfRecipe(recipeId: string): Promise<number>;
 };
 
 /** The base-language translation of each recipe. */
@@ -132,6 +170,7 @@ const rowColumns = {
   id: recipes.id,
   ownerId: recipes.ownerId,
   ownerName: user.name,
+  ownerImage: user.image,
   slug: recipes.slug,
   lang: sql<Locale>`${recipes.baseLang}`,
   servings: recipes.servings,
@@ -156,9 +195,19 @@ const listColumns = {
   servings: recipes.servings,
   visibility: recipes.visibility,
   ownerName: user.name,
+  ownerImage: user.image,
   hasSteps: recipes.hasSteps,
   updatedAt: recipes.updatedAt,
+  // The cover's id (first photo), if any.
+  coverId: sql<
+    string | null
+  >`(select ${recipeImages.id} from ${recipeImages} where ${recipeImages.recipeId} = ${recipes.id} order by ${recipeImages.position}, ${recipeImages.id} limit 1)`,
 };
+
+const imageBytes =
+  sql<number>`coalesce(sum(octet_length(${recipeImages.data}) + octet_length(${recipeImages.thumb})), 0)::bigint`.mapWith(
+    Number,
+  );
 
 const searchConfig = sql`(case ${recipeTranslations.lang} when 'fr' then 'french'::regconfig when 'hu' then 'hungarian'::regconfig else 'english'::regconfig end)`;
 
@@ -187,7 +236,17 @@ export function createRecipesRepository(db: Database): RecipesRepository {
       .from(recipeTranslations)
       .where(and(eq(recipeTranslations.recipeId, row.id), ne(recipeTranslations.lang, row.lang)))
       .orderBy(recipeTranslations.lang);
-    return { ...row, tagIds: tagRows.map((tag) => tag.tagId), translations };
+    const images = await db
+      .select({ id: recipeImages.id })
+      .from(recipeImages)
+      .where(eq(recipeImages.recipeId, row.id))
+      .orderBy(asc(recipeImages.position), asc(recipeImages.id));
+    return {
+      ...row,
+      tagIds: tagRows.map((tag) => tag.tagId),
+      translations,
+      imageIds: images.map((image) => image.id),
+    };
   };
 
   /** Replaces the tags of a recipe (inside the save's transaction). */
@@ -263,6 +322,13 @@ export function createRecipesRepository(db: Database): RecipesRepository {
           .values({ ...translation, recipeId: recipe.id, updatedAt: recipe.now });
       }
       await setTags(tx, recipe.id, recipe.tagIds);
+      if (recipe.copyImagesFrom) {
+        // Copied by the database (new ids), without reading the pictures into the server.
+        await tx.execute(sql`
+          insert into ${recipeImages} (id, recipe_id, position, content_type, data, thumb, created_at)
+          select gen_random_uuid()::text, ${recipe.id}, position, content_type, data, thumb, ${recipe.now.toISOString()}::timestamptz
+          from ${recipeImages} where recipe_id = ${recipe.copyImagesFrom}`);
+      }
     });
 
   return {
@@ -335,8 +401,16 @@ export function createRecipesRepository(db: Database): RecipesRepository {
     },
 
     // Not a content change: `updatedAt` (list order, editor conflicts) stays.
-    async setVisibility(id, visibility, shareToken) {
-      await db.update(recipes).set({ visibility, shareToken }).where(eq(recipes.id, id));
+    async setVisibility(id, visibility, shareToken, options) {
+      await db.transaction(async (tx) => {
+        await tx.update(recipes).set({ visibility, shareToken }).where(eq(recipes.id, id));
+        if (options?.renewImageIds) {
+          await tx
+            .update(recipeImages)
+            .set({ id: sql`gen_random_uuid()::text` })
+            .where(eq(recipeImages.recipeId, id));
+        }
+      });
     },
 
     async delete(id) {
@@ -382,6 +456,88 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         .where(and(eq(recipeTranslations.recipeId, recipeId), eq(recipeTranslations.lang, lang)))
         .returning({ lang: recipeTranslations.lang });
       return deleted.length > 0;
+    },
+
+    addImage(recipeId, image, max) {
+      return db.transaction(async (tx) => {
+        // The recipe row is locked: two uploads at once cannot both take the last place.
+        await tx
+          .select({ id: recipes.id })
+          .from(recipes)
+          .where(eq(recipes.id, recipeId))
+          .for('update');
+        const [stats] = await tx
+          .select({
+            count: sql<number>`count(*)::int`,
+            last: sql<number>`coalesce(max(${recipeImages.position}), -1)::int`,
+          })
+          .from(recipeImages)
+          .where(eq(recipeImages.recipeId, recipeId));
+        if ((stats?.count ?? 0) >= max) return 'too_many';
+        await tx
+          .insert(recipeImages)
+          .values({ ...image, recipeId, position: (stats?.last ?? -1) + 1 });
+        return 'ok';
+      });
+    },
+
+    async deleteImage(recipeId, imageId) {
+      const deleted = await db
+        .delete(recipeImages)
+        .where(and(eq(recipeImages.recipeId, recipeId), eq(recipeImages.id, imageId)))
+        .returning({ id: recipeImages.id });
+      return deleted.length > 0;
+    },
+
+    orderImages(recipeId, ids) {
+      return db.transaction(async (tx) => {
+        const current = await tx
+          .select({ id: recipeImages.id })
+          .from(recipeImages)
+          .where(eq(recipeImages.recipeId, recipeId))
+          .for('update');
+        const known = new Set(current.map((image) => image.id));
+        const same =
+          ids.length === known.size &&
+          new Set(ids).size === ids.length &&
+          ids.every((id) => known.has(id));
+        if (!same) return 'mismatch';
+        for (const [position, id] of ids.entries()) {
+          await tx.update(recipeImages).set({ position }).where(eq(recipeImages.id, id));
+        }
+        return 'ok';
+      });
+    },
+
+    async imageBytesOfOwner(ownerId) {
+      const [row] = await db
+        .select({ bytes: imageBytes })
+        .from(recipeImages)
+        .innerJoin(recipes, eq(recipes.id, recipeImages.recipeId))
+        .where(eq(recipes.ownerId, ownerId));
+      return row?.bytes ?? 0;
+    },
+
+    async imageBytesOfRecipe(recipeId) {
+      const [row] = await db
+        .select({ bytes: imageBytes })
+        .from(recipeImages)
+        .where(eq(recipeImages.recipeId, recipeId));
+      return row?.bytes ?? 0;
+    },
+
+    async findImage(imageId, size) {
+      const [row] = await db
+        .select({
+          contentType: recipeImages.contentType,
+          data: size === 'thumb' ? recipeImages.thumb : recipeImages.data,
+          ownerId: recipes.ownerId,
+          visibility: recipes.visibility,
+        })
+        .from(recipeImages)
+        .innerJoin(recipes, eq(recipes.id, recipeImages.recipeId))
+        .where(eq(recipeImages.id, imageId));
+      return row;
     },
   };
 }

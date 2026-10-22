@@ -210,3 +210,16 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **`hungarian-v1` seed** for existing instances (labels and aliases added where missing, new units and the `hongroise` tag created once), rather than editing `units-v1`/`tags-v1`, which already ran.
 - **The migration drops and re-adds the generated `search` column** (drizzle-kit's way to change its expression), so it re-creates its GIN index by hand: the generated file lacked it.
 - **Brave**: its push service is off by default and `subscribe` fails with a generic error; the app detects Brave (`navigator.brave`) and names the setting to turn on, and the help page has a Brave section. The browser's own error is logged to the console.
+
+## Phase 9c: Images
+
+- **Pictures in Postgres (`bytea`)**, chosen by the user over files or S3: one image + Postgres stays the whole deployment and the database backup covers them. Sizes are kept small by resizing in the browser (≤ 1600 px, ≤ 700 kB; thumbnail ≤ 480 px; avatar ≤ 256 px), so rows stay reasonable.
+- **No image library on the server** (sharp is a heavy native dependency): the browser resizes and re-encodes, the server only reads the header (type, dimensions) to refuse non-pictures, SVG and pixel bombs. The browser makes the thumbnail too (one multipart upload).
+- **Served outside `/api`** at stable URLs (a new picture gets a new id) so the browser and the service worker can keep them: what the user asked for ("like static files", no base64 in JSON).
+- **Unlisted recipes' photos are readable by anyone with their URL**: an `<img>` cannot carry the share token (it stays in the fragment); the random UUID is only given with the recipe, so it acts like the share link. A new share link gives the photos new ids, so revoking a leaked link also cuts off its photo URLs.
+- **Caching**: only pictures anyone may see are cached for a year (`private`: never in shared caches); session-dependent ones are revalidated (`no-cache` + ETag). The service worker reads pictures network first (a revoked photo disappears as soon as there is network) and its picture cache is cleared at sign-out like the API cache; the browser's own HTTP cache is not (it only holds pictures that browser was allowed to see).
+- **Cover = first photo** (no separate column): one ordered list, "make cover" moves a photo first.
+- **Photos are not exported** in `.md`/zip (the format is text; the export stays importable anywhere).
+- **Storage cap of 500 MB of photos per user** (about 600 photos) and a rate limit on "add to my library" (it duplicates the photos): one account cannot fill the database. A copy over the cap is made without its photos.
+- **Pictures are served with a sandboxed CSP allowing nothing**: only their header is checked, so whatever follows it can never run if opened as a document.
+- **Avatars are public** (shown next to the author's name, which public recipes already show).

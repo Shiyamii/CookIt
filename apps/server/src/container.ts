@@ -20,6 +20,8 @@ import { createUnitsService } from './modules/units/units.service';
 import { createImportService } from './modules/import/import.service';
 import { safeFetchHtml } from './lib/safe-fetch';
 import { createPushSender, isPushEndpoint } from './lib/web-push';
+import { createProfileRepository } from './modules/profile/profile.repository';
+import { createProfileService } from './modules/profile/profile.service';
 import { createPushRepository } from './modules/push/push.repository';
 import { createPushService } from './modules/push/push.service';
 import { createRateLimitRepository } from './modules/rate-limit/rate-limit.repository';
@@ -68,6 +70,7 @@ export function createContainer(db: Database) {
       publicKey: vapid?.publicKey,
       isPushEndpoint: (endpoint) => isPushEndpoint(endpoint, env.PUSH_TEST_ENDPOINT_ORIGIN),
     }),
+    profile: createProfileService({ repository: createProfileRepository(db) }),
     importer: createImportService({ fetchHtml: (url) => safeFetchHtml(url) }),
     recipes: createRecipesService({
       repository: createRecipesRepository(db),

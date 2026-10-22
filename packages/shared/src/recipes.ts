@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { RecipeImage } from './images';
 import { labelString } from './labels';
 import { SUPPORTED_LOCALES, type Locale } from './locale';
 import { metaFieldOf } from './recipe/meta-keys';
@@ -174,6 +175,10 @@ export type RecipeSummary = {
   servings: number;
   visibility: RecipeVisibility;
   ownerName: string;
+  /** URL of the owner's profile picture. */
+  ownerImage: string | null;
+  /** Thumbnail URL of the cover (first photo). */
+  cover: string | null;
   /** No step yet ("to complete"): cannot be cooked. */
   incomplete: boolean;
   updatedAt: string;
@@ -203,6 +208,10 @@ export type RecipeDetail = {
   body: string;
   visibility: RecipeVisibility;
   ownerName: string;
+  /** URL of the owner's profile picture. */
+  ownerImage: string | null;
+  /** Photos, the cover first. */
+  images: RecipeImage[];
   isOwner: boolean;
   /** Only for the owner of an unlisted recipe. */
   shareUrl: string | null;
@@ -216,7 +225,15 @@ export type RecipeDetail = {
 };
 
 /** Errors returned by the recipes API as `{ error }`, translated by the UI. */
-export const RECIPE_ERRORS = ['not_found', 'invalid_recipe', 'conflict', 'base_language'] as const;
+export const RECIPE_ERRORS = [
+  'not_found',
+  'invalid_recipe',
+  'conflict',
+  'base_language',
+  'invalid_image',
+  'too_many_images',
+  'storage_full',
+] as const;
 
 /**
  * The full markdown document of a recipe (format of §4) from its columns and body, for the

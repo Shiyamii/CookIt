@@ -4,6 +4,7 @@
 export * from '../modules/auth/auth.schema';
 export * from '../modules/cooking/cooking.schema';
 export * from '../modules/invites/invites.schema';
+export * from '../modules/profile/profile.schema';
 export * from '../modules/push/push.schema';
 export * from '../modules/rate-limit/rate-limit.schema';
 export * from '../modules/recipes/recipes.schema';

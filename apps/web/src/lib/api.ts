@@ -11,13 +11,15 @@ export class ApiError extends Error {
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  // A form (file upload) sets its own multipart content type.
+  const form = body instanceof FormData;
   const res = await fetch(`/api/v1${path}`, {
     method,
     headers: {
       Accept: 'application/json',
-      ...(body !== undefined && { 'Content-Type': 'application/json' }),
+      ...(body !== undefined && !form && { 'Content-Type': 'application/json' }),
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     credentials: 'same-origin',
   });
   const data: unknown = await res.json().catch(() => undefined);
@@ -37,6 +39,9 @@ export const apiGet = <T>(path: string) => request<T>('GET', path);
 export const apiPost = <T>(path: string, body: unknown = {}) => request<T>('POST', path, body);
 export const apiPut = <T>(path: string, body: unknown = {}) => request<T>('PUT', path, body);
 export const apiDelete = <T>(path: string, body?: unknown) => request<T>('DELETE', path, body);
+/** Sends files (multipart form). */
+export const apiUpload = <T>(method: 'POST' | 'PUT', path: string, form: FormData) =>
+  request<T>(method, path, form);
 
 /** The error code of a failed call, for `t('errors.<code>')`; `unknown` for anything else. */
 export function errorCode(error: unknown): string {

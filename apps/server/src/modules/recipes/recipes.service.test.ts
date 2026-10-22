@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { DEFAULT_UNITS, RECIPES_PAGE_SIZE, type RecipeSearch } from '@cookit/shared';
 import type {
   ListQuery,
+  NewImage,
   NewRecipe,
   RecipeContent,
   RecipeListRow,
@@ -33,13 +34,17 @@ const search = (partial: Partial<RecipeSearch> = {}): RecipeSearch => ({
   ...partial,
 });
 
+type FakeImage = NewImage & { recipeId: string };
+
 function fakeRepository() {
   const rows = new Map<string, RecipeRow & { searchText: string }>();
+  const images = new Map<string, FakeImage>();
   const state = { slugTakenOnce: 0, creates: 0, lastList: undefined as ListQuery | undefined };
   const toRow = (r: NewRecipe) => ({
     id: r.id,
     ownerId: r.ownerId,
     ownerName: `name-${r.ownerId}`,
+    ownerImage: null,
     slug: r.slug,
     lang: r.lang,
     servings: r.servings,
@@ -53,6 +58,7 @@ function fakeRepository() {
     bodyMarkdown: r.bodyMarkdown,
     tagIds: r.tagIds,
     translations: (r.translations ?? []).map((t) => ({ ...t })),
+    imageIds: [] as string[],
     createdAt: r.now,
     updatedAt: r.now,
     searchText: r.searchText,
@@ -65,7 +71,13 @@ function fakeRepository() {
         state.slugTakenOnce--;
         return 'slug_taken';
       }
-      rows.set(recipe.id, toRow(recipe));
+      const row = toRow(recipe);
+      for (const id of rows.get(recipe.copyImagesFrom ?? '')?.imageIds ?? []) {
+        const copy = { ...images.get(id)!, id: `copy-of-${id}`, recipeId: recipe.id };
+        images.set(copy.id, copy);
+        row.imageIds.push(copy.id);
+      }
+      rows.set(recipe.id, row);
       return 'ok';
     },
     async findById(id) {
@@ -88,21 +100,29 @@ function fakeRepository() {
       Object.assign(row, content, { updatedAt: options.now });
       return 'ok';
     },
-    async setVisibility(id, visibility, shareToken) {
+    async setVisibility(id, visibility, shareToken, options) {
       const row = rows.get(id)!;
       row.visibility = visibility;
       row.shareToken = shareToken;
+      if (options?.renewImageIds) {
+        row.imageIds = row.imageIds.map((old) => {
+          const renewed = { ...images.get(old)!, id: `renewed-${old}` };
+          images.delete(old);
+          images.set(renewed.id, renewed);
+          return renewed.id;
+        });
+      }
     },
     async delete(id) {
       rows.delete(id);
     },
     async listByOwner(ownerId, query) {
       state.lastList = query;
-      return [...rows.values()].filter((r) => r.ownerId === ownerId) as RecipeListRow[];
+      return listRows([...rows.values()].filter((r) => r.ownerId === ownerId));
     },
     async listPublic(query) {
       state.lastList = query;
-      return [...rows.values()].filter((r) => r.visibility === 'public') as RecipeListRow[];
+      return listRows([...rows.values()].filter((r) => r.visibility === 'public'));
     },
     async listAllByOwner(ownerId) {
       return [...rows.values()].filter((r) => r.ownerId === ownerId);
@@ -117,11 +137,58 @@ function fakeRepository() {
       if (row) row.translations = row.translations.filter((t) => t.lang !== lang);
       return (row?.translations.length ?? 0) < before;
     },
+    async addImage(recipeId, image, max) {
+      const row = rows.get(recipeId)!;
+      if (row.imageIds.length >= max) return 'too_many';
+      images.set(image.id, { ...image, recipeId });
+      row.imageIds.push(image.id);
+      return 'ok';
+    },
+    async deleteImage(recipeId, imageId) {
+      const row = rows.get(recipeId)!;
+      if (!row.imageIds.includes(imageId)) return false;
+      row.imageIds = row.imageIds.filter((id) => id !== imageId);
+      images.delete(imageId);
+      return true;
+    },
+    async orderImages(recipeId, ids) {
+      const row = rows.get(recipeId)!;
+      const same =
+        ids.length === row.imageIds.length &&
+        new Set(ids).size === ids.length &&
+        ids.every((id) => row.imageIds.includes(id));
+      if (!same) return 'mismatch';
+      row.imageIds = [...ids];
+      return 'ok';
+    },
+    async imageBytesOfOwner(ownerId) {
+      return [...images.values()]
+        .filter((image) => rows.get(image.recipeId)?.ownerId === ownerId)
+        .reduce((sum, image) => sum + image.data.length + image.thumb.length, 0);
+    },
+    async imageBytesOfRecipe(recipeId) {
+      return [...images.values()]
+        .filter((image) => image.recipeId === recipeId)
+        .reduce((sum, image) => sum + image.data.length + image.thumb.length, 0);
+    },
+    async findImage(imageId, size) {
+      const image = images.get(imageId);
+      const row = image && rows.get(image.recipeId);
+      if (!image || !row) return undefined;
+      return {
+        contentType: image.contentType,
+        data: size === 'thumb' ? image.thumb : image.data,
+        ownerId: row.ownerId,
+        visibility: row.visibility,
+      };
+    },
   };
-  return { repository, rows, state };
+  const listRows = (found: RecipeRow[]): RecipeListRow[] =>
+    found.map((r) => ({ ...r, coverId: r.imageIds[0] ?? null }));
+  return { repository, rows, images, state };
 }
 
-function setup() {
+function setup(options: { maxImageBytes?: number } = {}) {
   const fake = fakeRepository();
   let n = 0;
   let tokens = 0;
@@ -159,6 +226,7 @@ function setup() {
     generateToken: () => (tokens++ === 0 ? TOKEN : 'U'.repeat(43)),
     newId: () => `id-${++n}`,
     now: () => new Date((clock += 1000)),
+    maxImageBytes: options.maxImageBytes,
   });
   return { ...fake, service };
 }
@@ -723,5 +791,220 @@ describe('translations', () => {
     expect(await s.service.get(id, null, 'en')).toEqual({ error: 'not_found' });
     expect(await s.service.deleteTranslation(id, OTHER, 'en')).toEqual({ error: 'not_found' });
     expect(s.rows.get(id)!.translations).toHaveLength(1);
+  });
+});
+
+/** A lossy WebP header of `width` × `height` (only the header is ever read by the server). */
+function webp(width: number, height: number, padding = 30): Uint8Array {
+  const file = new Uint8Array(20 + padding);
+  const view = new DataView(file.buffer);
+  file.set(new TextEncoder().encode('RIFF'), 0);
+  view.setUint32(4, file.length - 8, true);
+  file.set(new TextEncoder().encode('WEBPVP8 '), 8);
+  view.setUint32(16, padding, true);
+  file.set([0x9d, 0x01, 0x2a], 23);
+  view.setUint16(26, width, true);
+  view.setUint16(28, height, true);
+  return file;
+}
+
+const JPEG_THUMB = new Uint8Array([
+  0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x00, 0x10, 0x00, 0x10, 0x03, 0, 0, 0, 0, 0, 0, 0, 0,
+]);
+const UPLOAD = { image: webp(1600, 1200), thumb: webp(480, 360) };
+
+describe('photos', () => {
+  test('the owner adds photos: the first is the cover, in details and lists', async () => {
+    const s = setup();
+    const id = await created(s);
+    const first = await s.service.addImage(id, OWNER, UPLOAD);
+    const second = await s.service.addImage(id, OWNER, UPLOAD);
+    if ('error' in first || 'error' in second) throw new Error('upload failed');
+    expect(first.url).toBe(`/images/recipes/${first.id}`);
+    expect(first.thumbUrl).toBe(`/images/recipes/${first.id}/thumb`);
+    expect(s.images.get(first.id)?.contentType).toBe('image/webp');
+
+    const detail = await s.service.get(id, OWNER);
+    expect('images' in detail && detail.images.map((image) => image.id)).toEqual([
+      first.id,
+      second.id,
+    ]);
+    const list = await s.service.listMine(OWNER, search());
+    expect(list.recipes[0]?.cover).toBe(first.thumbUrl);
+  });
+
+  test('a recipe without photos has no cover', async () => {
+    const s = setup();
+    await created(s);
+    expect((await s.service.listMine(OWNER, search())).recipes[0]?.cover).toBeNull();
+  });
+
+  test('at most six photos', async () => {
+    const s = setup();
+    const id = await created(s);
+    for (let i = 0; i < 6; i++)
+      expect(await s.service.addImage(id, OWNER, UPLOAD)).toHaveProperty('id');
+    expect(await s.service.addImage(id, OWNER, UPLOAD)).toEqual({ error: 'too_many_images' });
+  });
+
+  test('only the owner adds, deletes or orders photos', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    const image = await s.service.addImage(id, OWNER, UPLOAD);
+    if ('error' in image) throw new Error('upload failed');
+    expect(await s.service.addImage(id, OTHER, UPLOAD)).toEqual({ error: 'not_found' });
+    expect(await s.service.deleteImage(id, OTHER, image.id)).toEqual({ error: 'not_found' });
+    expect(await s.service.orderImages(id, OTHER, [image.id])).toEqual({ error: 'not_found' });
+    expect(await s.service.addImage('nope', OWNER, UPLOAD)).toEqual({ error: 'not_found' });
+    expect(s.rows.get(id)!.imageIds).toEqual([image.id]);
+  });
+
+  test('pictures that are not WebP/JPEG within the limits are refused', async () => {
+    const s = setup();
+    const id = await created(s);
+    const refused = [
+      { image: new TextEncoder().encode('<svg/>'), thumb: UPLOAD.thumb },
+      { image: UPLOAD.image, thumb: new Uint8Array() },
+      // Too many pixels for a photo, for a thumbnail.
+      { image: webp(1601, 100), thumb: UPLOAD.thumb },
+      { image: UPLOAD.image, thumb: webp(481, 100) },
+      // Too many bytes.
+      { image: webp(100, 100, 700_000), thumb: UPLOAD.thumb },
+      // Thumbnail of another type than the picture.
+      { image: UPLOAD.image, thumb: JPEG_THUMB },
+    ];
+    for (const upload of refused) {
+      expect(await s.service.addImage(id, OWNER, upload)).toEqual({ error: 'invalid_image' });
+    }
+    expect(s.rows.get(id)!.imageIds).toEqual([]);
+  });
+
+  test('deleting and reordering', async () => {
+    const s = setup();
+    const id = await created(s);
+    const ids: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const image = await s.service.addImage(id, OWNER, UPLOAD);
+      if ('error' in image) throw new Error('upload failed');
+      ids.push(image.id);
+    }
+    const [a, b, c] = ids as [string, string, string];
+    expect(await s.service.orderImages(id, OWNER, [c, a, b])).toEqual({ ok: true });
+    expect(s.rows.get(id)!.imageIds).toEqual([c, a, b]);
+    // Missing, duplicated or foreign ids.
+    expect(await s.service.orderImages(id, OWNER, [c, a])).toEqual({ error: 'invalid_order' });
+    expect(await s.service.orderImages(id, OWNER, [c, a, a])).toEqual({ error: 'invalid_order' });
+    expect(await s.service.orderImages(id, OWNER, [c, a, 'x'])).toEqual({ error: 'invalid_order' });
+    expect(await s.service.deleteImage(id, OWNER, c)).toEqual({ ok: true });
+    expect(await s.service.deleteImage(id, OWNER, c)).toEqual({ error: 'not_found' });
+    expect(s.rows.get(id)!.imageIds).toEqual([a, b]);
+  });
+
+  test('a photo of another recipe cannot be deleted through this one', async () => {
+    const s = setup();
+    const mine = await created(s);
+    const other = await created(s);
+    const image = await s.service.addImage(other, OWNER, UPLOAD);
+    if ('error' in image) throw new Error('upload failed');
+    expect(await s.service.deleteImage(mine, OWNER, image.id)).toEqual({ error: 'not_found' });
+    expect(s.images.has(image.id)).toBe(true);
+  });
+
+  test('who sees a photo: owner always, anyone when public or unlisted, nobody else', async () => {
+    const s = setup();
+    const id = await created(s);
+    const image = await s.service.addImage(id, OWNER, UPLOAD);
+    if ('error' in image) throw new Error('upload failed');
+    // The photo's current id (a new share link renews it).
+    const read = async (viewer: string | null, size: 'full' | 'thumb' = 'full') => {
+      const current = s.rows.get(id)!.imageIds[0]!;
+      const result = await s.service.readImage(current, viewer, size);
+      return 'error' in result ? result.error : result.public ? 'public' : 'private';
+    };
+    expect(await read(OWNER)).toBe('private');
+    expect(await read(OTHER)).toBe('not_found');
+    expect(await read(null)).toBe('not_found');
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(await read(OTHER)).toBe('private');
+    expect(await read(null, 'thumb')).toBe('private');
+    await s.service.setVisibility(id, OWNER, 'public');
+    expect(await read(null)).toBe('public');
+    await s.service.setVisibility(id, OWNER, 'private');
+    expect(await read(null)).toBe('not_found');
+    expect(await s.service.readImage('nope', OWNER, 'full')).toEqual({ error: 'not_found' });
+  });
+
+  test('the full picture and the thumbnail are served separately', async () => {
+    const s = setup();
+    const id = await created(s);
+    const image = await s.service.addImage(id, OWNER, UPLOAD);
+    if ('error' in image) throw new Error('upload failed');
+    const full = await s.service.readImage(image.id, OWNER, 'full');
+    const thumb = await s.service.readImage(image.id, OWNER, 'thumb');
+    expect('data' in full && full.data.length).toBe(UPLOAD.image.length);
+    expect('data' in thumb && thumb.data.length).toBe(UPLOAD.thumb.length);
+  });
+
+  test('"add to my library" copies the photos', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    const image = await s.service.addImage(id, OWNER, UPLOAD);
+    if ('error' in image) throw new Error('upload failed');
+    const copy = await s.service.copy(id, OTHER, undefined);
+    if (!('id' in copy)) throw new Error('copy failed');
+    expect(s.rows.get(copy.id)!.imageIds).toEqual([`copy-of-${image.id}`]);
+    // The copy's photos are its own: deleting the original's leaves them.
+    await s.service.deleteImage(id, OWNER, image.id);
+    expect(await s.service.readImage(`copy-of-${image.id}`, OTHER, 'full')).toHaveProperty('data');
+  });
+
+  test('a new share link gives the photos new URLs: the old ones stop working', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    const image = await s.service.addImage(id, OWNER, UPLOAD);
+    if ('error' in image) throw new Error('upload failed');
+    // Same link kept (already unlisted): same URLs.
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(s.rows.get(id)!.imageIds).toEqual([image.id]);
+    // Link revoked, then a new one.
+    await s.service.setVisibility(id, OWNER, 'private');
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(s.rows.get(id)!.imageIds).not.toContain(image.id);
+    expect(await s.service.readImage(image.id, null, 'full')).toEqual({ error: 'not_found' });
+    // Public and private keep them (only a share link can leak).
+    const before = s.rows.get(id)!.imageIds;
+    await s.service.setVisibility(id, OWNER, 'public');
+    await s.service.setVisibility(id, OWNER, 'private');
+    expect(s.rows.get(id)!.imageIds).toEqual(before);
+  });
+
+  test("an owner's photos are limited in total bytes", async () => {
+    const size = UPLOAD.image.length + UPLOAD.thumb.length;
+    const s = setup({ maxImageBytes: size * 2 });
+    const a = await created(s);
+    const b = await created(s);
+    expect(await s.service.addImage(a, OWNER, UPLOAD)).toHaveProperty('id');
+    expect(await s.service.addImage(b, OWNER, UPLOAD)).toHaveProperty('id');
+    expect(await s.service.addImage(b, OWNER, UPLOAD)).toEqual({ error: 'storage_full' });
+    // Another user has their own storage.
+    const other = await created(s, OTHER);
+    expect(await s.service.addImage(other, OTHER, UPLOAD)).toHaveProperty('id');
+  });
+
+  test('a copy leaves the photos out when they do not fit in the reader storage', async () => {
+    const size = UPLOAD.image.length + UPLOAD.thumb.length;
+    const s = setup({ maxImageBytes: size * 2 });
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    await s.service.addImage(id, OWNER, UPLOAD);
+    await s.service.addImage(id, OWNER, UPLOAD);
+    const first = await s.service.copy(id, OTHER, undefined);
+    const second = await s.service.copy(id, OTHER, undefined);
+    if (!('id' in first) || !('id' in second)) throw new Error('copy failed');
+    expect(s.rows.get(first.id)!.imageIds).toHaveLength(2);
+    expect(s.rows.get(second.id)!.imageIds).toEqual([]);
   });
 });

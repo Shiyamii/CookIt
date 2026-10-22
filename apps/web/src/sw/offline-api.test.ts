@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { isOfflineApi } from './offline-api';
+import { isImage, isOfflineApi } from './offline-api';
 
 describe('API answers kept for offline use', () => {
   test('what opening and cooking a recipe needs', () => {
@@ -68,5 +68,32 @@ describe('API answers kept for offline use', () => {
     expect(isOfflineApi('/api/v1/recipes/%34f8ea449-3387-4b6d-b41c-f31a17963f7e')).toBe(false);
     expect(isOfflineApi('/api/v1/recipes/..%2fcook%2fsession')).toBe(false);
     expect(isOfflineApi('/api/v1/recipes/../cook/session')).toBe(false);
+  });
+});
+
+describe('pictures kept for offline use', () => {
+  const id = '4f8ea449-3387-4b6d-b41c-f31a17963f7e';
+
+  test('recipe photos, their thumbnails and profile pictures', () => {
+    for (const path of [
+      `/images/recipes/${id}`,
+      `/images/recipes/${id}/thumb`,
+      `/images/avatars/${id}`,
+    ]) {
+      expect(isImage(path)).toBe(true);
+    }
+  });
+
+  test('nothing else', () => {
+    for (const path of [
+      '/images/recipes',
+      `/images/recipes/${id}/other`,
+      `/images/avatars/${id}/thumb`,
+      `/api/v1/recipes/${id}/images`,
+      `/images/x/${id}`,
+      '/pwa-192x192.png',
+    ]) {
+      expect(isImage(path)).toBe(false);
+    }
   });
 });

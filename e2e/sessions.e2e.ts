@@ -143,6 +143,7 @@ test.describe('profile', () => {
       username,
       role: 'user',
       locale: 'fr',
+      image: null,
     });
     expect(await me(page.context().request)).toMatchObject({
       username: ADMIN.username,
@@ -338,6 +339,7 @@ test.describe('security headers', () => {
         '/admin/users',
         '/admin/tags',
         '/admin/units',
+        '/account/profile',
         '/account/security',
         '/account/notifications',
         '/recipes',

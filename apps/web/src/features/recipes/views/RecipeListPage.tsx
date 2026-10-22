@@ -134,30 +134,40 @@ function RecipeCard({ recipe, showOwner }: { recipe: RecipeSummary; showOwner: b
   return (
     <Link
       to={`/recipes/${recipe.id}`}
-      className="grid h-full min-w-0 gap-1 rounded-lg border p-4 transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="flex h-full min-w-0 gap-3 rounded-lg border p-4 transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
-      <span className="flex min-w-0 items-start gap-2">
-        <span className="min-w-0 flex-1 truncate font-medium">{recipe.title}</span>
-        {!showOwner && (
-          <Icon
-            className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-            aria-label={t(`recipes.visibility.${recipe.visibility}`)}
-          />
-        )}
-      </span>
-      {recipe.description && (
-        <span className="line-clamp-2 text-sm wrap-anywhere text-muted-foreground">
-          {recipe.description}
+      {recipe.cover && (
+        <img
+          src={recipe.cover}
+          alt=""
+          loading="lazy"
+          className="size-20 shrink-0 rounded-md bg-muted object-cover"
+        />
+      )}
+      <span className="grid min-w-0 flex-1 content-start gap-1">
+        <span className="flex min-w-0 items-start gap-2">
+          <span className="min-w-0 flex-1 truncate font-medium">{recipe.title}</span>
+          {!showOwner && (
+            <Icon
+              className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+              aria-label={t(`recipes.visibility.${recipe.visibility}`)}
+            />
+          )}
         </span>
-      )}
-      {recipe.incomplete && (
-        <Badge variant="secondary" className="justify-self-start">
-          {t('recipes.incomplete')}
-        </Badge>
-      )}
-      <span className="text-xs text-muted-foreground">
-        {t('recipes.servingsCount', { count: recipe.servings })}
-        {showOwner && ` · ${t('recipes.by', { name: recipe.ownerName })}`}
+        {recipe.description && (
+          <span className="line-clamp-2 text-sm wrap-anywhere text-muted-foreground">
+            {recipe.description}
+          </span>
+        )}
+        {recipe.incomplete && (
+          <Badge variant="secondary" className="justify-self-start">
+            {t('recipes.incomplete')}
+          </Badge>
+        )}
+        <span className="text-xs text-muted-foreground">
+          {t('recipes.servingsCount', { count: recipe.servings })}
+          {showOwner && ` · ${t('recipes.by', { name: recipe.ownerName })}`}
+        </span>
       </span>
     </Link>
   );

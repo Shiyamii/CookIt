@@ -55,8 +55,25 @@ export function apiBodyLimit(): MiddlewareHandler {
   });
 }
 
-/** Security headers and a strict CSP: the SPA only loads its own scripts, styles and fonts. */
+/**
+ * Security headers and a strict CSP: the SPA only loads its own scripts, styles and fonts.
+ * Uploaded pictures (`/images/`) get a CSP that allows nothing, sandboxed: opened as a document,
+ * whatever bytes follow their header can never run.
+ */
 export function securityHeaders(): MiddlewareHandler {
+  const app = appHeaders();
+  const images = secureHeaders({
+    contentSecurityPolicy: { defaultSrc: ["'none'"], sandbox: [] },
+    referrerPolicy: 'no-referrer',
+    strictTransportSecurity: hsts(),
+  });
+  return (c, next) => (c.req.path.startsWith('/images/') ? images(c, next) : app(c, next));
+}
+
+const hsts = () =>
+  env.ORIGIN.startsWith('https://') ? 'max-age=31536000; includeSubDomains' : false;
+
+function appHeaders(): MiddlewareHandler {
   return secureHeaders({
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
@@ -73,8 +90,6 @@ export function securityHeaders(): MiddlewareHandler {
       frameAncestors: ["'none'"],
     },
     referrerPolicy: 'strict-origin-when-cross-origin',
-    strictTransportSecurity: env.ORIGIN.startsWith('https://')
-      ? 'max-age=31536000; includeSubDomains'
-      : false,
+    strictTransportSecurity: hsts(),
   });
 }

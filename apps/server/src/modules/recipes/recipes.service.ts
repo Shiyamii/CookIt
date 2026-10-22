@@ -3,7 +3,11 @@ import {
   composeRecipeMarkdown,
   type TagCategory,
   fold,
+  MAX_IMAGE_BYTES_PER_USER,
+  MAX_RECIPE_IMAGES,
   parseRecipe,
+  recipeImageUrls,
+  type RecipeImage,
   RECIPES_PAGE_SIZE,
   serializeBody,
   type Diagnostic,
@@ -18,6 +22,7 @@ import {
   type RecipeVisibility,
   type Unit,
 } from '@cookit/shared';
+import { checkImage } from '../../lib/images';
 import type {
   RecipeContent,
   RecipeRow,
@@ -33,10 +38,18 @@ export type Conflict = { error: 'conflict' };
 export type InvalidTags = { error: 'invalid_tags' };
 /** The base language is changed by the editors, not as a translation. */
 export type BaseLanguage = { error: 'base_language' };
+/** Not a WebP or JPEG within the limits, or a thumbnail of another type than its picture. */
+export type InvalidImage = { error: 'invalid_image' };
+export type TooManyImages = { error: 'too_many_images' };
+/** The owner's photos already take all their storage. */
+export type StorageFull = { error: 'storage_full' };
+/** A new photo order that is not exactly the recipe's photos. */
+export type InvalidOrder = { error: 'invalid_order' };
 
 const NOT_FOUND: NotFound = { error: 'not_found' };
 const INVALID_TAGS: InvalidTags = { error: 'invalid_tags' };
 const BASE_LANGUAGE: BaseLanguage = { error: 'base_language' };
+const INVALID_IMAGE: InvalidImage = { error: 'invalid_image' };
 const SLUG_MAX = 80;
 const MAX_SEARCH_WORDS = 10;
 
@@ -97,8 +110,11 @@ export function createRecipesService(deps: {
   generateToken: () => string;
   newId?: () => string;
   now?: () => Date;
+  /** Photo storage per user (tests use a small one). */
+  maxImageBytes?: number;
 }) {
   const { repository } = deps;
+  const maxImageBytes = deps.maxImageBytes ?? MAX_IMAGE_BYTES_PER_USER;
   const now = deps.now ?? (() => new Date());
   const newId = deps.newId ?? (() => crypto.randomUUID());
 
@@ -121,6 +137,8 @@ export function createRecipesService(deps: {
       body: shown.bodyMarkdown,
       visibility: row.visibility,
       ownerName: row.ownerName,
+      ownerImage: row.ownerImage,
+      images: row.imageIds.map(recipeImageUrls),
       isOwner,
       shareUrl:
         isOwner && row.visibility === 'unlisted' && row.shareToken
@@ -191,6 +209,7 @@ export function createRecipesService(deps: {
       copiedFromId?: string | null;
       tagIds?: string[];
       translations?: (TranslationContent & { lang: Locale })[];
+      copyImagesFrom?: string;
     } = {},
   ): Promise<{ id: string }> => {
     // Two creations with the same title at once: the second one picks the next free slug.
@@ -205,6 +224,7 @@ export function createRecipesService(deps: {
         copiedFromId: options.copiedFromId ?? null,
         tagIds: options.tagIds ?? [],
         translations: options.translations,
+        copyImagesFrom: options.copyImagesFrom,
         now: now(),
       });
       if (result === 'ok') return { id };
@@ -249,8 +269,9 @@ export function createRecipesService(deps: {
   ): Promise<RecipePage> => {
     const found = await rows;
     return {
-      recipes: found.slice(0, RECIPES_PAGE_SIZE).map(({ hasSteps, ...row }) => ({
+      recipes: found.slice(0, RECIPES_PAGE_SIZE).map(({ hasSteps, coverId, ...row }) => ({
         ...row,
+        cover: coverId ? recipeImageUrls(coverId).thumbUrl : null,
         incomplete: !hasSteps,
         updatedAt: row.updatedAt.toISOString(),
       })),
@@ -392,13 +413,12 @@ export function createRecipesService(deps: {
     ): Promise<{ visibility: RecipeVisibility; shareUrl: string | null } | NotFound> {
       const row = await owned(id, userId);
       if (!row) return NOT_FOUND;
-      const token =
-        visibility !== 'unlisted'
-          ? null
-          : row.visibility === 'unlisted' && row.shareToken
-            ? row.shareToken
-            : deps.generateToken();
-      await repository.setVisibility(id, visibility, token);
+      const keep = row.visibility === 'unlisted' && row.shareToken;
+      const token = visibility !== 'unlisted' ? null : keep ? row.shareToken : deps.generateToken();
+      // A new link: the photos get new URLs too, so a leaked link's photos are cut off as well.
+      await repository.setVisibility(id, visibility, token, {
+        renewImageIds: visibility === 'unlisted' && !keep,
+      });
       return { visibility, shareUrl: token ? shareUrl(token) : null };
     },
 
@@ -425,11 +445,18 @@ export function createRecipesService(deps: {
       if (!row || !readable || row.ownerId === userId) return NOT_FOUND;
       const parsed = await parseFields(baseFields(row), row.bodyMarkdown, row.lang);
       if ('error' in parsed) return parsed;
-      // Tags and translations are copied too (plan §4); translations as stored (canonical).
+      // The photos only when they fit in the reader's storage (the recipe is copied anyway).
+      const photosFit =
+        row.imageIds.length > 0 &&
+        (await repository.imageBytesOfOwner(userId)) +
+          (await repository.imageBytesOfRecipe(row.id)) <=
+          maxImageBytes;
+      // Tags, translations and photos are copied too (plan §4); translations as stored.
       return insert(userId, parsed.document, row.lang, {
         copiedFromId: row.id,
         tagIds: row.tagIds,
         translations: row.translations,
+        copyImagesFrom: photosFit ? row.id : undefined,
       });
     },
 
@@ -458,6 +485,78 @@ export function createRecipesService(deps: {
           { locale: row.lang, includeTags: true },
         ),
       }));
+    },
+
+    /**
+     * Adds a photo (after the others: the first one is the cover). Only the owner; both pictures
+     * are checked from their header (type, dimensions, size).
+     */
+    async addImage(
+      id: string,
+      userId: string,
+      upload: { image: Uint8Array; thumb: Uint8Array },
+    ): Promise<RecipeImage | NotFound | InvalidImage | TooManyImages | StorageFull> {
+      if (!(await owned(id, userId))) return NOT_FOUND;
+      const type = checkImage(upload.image, 'full');
+      if (!type || checkImage(upload.thumb, 'thumb') !== type) return INVALID_IMAGE;
+      const size = upload.image.length + upload.thumb.length;
+      if ((await repository.imageBytesOfOwner(userId)) + size > maxImageBytes) {
+        return { error: 'storage_full' };
+      }
+      const imageId = newId();
+      const added = await repository.addImage(
+        id,
+        {
+          id: imageId,
+          contentType: type,
+          data: Buffer.from(upload.image),
+          thumb: Buffer.from(upload.thumb),
+        },
+        MAX_RECIPE_IMAGES,
+      );
+      return added === 'ok' ? recipeImageUrls(imageId) : { error: 'too_many_images' };
+    },
+
+    async deleteImage(
+      id: string,
+      userId: string,
+      imageId: string,
+    ): Promise<{ ok: true } | NotFound> {
+      if (!(await owned(id, userId))) return NOT_FOUND;
+      return (await repository.deleteImage(id, imageId)) ? { ok: true } : NOT_FOUND;
+    },
+
+    /** New order of the photos (all of them, the cover first). */
+    async orderImages(
+      id: string,
+      userId: string,
+      ids: string[],
+    ): Promise<{ ok: true } | NotFound | InvalidOrder> {
+      if (!(await owned(id, userId))) return NOT_FOUND;
+      return (await repository.orderImages(id, ids)) === 'ok'
+        ? { ok: true }
+        : { error: 'invalid_order' };
+    },
+
+    /**
+     * A photo, for whoever may read its recipe: anyone for a public recipe, the owner always. An
+     * unlisted recipe's photos are served to anyone with their URL: it is only given with the
+     * recipe (its share link), and its id is random like a share token. A private recipe's
+     * photos are only served to its owner.
+     */
+    async readImage(
+      imageId: string,
+      viewerId: string | null,
+      size: 'full' | 'thumb',
+    ): Promise<{ contentType: string; data: Buffer; public: boolean } | NotFound> {
+      const image = await repository.findImage(imageId, size);
+      if (!image) return NOT_FOUND;
+      if (image.visibility === 'private' && image.ownerId !== viewerId) return NOT_FOUND;
+      return {
+        contentType: image.contentType,
+        data: image.data,
+        public: image.visibility === 'public',
+      };
     },
 
     async listMine(userId: string, search: RecipeSearch): Promise<RecipePage> {

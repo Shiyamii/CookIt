@@ -18,6 +18,10 @@ export const RATE_LIMITS = {
   // Each test notification makes the server call the push services.
   pushTestPerAccount: { name: 'push-test:account', limit: 10, windowSeconds: 10 * 60 },
   pushSubscribePerAccount: { name: 'push-subscribe:account', limit: 30, windowSeconds: 10 * 60 },
+  // Photos and profile pictures: each upload stores up to ~800 kB.
+  imageUploadPerAccount: { name: 'image-upload:account', limit: 60, windowSeconds: 10 * 60 },
+  // "Add to my library" copies the photos too.
+  recipeCopyPerAccount: { name: 'recipe-copy:account', limit: 30, windowSeconds: 10 * 60 },
   // Every cooking event is a save (about one a second at most while cooking).
   cookSavePerAccount: { name: 'cook-save:account', limit: 600, windowSeconds: 10 * 60 },
 } satisfies Record<string, RateLimitRule>;

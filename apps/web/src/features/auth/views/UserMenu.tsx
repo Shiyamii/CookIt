@@ -1,4 +1,5 @@
 import { Bell, CircleUser, LogOut, Mail, Ruler, ShieldCheck, Tags, Users } from 'lucide-react';
+import { UserAvatar } from '@/components/UserAvatar';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
@@ -29,12 +30,17 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label={t('auth.menu.label')}>
-          <CircleUser />
+          <UserAvatar image={vm.user.image} name={vm.user.name} className="size-8" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         <DropdownMenuLabel className="truncate">{vm.user.name}</DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/account/profile">
+            <CircleUser /> {t('account.profile.title')}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link to="/account/security">
             <ShieldCheck /> {t('account.security.title')}

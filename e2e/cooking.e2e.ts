@@ -112,6 +112,8 @@ test('timers: +1 min, cancel, and a finished timer rings until dismissed', async
   await page.getByRole('button', { name: /Timer 1 h:/ }).click();
   await expect(timer).toHaveCount(1);
 
+  // The timer is shown at once and saved just after: wait for the server to have it.
+  await expect.poll(async () => (await session(page)).session?.state.timers.length).toBe(1);
   const before = Date.parse((await session(page)).session?.state.timers[0]?.endsAt ?? '');
   await timer.getByRole('button', { name: '1 min' }).click();
   await expect

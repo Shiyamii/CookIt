@@ -13,6 +13,7 @@ export const hu: Translations = {
     copy: 'Másolás',
     copied: 'Másolva',
     close: 'Bezárás',
+    save: 'Mentés',
     cancel: 'Mégse',
   },
   language: {
@@ -105,6 +106,18 @@ export const hu: Translations = {
     },
   },
   account: {
+    profile: {
+      title: 'Profil',
+      picture: 'Profilkép',
+      add: 'Kép hozzáadása',
+      change: 'Kép cseréje',
+      remove: 'Eltávolítás',
+      name: 'Megjelenített név',
+      nameHint:
+        'A receptjeiden és a menüben látszik. A felhasználóneved ({{username}}) nem változik.',
+      nameRequired: 'Adj meg egy nevet (legfeljebb 100 karakter).',
+      saved: 'Név elmentve.',
+    },
     security: {
       title: 'Biztonság',
       recovery:
@@ -171,6 +184,26 @@ export const hu: Translations = {
     },
   },
   recipes: {
+    photos: {
+      title: 'Fotók',
+      count: '{{n}}/{{max}}',
+      hint: 'Az első fotó a borítókép, ez látszik a listákban. A képeket küldés előtt lekicsinyítjük.',
+      add: 'Fotók hozzáadása',
+      uploading: '{{n}}. fotó küldése ({{total}} közül)…',
+      skipped_one: '{{count}} fotó kimaradt: receptenként legfeljebb {{max}} lehet.',
+      skipped_other: '{{count}} fotó kimaradt: receptenként legfeljebb {{max}} lehet.',
+      number: '{{n}}. fotó',
+      cover: 'Borítókép',
+      makeCover: 'Legyen borítókép',
+      makeCoverOf: 'Legyen borítókép: {{n}}. fotó',
+      earlier: '{{n}}. fotó előrébb',
+      later: '{{n}}. fotó hátrébb',
+      delete: '{{n}}. fotó törlése',
+      open: '{{n}}. fotó megnyitása ({{total}} közül): {{title}}',
+      viewer: '{{title}}: {{n}}. fotó ({{total}} közül)',
+      previous: 'Előző fotó',
+      next: 'Következő fotó',
+    },
     ingredients: 'Hozzávalók',
     steps: 'Elkészítés',
     incomplete: 'Kiegészítendő',
@@ -268,6 +301,13 @@ export const hu: Translations = {
       save_other: '{{count}} recept mentése',
       startOver: 'Újrakezdés',
       errors: {
+        invalid_image: 'A szerver nem fogadta el ezt a képet. Próbálj egy másikat.',
+        storage_full:
+          'A fotóid elfoglalják a teljes megengedett helyet (500 MB): előbb törölj néhányat.',
+        too_many_images: 'Ennek a receptnek már 6 fotója van: előbb törölj egyet.',
+        invalid_order: 'A fotók közben megváltoztak. Próbáld újra.',
+        image_unreadable: 'Ez a fájl nem olvasható képként.',
+        image_too_big: 'Ez a kép túl nagy.',
         invalid_url: 'Ez a cím nem érvényes (http vagy https, szabványos port).',
         blocked_address: 'Ez a cím nem érhető el a CookItből (helyi vagy magánhálózat).',
         fetch_failed: 'Az oldalt nem sikerült betölteni.',

@@ -13,6 +13,7 @@ export const fr: Translations = {
     copy: 'Copier',
     copied: 'Copié',
     close: 'Fermer',
+    save: 'Enregistrer',
     cancel: 'Annuler',
   },
   language: {
@@ -105,6 +106,18 @@ export const fr: Translations = {
     },
   },
   account: {
+    profile: {
+      title: 'Profil',
+      picture: 'Photo de profil',
+      add: 'Ajouter une photo',
+      change: 'Changer la photo',
+      remove: 'Retirer',
+      name: 'Nom affiché',
+      nameHint:
+        "Affiché sur vos recettes et dans le menu. Votre nom d'utilisateur ({{username}}) ne change pas.",
+      nameRequired: 'Saisissez un nom (100 caractères au plus).',
+      saved: 'Nom enregistré.',
+    },
     security: {
       title: 'Sécurité',
       recovery:
@@ -171,6 +184,26 @@ export const fr: Translations = {
     },
   },
   recipes: {
+    photos: {
+      title: 'Photos',
+      count: '{{n}}/{{max}}',
+      hint: "La première photo est la couverture, montrée dans les listes. Les images sont réduites avant l'envoi.",
+      add: 'Ajouter des photos',
+      uploading: 'Envoi de la photo {{n}} sur {{total}}…',
+      skipped_one: '{{count}} photo laissée de côté : {{max}} au plus par recette.',
+      skipped_other: '{{count}} photos laissées de côté : {{max}} au plus par recette.',
+      number: 'Photo {{n}}',
+      cover: 'Couverture',
+      makeCover: 'Mettre en couverture',
+      makeCoverOf: 'Mettre en couverture : photo {{n}}',
+      earlier: 'Avancer la photo {{n}}',
+      later: 'Reculer la photo {{n}}',
+      delete: 'Supprimer la photo {{n}}',
+      open: 'Ouvrir la photo {{n}} sur {{total}} : {{title}}',
+      viewer: '{{title}} : photo {{n}} sur {{total}}',
+      previous: 'Photo précédente',
+      next: 'Photo suivante',
+    },
     ingredients: 'Ingrédients',
     steps: 'Étapes',
     incomplete: 'À compléter',
@@ -269,6 +302,12 @@ export const fr: Translations = {
       save_other: 'Enregistrer {{count}} recettes',
       startOver: 'Recommencer',
       errors: {
+        invalid_image: 'Le serveur a refusé cette image. Essayez-en une autre.',
+        storage_full: 'Vos photos occupent tout l’espace permis (500 Mo) : supprimez-en d’abord.',
+        too_many_images: 'Cette recette a déjà 6 photos : supprimez-en une avant.',
+        invalid_order: 'Les photos ont changé entre-temps. Réessayez.',
+        image_unreadable: 'Ce fichier ne peut pas être lu comme une image.',
+        image_too_big: 'Cette image est trop grande.',
         invalid_url: 'Cette adresse n’est pas valide (http ou https, port standard).',
         blocked_address:
           'Cette adresse n’est pas accessible depuis CookIt (réseau local ou privé).',

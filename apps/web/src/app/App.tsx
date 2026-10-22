@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
+import { ProfilePage } from '@/features/account/views/ProfilePage';
 import { SecurityPage } from '@/features/account/views/SecurityPage';
 import { NotificationsPage } from '@/features/push/views/NotificationsPage';
 import { InvitesPage } from '@/features/admin/views/InvitesPage';
@@ -81,6 +82,7 @@ const router = createBrowserRouter([
         path: 'account',
         element: <RequireAccess level="user" />,
         children: [
+          { path: 'profile', element: <ProfilePage /> },
           { path: 'security', element: <SecurityPage /> },
           { path: 'notifications', element: <NotificationsPage /> },
         ],

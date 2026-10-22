@@ -13,6 +13,7 @@ import {
   timestamp,
   unique,
 } from 'drizzle-orm/pg-core';
+import { bytea } from '../../db/types';
 import { user } from '../auth/auth.schema';
 import { tags } from '../tags/tags.schema';
 
@@ -20,7 +21,7 @@ const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' });
 
 /**
  * A recipe: what does not depend on the language. Part 1's title and description live in the
- * translations; servings and source here (plan §3). No cover image yet (later phase).
+ * translations; servings and source here (plan §3). Photos are in `recipe_images`.
  */
 export const recipes = pgTable(
   'recipes',
@@ -105,5 +106,28 @@ export const recipeTags = pgTable(
   (table) => [
     primaryKey({ columns: [table.recipeId, table.tagId] }),
     index('recipe_tags_tag_idx').on(table.tagId),
+  ],
+);
+
+/**
+ * Photos of a recipe (phase 9c), the lowest `position` first: that one is the cover. The full
+ * picture and its thumbnail are both resized by the browser; same type for both.
+ */
+export const recipeImages = pgTable(
+  'recipe_images',
+  {
+    id: text('id').primaryKey(),
+    recipeId: text('recipe_id')
+      .notNull()
+      .references(() => recipes.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull(),
+    contentType: text('content_type').notNull(),
+    data: bytea('data').notNull(),
+    thumb: bytea('thumb').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('recipe_images_recipe_idx').on(table.recipeId, table.position),
+    check('recipe_images_type_check', sql`${table.contentType} in ('image/webp', 'image/jpeg')`),
   ],
 );

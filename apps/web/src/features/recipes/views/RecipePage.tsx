@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Markdown } from '@/components/Markdown';
+import { UserAvatar } from '@/components/UserAvatar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,8 @@ import {
 import { NotFoundPage } from '@/features/system/views/NotFoundPage';
 import { useRecipeViewModel } from '../viewmodels/useRecipeViewModel';
 import { RecipeContent } from './RecipeContent';
+import { RecipePhotos } from './RecipePhotos';
+import { RecipePhotosManager } from './RecipePhotosManager';
 
 const VISIBILITIES: RecipeVisibility[] = ['private', 'unlisted', 'public'];
 
@@ -54,8 +57,12 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
   return (
     <article className="grid grid-cols-1 gap-6">
       <header className="grid gap-3">
+        <RecipePhotos images={vm.images} title={recipe.title} />
         <h1 className="text-3xl font-semibold wrap-anywhere">{recipe.title}</h1>
         <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          {!vm.isOwner && (
+            <UserAvatar image={vm.ownerImage} name={vm.ownerName} className="size-6 text-xs" />
+          )}
           {vm.isOwner ? t('recipes.yours') : t('recipes.by', { name: vm.ownerName })}
           {vm.incomplete && <Badge variant="secondary">{t('recipes.incomplete')}</Badge>}
         </p>
@@ -228,6 +235,7 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
               {t(`recipes.visibility.${vm.visibility}Hint`)}
             </p>
           </div>
+          <RecipePhotosManager recipeId={vm.id} images={vm.images} />
           {vm.shareUrl && (
             <div className="flex gap-2">
               <Input

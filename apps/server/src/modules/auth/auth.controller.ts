@@ -216,9 +216,17 @@ export function createAuthController(deps: {
   app.get('/api/v1/me', (c) => {
     const user = c.var.user;
     if (!user) return c.json({ user: null });
-    const { id, name, email, username, displayUsername, role, locale } = user;
+    const { id, name, email, username, displayUsername, role, locale, image } = user;
     return c.json({
-      user: { id, name, email, username: displayUsername ?? username, role, locale },
+      user: {
+        id,
+        name,
+        email,
+        username: displayUsername ?? username,
+        role,
+        locale,
+        image: image ?? null,
+      },
     });
   });
 

@@ -8,6 +8,7 @@ import { apiBodyLimit, noStore, sameOrigin, securityHeaders, staticCaching } fro
 import { createAccountSecurityController } from './modules/account-security/account-security.controller';
 import { createAuthController } from './modules/auth/auth.controller';
 import { createCookingController } from './modules/cooking/cooking.controller';
+import { createProfileController } from './modules/profile/profile.controller';
 import { createPushController } from './modules/push/push.controller';
 import { sessionMiddleware } from './modules/auth/auth.middleware';
 import { createInvitesController } from './modules/invites/invites.controller';
@@ -25,6 +26,9 @@ export function createApp(container: Container) {
 
   app.use('*', securityHeaders());
   app.use('/api/*', apiBodyLimit(), sameOrigin(), noStore(), sessionMiddleware(container.auth));
+  // Pictures are served outside the API (cacheable), but who may see a recipe photo depends on
+  // the session.
+  app.use('/images/*', sessionMiddleware(container.auth));
 
   app.route('/', createSystemController(container.system));
   app.route('/', createAuthController(container));
@@ -36,10 +40,13 @@ export function createApp(container: Container) {
   app.route('/', createImportController(container));
   app.route('/', createCookingController(container));
   app.route('/', createPushController(container));
+  app.route('/', createProfileController(container));
   app.route('/', createTagsController(container));
   app.route('/', createUnitsController(container));
 
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
+  // An unknown picture is a 404, never the SPA's page.
+  app.all('/images/*', (c) => c.notFound());
 
   // SPA: static files, then index.html for client-side routes.
   app.use('*', staticCaching());

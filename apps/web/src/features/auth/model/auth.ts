@@ -15,6 +15,8 @@ export type CurrentUser = {
   username: string;
   role: 'admin' | 'user';
   locale: Locale;
+  /** URL of the profile picture. */
+  image: string | null;
 };
 
 export const SESSION_QUERY_KEY = ['session'] as const;
