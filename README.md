@@ -18,6 +18,7 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 - **Translations**: each recipe can have a French, an English and a Hungarian version; the UI is in French, English and Hungarian.
 - **Photos**: a cover and a gallery for each recipe (resized in the browser), a display name and a profile picture for each user.
 - **Tags** organized in categories, managed by the admin.
+- **Home page**: resume the cooking in progress, an idea of the day, your recent recipes.
 - **Installable PWA**, mobile first, works offline for the pages and recipes already opened, cooking mode included.
 
 ## Recipe format

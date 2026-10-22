@@ -9,6 +9,7 @@ describe('API answers kept for offline use', () => {
       '/api/v1/tags',
       '/api/v1/meta',
       '/api/v1/recipes',
+      '/api/v1/recipes/idea',
       '/api/v1/gallery',
       '/api/v1/recipes/4f8ea449-3387-4b6d-b41c-f31a17963f7e',
     ]) {

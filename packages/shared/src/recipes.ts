@@ -166,6 +166,17 @@ export const recipeSearchSchema = z.object({
 });
 export type RecipeSearch = z.infer<typeof recipeSearchSchema>;
 
+/**
+ * The idea of the day (home page): `day` is the user's local date, so the idea changes at their
+ * midnight; `n` asks for another one; `exclude` is the idea shown, never given again at once.
+ */
+export const recipeIdeaQuerySchema = z.object({
+  day: z.iso.date(),
+  n: z.coerce.number().int().min(0).max(1000).default(0),
+  exclude: z.uuid().optional(),
+});
+export type RecipeIdeaQuery = z.infer<typeof recipeIdeaQuerySchema>;
+
 /** A recipe in a list (my recipes, gallery). */
 export type RecipeSummary = {
   id: string;

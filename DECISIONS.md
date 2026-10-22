@@ -223,3 +223,10 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Storage cap of 500 MB of photos per user** (about 600 photos) and a rate limit on "add to my library" (it duplicates the photos): one account cannot fill the database. A copy over the cap is made without its photos.
 - **Pictures are served with a sandboxed CSP allowing nothing**: only their header is checked, so whatever follows it can never run if opened as a document.
 - **Avatars are public** (shown next to the author's name, which public recipes already show).
+
+## Phase 9d: Home page
+
+- **Idea of the day chosen by the server with `md5(id || seed)`** (seed = user, local day, try number): stable all day without storing anything, different for each user, and only among recipes the user may read (theirs and public ones) that can be cooked. The day is the browser's local date, so it changes at the user's midnight.
+- **"Another idea" excludes the one shown** (else a small library would often give the same one again); `n` is capped at 1000.
+- **Recent recipes = recently changed** (the list order): there is no "last cooked" date yet.
+- **The cooking summary reads the cooking mode's own sync store**, so the home page shows the same state as `/cook` (local copy included, offline too).

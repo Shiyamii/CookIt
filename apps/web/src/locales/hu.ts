@@ -29,6 +29,28 @@ export const hu: Translations = {
     system: 'Rendszer',
   },
   home: {
+    hello: 'Szia, {{name}}!',
+    browseGallery: 'Galéria böngészése',
+    cooking: {
+      title: 'Főzés folyamatban',
+      step: '{{n}}. lépés',
+      next: 'Következő időzítő: {{label}} ({{recipe}}), lejár {{time}}-kor',
+      finished_one: '{{count}} időzítő lejárt',
+      finished_other: '{{count}} időzítő lejárt',
+      resume: 'Főzés folytatása',
+    },
+    idea: {
+      title: 'A nap ötlete',
+      none: 'Még nincs javasolható recept: adj hozzá egyet, vagy várj nyilvános receptekre.',
+      open: 'Recept megnyitása',
+      another: 'Másik ötlet',
+    },
+    recent: {
+      title: 'Legutóbbi receptjeid',
+      all: 'Összes receptem',
+      empty: 'Még nincs egy recepted sem.',
+      add: 'Recept hozzáadása',
+    },
     title: 'Üdv a CookItben',
     subtitle: 'Receptjeid lépésről lépésre, időzítőkkel, amelyek sosem felejtenek.',
     apiStatus: 'Szerver állapota',

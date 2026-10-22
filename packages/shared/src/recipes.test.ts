@@ -7,6 +7,7 @@ import {
   recipeCopyInputSchema,
   recipeCreateInputSchema,
   recipeFieldsSchema,
+  recipeIdeaQuerySchema,
   recipeMarkdownInputSchema,
   recipeSaveInputSchema,
   recipeSearchSchema,
@@ -163,5 +164,40 @@ describe('composeRecipeMarkdown', () => {
     if (!r.ok) throw new Error('parse');
     expect(r.document.servings).toBe(2);
     expect(r.document.ingredientGroups.length).toBeGreaterThan(0);
+  });
+});
+
+describe('recipeIdeaQuerySchema', () => {
+  const ID = '11111111-1111-4111-8111-111111111111';
+  const parse = (query: Record<string, unknown>) => recipeIdeaQuerySchema.safeParse(query);
+
+  test('n defaults to 0 and exclude is optional', () => {
+    expect(recipeIdeaQuerySchema.parse({ day: '2026-10-22' })).toEqual({ day: '2026-10-22', n: 0 });
+  });
+  test('n comes as a string from the query string', () => {
+    expect(recipeIdeaQuerySchema.parse({ day: '2026-10-22', n: '7' }).n).toBe(7);
+  });
+  test('n stays within 0 and 1000 and is an integer', () => {
+    expect(parse({ day: '2026-10-22', n: '0' }).success).toBe(true);
+    expect(parse({ day: '2026-10-22', n: '1000' }).success).toBe(true);
+    expect(parse({ day: '2026-10-22', n: '1001' }).success).toBe(false);
+    expect(parse({ day: '2026-10-22', n: '-1' }).success).toBe(false);
+    expect(parse({ day: '2026-10-22', n: '1.5' }).success).toBe(false);
+    expect(parse({ day: '2026-10-22', n: 'abc' }).success).toBe(false);
+  });
+  test('day must be a real ISO date', () => {
+    expect(parse({}).success).toBe(false);
+    expect(parse({ day: '' }).success).toBe(false);
+    expect(parse({ day: '2026-13-01' }).success).toBe(false);
+    expect(parse({ day: '2026-02-30' }).success).toBe(false);
+    expect(parse({ day: '22/10/2026' }).success).toBe(false);
+    expect(parse({ day: '2026-10-22T10:00:00Z' }).success).toBe(false);
+    expect(parse({ day: '2024-02-29' }).success).toBe(true);
+    expect(parse({ day: '2026-02-29' }).success).toBe(false);
+  });
+  test('exclude must be a uuid', () => {
+    expect(parse({ day: '2026-10-22', exclude: ID }).success).toBe(true);
+    expect(parse({ day: '2026-10-22', exclude: 'not-a-uuid' }).success).toBe(false);
+    expect(parse({ day: '2026-10-22', exclude: '' }).success).toBe(false);
   });
 });

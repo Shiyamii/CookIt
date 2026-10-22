@@ -17,6 +17,7 @@ const OFFLINE_API = [
   /^\/api\/v1\/units$/,
   /^\/api\/v1\/tags$/,
   /^\/api\/v1\/recipes$/,
+  /^\/api\/v1\/recipes\/idea$/,
   /^\/api\/v1\/gallery$/,
   /^\/api\/v1\/recipes\/[0-9a-f-]{36}$/,
 ];

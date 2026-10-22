@@ -2,6 +2,7 @@ import {
   recipeCopyInputSchema,
   recipeCreateInputSchema,
   recipeImageOrderInputSchema,
+  recipeIdeaQuerySchema,
   recipeImageUploadSchema,
   recipeLangQuerySchema,
   recipeMarkdownCreateInputSchema,
@@ -110,6 +111,13 @@ export function createRecipesController(deps: {
       'Content-Type': 'application/zip',
       'Content-Disposition': 'attachment; filename="cookit-recipes.zip"',
     });
+  });
+
+  // The idea of the day (home page).
+  app.get('/api/v1/recipes/idea', requireUser, async (c) => {
+    const query = recipeIdeaQuerySchema.safeParse(c.req.query());
+    if (!query.success) return c.json({ error: 'invalid_input' }, 400);
+    return c.json(await deps.recipes.idea(userId(c), query.data));
   });
 
   // A recipe from its id: its owner, or anyone for a public recipe. `?lang=` picks a translation.

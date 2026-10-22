@@ -114,7 +114,7 @@ test.describe('invitations (admin)', () => {
     const visitor = await newVisitor(browser);
     const username = uniqueName('guest');
     await signUp(visitor, link, username);
-    await expect(visitor.getByRole('heading', { name: 'Welcome to CookIt' })).toBeVisible();
+    await expect(visitor.getByRole('heading', { name: /^Hello, / })).toBeVisible();
     await expect(visitor.getByRole('button', { name: 'Account' })).toBeVisible();
 
     // Used: the same link no longer works, even in another browser.

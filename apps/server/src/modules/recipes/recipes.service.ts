@@ -16,7 +16,9 @@ import {
   type RecipeDetail,
   type RecipeDocument,
   type RecipeFields,
+  type RecipeIdeaQuery,
   type RecipePage,
+  type RecipeSummary,
   type RecipeSaveInput,
   type RecipeSearch,
   type RecipeVisibility,
@@ -25,6 +27,7 @@ import {
 import { checkImage } from '../../lib/images';
 import type {
   RecipeContent,
+  RecipeListRow,
   RecipeRow,
   RecipesRepository,
   TranslationContent,
@@ -264,17 +267,17 @@ export function createRecipesService(deps: {
     return { updatedAt: at.toISOString() };
   };
 
-  const page = async (
-    rows: Promise<Awaited<ReturnType<RecipesRepository['listPublic']>>>,
-  ): Promise<RecipePage> => {
+  const summary = ({ hasSteps, coverId, ...row }: RecipeListRow): RecipeSummary => ({
+    ...row,
+    cover: coverId ? recipeImageUrls(coverId).thumbUrl : null,
+    incomplete: !hasSteps,
+    updatedAt: row.updatedAt.toISOString(),
+  });
+
+  const page = async (rows: Promise<RecipeListRow[]>): Promise<RecipePage> => {
     const found = await rows;
     return {
-      recipes: found.slice(0, RECIPES_PAGE_SIZE).map(({ hasSteps, coverId, ...row }) => ({
-        ...row,
-        cover: coverId ? recipeImageUrls(coverId).thumbUrl : null,
-        incomplete: !hasSteps,
-        updatedAt: row.updatedAt.toISOString(),
-      })),
+      recipes: found.slice(0, RECIPES_PAGE_SIZE).map(summary),
       hasMore: found.length > RECIPES_PAGE_SIZE,
     };
   };
@@ -557,6 +560,19 @@ export function createRecipesService(deps: {
         data: image.data,
         public: image.visibility === 'public',
       };
+    },
+
+    /**
+     * The idea of the day: a recipe that can be cooked, among the user's and the public ones,
+     * the same all day for this user (another one for each `n`). The one shown (`exclude`) is
+     * only given again when it is the only one.
+     */
+    async idea(userId: string, query: RecipeIdeaQuery): Promise<{ recipe: RecipeSummary | null }> {
+      const seed = `${userId}:${query.day}:${query.n}`;
+      const row =
+        (await repository.pick(userId, seed, query.exclude)) ??
+        (query.exclude ? await repository.pick(userId, seed) : undefined);
+      return { recipe: row ? summary(row) : null };
     },
 
     async listMine(userId: string, search: RecipeSearch): Promise<RecipePage> {

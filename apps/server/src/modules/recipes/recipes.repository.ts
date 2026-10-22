@@ -1,5 +1,5 @@
 import type { Locale, RecipeVisibility } from '@cookit/shared';
-import { and, asc, desc, eq, exists, like, ne, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, like, ne, or, sql, type SQL } from 'drizzle-orm';
 import type { Database } from '../../db';
 import { uniqueViolation } from '../../db/errors';
 import { user } from '../auth/auth.schema';
@@ -136,6 +136,11 @@ export type RecipesRepository = {
   delete(id: string): Promise<void>;
   listByOwner(ownerId: string, query: ListQuery): Promise<RecipeListRow[]>;
   listPublic(query: ListQuery): Promise<RecipeListRow[]>;
+  /**
+   * One recipe with steps among the owner's and the public ones, picked by `seed` (the same seed
+   * gives the same recipe while they do not change), other than `exclude`.
+   */
+  pick(ownerId: string, seed: string, exclude?: string): Promise<RecipeListRow | undefined>;
   /** Every recipe of the owner in its base language (export of all recipes), oldest first. */
   listAllByOwner(ownerId: string): Promise<Omit<RecipeRow, 'translations' | 'imageIds'>[]>;
   /** Creates or replaces a translation (never the base language: the service checks it). */
@@ -420,6 +425,24 @@ export function createRecipesRepository(db: Database): RecipesRepository {
     listByOwner: (ownerId, query) => list(eq(recipes.ownerId, ownerId), query),
 
     listPublic: (query) => list(eq(recipes.visibility, 'public'), query),
+
+    async pick(ownerId, seed, exclude) {
+      const [row] = await db
+        .select(listColumns)
+        .from(recipes)
+        .innerJoin(recipeTranslations, baseTranslation)
+        .innerJoin(user, eq(user.id, recipes.ownerId))
+        .where(
+          and(
+            eq(recipes.hasSteps, true),
+            or(eq(recipes.ownerId, ownerId), eq(recipes.visibility, 'public')),
+            exclude ? ne(recipes.id, exclude) : undefined,
+          ),
+        )
+        .orderBy(sql`md5(${recipes.id} || ${seed})`)
+        .limit(1);
+      return row;
+    },
 
     async listAllByOwner(ownerId) {
       const rows = await db

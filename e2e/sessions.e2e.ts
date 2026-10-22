@@ -57,7 +57,7 @@ test.describe('sign-in', () => {
   test('a signed-in user visiting the sign-in page is sent home', async ({ page }) => {
     await page.goto('/login');
     await expect(page).toHaveURL('/');
-    await expect(page.getByRole('heading', { name: 'Welcome to CookIt' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Hello, / })).toBeVisible();
   });
 });
 
@@ -192,7 +192,7 @@ test.describe('profile', () => {
   }) => {
     const member = await newMember(browser, page, 'polyglot');
     await member.page.goto('/');
-    await expect(member.page.getByRole('heading', { name: 'Welcome to CookIt' })).toBeVisible();
+    await expect(member.page.getByRole('heading', { name: /^Hello, / })).toBeVisible();
     const saved = member.page.waitForResponse((res) =>
       res.url().endsWith('/api/v1/auth/update-user'),
     );
@@ -208,7 +208,7 @@ test.describe('profile', () => {
     });
     expect(signIn.ok()).toBe(true);
     await elsewhere.goto('/');
-    await expect(elsewhere.getByRole('heading', { name: 'Bienvenue sur CookIt' })).toBeVisible();
+    await expect(elsewhere.getByRole('heading', { name: /^Bonjour, / })).toBeVisible();
     await expect(elsewhere.locator('html')).toHaveAttribute('lang', 'fr');
   });
 
@@ -233,7 +233,7 @@ test.describe('profile', () => {
     });
     expect(res.ok()).toBe(true);
     await visitor.goto('/');
-    await expect(visitor.getByRole('heading', { name: 'Welcome to CookIt' })).toBeVisible();
+    await expect(visitor.getByRole('heading', { name: /^Hello, / })).toBeVisible();
     expect(profileUpdates).toBe(0);
     expect((await me(visitor.request))?.locale).toBe('en');
   });

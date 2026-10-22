@@ -12,7 +12,7 @@ import { LoginPage } from '@/features/auth/views/LoginPage';
 import { RegisterPage } from '@/features/auth/views/RegisterPage';
 import { RequireAccess } from '@/features/auth/views/RequireAccess';
 import { ResetPasswordPage } from '@/features/auth/views/ResetPasswordPage';
-import { HomePage } from '@/features/system/views/HomePage';
+import { HomePage } from '@/features/home/views/HomePage';
 import { AddRecipePage } from '@/features/recipes/views/AddRecipePage';
 import { RecipeListPage } from '@/features/recipes/views/RecipeListPage';
 import { RecipePage } from '@/features/recipes/views/RecipePage';

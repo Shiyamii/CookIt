@@ -27,6 +27,28 @@ export const en = {
     system: 'System',
   },
   home: {
+    hello: 'Hello, {{name}}',
+    browseGallery: 'Browse the gallery',
+    cooking: {
+      title: 'Cooking in progress',
+      step: 'Step {{n}}',
+      next: 'Next timer: {{label}} ({{recipe}}), ends at {{time}}',
+      finished_one: '{{count}} timer has finished',
+      finished_other: '{{count}} timers have finished',
+      resume: 'Resume cooking',
+    },
+    idea: {
+      title: 'Idea of the day',
+      none: 'No recipe to suggest yet: add one, or wait for public recipes.',
+      open: 'See the recipe',
+      another: 'Another idea',
+    },
+    recent: {
+      title: 'Your recent recipes',
+      all: 'All my recipes',
+      empty: 'You have no recipes yet.',
+      add: 'Add a recipe',
+    },
     title: 'Welcome to CookIt',
     subtitle: 'Your recipes, step by step, with timers that never forget.',
     apiStatus: 'Server status',

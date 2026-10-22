@@ -29,6 +29,28 @@ export const fr: Translations = {
     system: 'Système',
   },
   home: {
+    hello: 'Bonjour, {{name}}',
+    browseGallery: 'Parcourir la galerie',
+    cooking: {
+      title: 'Cuisine en cours',
+      step: 'Étape {{n}}',
+      next: 'Prochain minuteur : {{label}} ({{recipe}}), fin à {{time}}',
+      finished_one: '{{count}} minuteur a sonné',
+      finished_other: '{{count}} minuteurs ont sonné',
+      resume: 'Reprendre la cuisine',
+    },
+    idea: {
+      title: 'Idée du jour',
+      none: 'Aucune recette à proposer pour l’instant : ajoutez-en une, ou attendez des recettes publiques.',
+      open: 'Voir la recette',
+      another: 'Une autre idée',
+    },
+    recent: {
+      title: 'Vos dernières recettes',
+      all: 'Toutes mes recettes',
+      empty: 'Vous n’avez encore aucune recette.',
+      add: 'Ajouter une recette',
+    },
     title: 'Bienvenue sur CookIt',
     subtitle: 'Vos recettes, étape par étape, avec des minuteurs qui n’oublient rien.',
     apiStatus: 'État du serveur',

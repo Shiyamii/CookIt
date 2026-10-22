@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ColorDot } from '@/components/ColorDot';
 import { Link } from 'react-router';
 import { Markdown } from '@/components/Markdown';
 import {
@@ -43,15 +44,6 @@ import { PushNotice } from '@/features/push/views/PushNotice';
 import { useCookViewModel } from '../viewmodels/useCookViewModel';
 
 type Vm = ReturnType<typeof useCookViewModel>;
-
-/** Background classes of the recipe colors (theme tokens, listed for Tailwind). */
-const COLOR_CLASSES: Record<string, string> = {
-  'chart-1': 'bg-chart-1',
-  'chart-2': 'bg-chart-2',
-  'chart-3': 'bg-chart-3',
-  'chart-4': 'bg-chart-4',
-  'chart-5': 'bg-chart-5',
-};
 
 /** The cooking mode: one step at a time, large buttons, timers, ingredients in a drawer. */
 export function CookPage() {
@@ -399,15 +391,6 @@ function IngredientsDrawer({ vm }: { vm: Vm }) {
         </div>
       </SheetContent>
     </Sheet>
-  );
-}
-
-function ColorDot({ color, className }: { color: string; className: string }) {
-  return (
-    <span
-      aria-hidden
-      className={`shrink-0 rounded-full ${COLOR_CLASSES[color] ?? ''} ${className}`}
-    />
   );
 }
 

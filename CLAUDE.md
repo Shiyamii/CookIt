@@ -217,6 +217,12 @@ When recipes are stored (phase 4): Zod schemas for the columns must refuse line 
 - Service worker: `/images/…` `NetworkFirst` in `cookit-images` (`isImage`; a revoked photo is a 404 as soon as there is network), cleared with the API cache (`clearOfflineData`, sign-out/sign-in); navigations under `/images/` are not the SPA.
 - **Postgres + Drizzle**: `bytea` custom type in `src/db/types.ts`. A `Date` inside a raw `sql` template must be sent as `toISOString()` (the driver Drizzle configures throws `ERR_INVALID_ARG_TYPE` otherwise).
 
+## Home page (phase 9d)
+
+- `features/home` (route `/`). Signed out: the welcome card (sign in, gallery, server status). Signed in: `Hello, <name>`, then **cooking in progress** (read from the cooking sync store `cookSyncFor`, refreshed on load: dishes with their color and step, next running timer shown on the device clock, finished timers, "Resume cooking" → `/cook`; pure logic in `model/home.ts` `cookingSummary`), the **idea of the day** and the **recent recipes** (first 4 of `GET /recipes`, `RecipeCard` shared with the lists).
+- **Idea of the day**: `GET /api/v1/recipes/idea?day=YYYY-MM-DD&n=&exclude=` (signed in, `recipeIdeaQuerySchema`). One recipe with steps among the user's own and the public ones, ordered by `md5(id || userId:day:n)`: the same all day (the user's local date, `localDay`), another one per `n` ("Another idea"), never the one shown (`exclude`) unless it is the only one. Cached offline like the other API reads.
+- After sign-in and registration the user lands on `/` (unless a `redirect` was given).
+
 ## Accounts (phase 3)
 
 - **Better Auth** (`apps/server/src/modules/auth/auth.ts`) handles sessions, sign-in (email or username), sign-out and password changes, mounted at `/api/v1/auth`. Only an **allowlist** of its routes is reachable (`auth.controller.ts`); `update-user` only accepts `name` / `locale` (`updateProfileInputSchema`). Its own sign-up is disabled.

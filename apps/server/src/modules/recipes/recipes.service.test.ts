@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { createHash } from 'node:crypto';
 import { DEFAULT_UNITS, RECIPES_PAGE_SIZE, type RecipeSearch } from '@cookit/shared';
 import type {
   ListQuery,
@@ -160,6 +161,15 @@ function fakeRepository() {
       if (!same) return 'mismatch';
       row.imageIds = [...ids];
       return 'ok';
+    },
+    async pick(ownerId, seed, exclude) {
+      // The same ordering as the repository's (md5 of id and seed).
+      const rank = (id: string) => createHash('md5').update(`${id}${seed}`).digest('hex');
+      const found = [...rows.values()]
+        .filter((r) => r.hasSteps && (r.ownerId === ownerId || r.visibility === 'public'))
+        .filter((r) => r.id !== exclude)
+        .sort((a, b) => rank(a.id).localeCompare(rank(b.id)));
+      return found.length ? listRows(found.slice(0, 1))[0] : undefined;
     },
     async imageBytesOfOwner(ownerId) {
       return [...images.values()]
@@ -1006,5 +1016,59 @@ describe('photos', () => {
     if (!('id' in first) || !('id' in second)) throw new Error('copy failed');
     expect(s.rows.get(first.id)!.imageIds).toHaveLength(2);
     expect(s.rows.get(second.id)!.imageIds).toEqual([]);
+  });
+});
+
+describe('idea of the day', () => {
+  const DAY = { day: '2026-10-22', n: 0 };
+  const idea = async (
+    s: ReturnType<typeof setup>,
+    user: string,
+    query: Partial<typeof DAY> & { exclude?: string } = {},
+  ) => (await s.service.idea(user, { ...DAY, ...query })).recipe?.id ?? null;
+
+  test('the same recipe all day, among the ones that can be cooked', async () => {
+    const s = setup();
+    const ids = [await created(s), await created(s), await created(s)];
+    const incomplete = await s.service.create(OWNER, { ...FIELDS, body: '- 1 oeuf\n\n---\n' });
+    if ('error' in incomplete) throw new Error('create failed');
+    const first = await idea(s, OWNER);
+    expect(ids).toContain(first ?? '');
+    expect(await idea(s, OWNER)).toBe(first);
+    // Never a recipe without steps.
+    for (let n = 0; n < 20; n++) expect(await idea(s, OWNER, { n })).not.toBe(incomplete.id);
+  });
+
+  test('another day or another try can give another one', async () => {
+    const s = setup();
+    for (let i = 0; i < 8; i++) await created(s);
+    const days = new Set<string | null>();
+    for (let d = 10; d < 30; d++) days.add(await idea(s, OWNER, { day: `2026-10-${d}` }));
+    expect(days.size).toBeGreaterThan(1);
+    const tries = new Set<string | null>();
+    for (let n = 0; n < 20; n++) tries.add(await idea(s, OWNER, { n }));
+    expect(tries.size).toBeGreaterThan(1);
+  });
+
+  test('"another idea" never gives the one shown, unless it is the only one', async () => {
+    const s = setup();
+    const a = await created(s);
+    expect(await idea(s, OWNER, { exclude: a })).toBe(a);
+    const b = await created(s);
+    for (let n = 0; n < 10; n++) {
+      expect(await idea(s, OWNER, { n, exclude: a })).toBe(b);
+      expect(await idea(s, OWNER, { n, exclude: b })).toBe(a);
+    }
+  });
+
+  test("others' recipes only when public; nothing when there is nothing", async () => {
+    const s = setup();
+    expect(await idea(s, OTHER)).toBeNull();
+    const id = await created(s);
+    expect(await idea(s, OTHER)).toBeNull();
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(await idea(s, OTHER)).toBeNull();
+    await s.service.setVisibility(id, OWNER, 'public');
+    expect(await idea(s, OTHER)).toBe(id);
   });
 });
