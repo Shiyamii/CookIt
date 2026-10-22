@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useSession } from '@/features/auth/viewmodels/useSession';
 import { cookSyncFor } from '@/features/cooking/model/store';
 import { fetchMyRecipes, fetchRecipe, RECIPES_QUERY_KEY } from '@/features/recipes/model/recipes';
+import { remainingCount } from '@/features/shopping/model/list';
+import { useShoppingSync } from '@/features/shopping/viewmodels/useShoppingSync';
 import { fetchMeta, type ApiStatus } from '@/features/system/model/meta';
 import { cookingSummary, fetchIdea, localDay } from '../model/home';
 
@@ -46,6 +48,10 @@ export function useHomeViewModel() {
   });
   const time = new Intl.DateTimeFormat(i18n.resolvedLanguage, { timeStyle: 'short' });
 
+  // The shopping list: a reminder of what is left to buy.
+  const shopping = useShoppingSync();
+  const toBuy = remainingCount(shopping.snapshot?.state ?? null);
+
   const recent = useQuery({
     queryKey: [...RECIPES_QUERY_KEY, 'home', 'recent'],
     queryFn: () => fetchMyRecipes('', 1, []),
@@ -86,6 +92,7 @@ export function useHomeViewModel() {
     ideaChanging: idea.isPlaceholderData,
     anotherIdea: () =>
       setAnother((current) => ({ n: current.n + 1, exclude: idea.data?.recipe?.id })),
+    toBuy,
     recent: recent.data?.recipes.slice(0, RECENT_COUNT) ?? [],
     recentLoading: recent.isPending,
   };

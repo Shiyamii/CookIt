@@ -45,6 +45,7 @@ export const activeRecipe = {
 
 /** At sign-out: the next person on this browser starts from the server, with nothing local. */
 export function clearCookingData(): void {
+  for (const sync of syncs.values()) sync.dispose();
   syncs.clear();
   active.clear();
   clearLocalCopies();

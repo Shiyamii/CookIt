@@ -4,6 +4,7 @@ import { clearCookingData } from '@/features/cooking/model/store';
 import { forgetPushSubscription } from '@/features/push/model/push';
 import { clearOfflineData } from '@/features/pwa/model/offline';
 import { clearDrafts } from '@/features/recipes/model/draft';
+import { clearShoppingData } from '@/features/shopping/model/shopping';
 import { signOut } from '../model/auth';
 import { useSession } from './useSession';
 
@@ -20,10 +21,12 @@ export function useUserMenuViewModel() {
     },
     onSuccess: async () => {
       // Every cached query may hold private data: start from a clean cache, and drop the local
-      // recipe drafts and cooking session (the next person on this browser must not see them).
+      // recipe drafts, cooking session and shopping list (the next person on this browser must
+      // not see them).
       queryClient.clear();
       clearDrafts();
       clearCookingData();
+      clearShoppingData();
       await clearOfflineData();
       await navigate('/login', { replace: true });
     },

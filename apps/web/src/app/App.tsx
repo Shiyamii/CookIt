@@ -40,6 +40,9 @@ const importAiPage = async () => ({
 const cookPage = async () => ({
   Component: (await import('@/features/cooking/views/CookPage')).CookPage,
 });
+const shoppingPage = async () => ({
+  Component: (await import('@/features/shopping/views/ShoppingPage')).ShoppingPage,
+});
 const translationPage = async () => ({
   Component: (await import('@/features/recipes/views/TranslationPage')).TranslationPage,
 });
@@ -77,6 +80,11 @@ const router = createBrowserRouter([
         path: 'cook',
         element: <RequireAccess level="user" />,
         children: [{ index: true, lazy: cookPage }],
+      },
+      {
+        path: 'shopping',
+        element: <RequireAccess level="user" />,
+        children: [{ index: true, lazy: shoppingPage }],
       },
       {
         path: 'account',

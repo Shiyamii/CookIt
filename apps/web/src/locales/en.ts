@@ -5,6 +5,7 @@ export const en = {
     myRecipes: 'My recipes',
     gallery: 'Gallery',
     cook: 'Cooking',
+    shopping: 'Shopping',
   },
   common: {
     loading: 'Loading…',
@@ -43,6 +44,8 @@ export const en = {
       open: 'See the recipe',
       another: 'Another idea',
     },
+    shopping_one: '{{count}} item to buy',
+    shopping_other: '{{count}} items to buy',
     recent: {
       title: 'Your recent recipes',
       all: 'All my recipes',
@@ -200,6 +203,40 @@ export const en = {
       deleteText:
         'You will not be able to sign in with it anymore. Also remove it from your device or password manager.',
       unsupported: 'This browser does not support passkeys.',
+    },
+  },
+  shopping: {
+    title: 'Shopping list',
+    empty: 'Your shopping list is empty.',
+    emptyHint:
+      'Add the ingredients of a recipe from its page, or type an item above. Your recipes:',
+    allDone: 'Everything is checked off.',
+    remaining_one: '{{count}} item left to buy',
+    remaining_other: '{{count}} items left to buy',
+    item: 'Item to add',
+    itemPlaceholder: 'Add an item (washing-up liquid…)',
+    addItem: 'Add',
+    full: 'The shopping list is full: remove what you bought first.',
+    clearChecked_one: 'Remove the checked item ({{count}})',
+    clearChecked_other: 'Remove the checked items ({{count}})',
+    recipes: 'Recipes in the list',
+    removeRecipe: 'Remove {{title}} from the list',
+    clearAll: 'Empty the list',
+    clearAllTitle: 'Empty the shopping list?',
+    clearAllText: 'Every item and recipe leaves the list.',
+    add: {
+      button: 'Add to the shopping list',
+      title: 'Add to the shopping list',
+      hint_one: 'Ingredients for {{count}} serving. Untick what you already have.',
+      hint_other: 'Ingredients for {{count}} servings. Untick what you already have.',
+      replaces_one:
+        'This recipe is already in the list (for {{count}} serving): it will be replaced.',
+      replaces_other:
+        'This recipe is already in the list (for {{count}} servings): it will be replaced.',
+      confirm_one: 'Add {{count}} ingredient',
+      confirm_other: 'Add {{count}} ingredients',
+      done: 'Added to the shopping list.',
+      see: 'See the list',
     },
   },
   recipes: {

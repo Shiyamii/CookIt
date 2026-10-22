@@ -230,3 +230,11 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **"Another idea" excludes the one shown** (else a small library would often give the same one again); `n` is capped at 1000.
 - **Recent recipes = recently changed** (the list order): there is no "last cooked" date yet.
 - **The cooking summary reads the cooking mode's own sync store**, so the home page shows the same state as `/cook` (local copy included, offline too).
+
+## Phase 9e: Shopping list
+
+- **One list per user, saved whole, last change wins** (like the cooking session, same sync code, now generic in `lib/state-sync.ts`): one person shops at a time; a list shared by a household would need members and access rules.
+- **Entries are copies of the ingredient lines** (scaled text + parsed quantity), not references: the list works offline, survives recipe edits or lost access, and the server checks nothing but its shape.
+- **Merged by name and unit only**, never converting units (`250 g` and `1 kg` of flour stay two lines) nor guessing synonyms: a wrong sum in the shop is worse than two lines. Plural `s`/`x`, case, accents and `œ` are ignored in names.
+- **Free items are never merged** (typed text, no parsed quantity). No aisle grouping (would need a store-section table and a mapping per ingredient).
+- **Limits** (300 entries, 50 recipes, 200 characters per line) keep a full list well under the 1 MB API body limit; an amount above 1,000,000 or a line cut to the limit is kept as text, not added up.

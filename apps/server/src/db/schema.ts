@@ -8,6 +8,7 @@ export * from '../modules/profile/profile.schema';
 export * from '../modules/push/push.schema';
 export * from '../modules/rate-limit/rate-limit.schema';
 export * from '../modules/recipes/recipes.schema';
+export * from '../modules/shopping/shopping.schema';
 export * from '../modules/system/system.schema';
 export * from '../modules/tags/tags.schema';
 export * from '../modules/units/units.schema';

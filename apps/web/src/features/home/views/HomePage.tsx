@@ -1,4 +1,13 @@
-import { BellRing, ChefHat, Lightbulb, Plus, RefreshCw, Timer } from 'lucide-react';
+import {
+  BellRing,
+  ChefHat,
+  ChevronRight,
+  Lightbulb,
+  Plus,
+  RefreshCw,
+  ShoppingCart,
+  Timer,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { ColorDot } from '@/components/ColorDot';
@@ -21,6 +30,7 @@ export function HomePage() {
     <div className="grid grid-cols-1 gap-8">
       <h1 className="text-3xl font-semibold wrap-anywhere">{t('home.hello', { name: vm.name })}</h1>
       {vm.cooking && <Cooking cooking={vm.cooking} />}
+      {vm.toBuy > 0 && <Shopping count={vm.toBuy} />}
       <Idea vm={vm} />
       <Recent vm={vm} />
     </div>
@@ -117,6 +127,21 @@ function Cooking({ cooking }: { cooking: NonNullable<Vm['cooking']> }) {
         <Link to="/cook">{t('home.cooking.resume')}</Link>
       </Button>
     </section>
+  );
+}
+
+/** A reminder of the shopping list while something is left to buy. */
+function Shopping({ count }: { count: number }) {
+  const { t } = useTranslation();
+  return (
+    <Link
+      to="/shopping"
+      className="flex min-h-11 items-center gap-3 rounded-lg border bg-card p-4 hover:bg-accent"
+    >
+      <ShoppingCart className="size-5 shrink-0" aria-hidden />
+      <span className="flex-1 font-medium">{t('home.shopping', { count })}</span>
+      <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+    </Link>
   );
 }
 

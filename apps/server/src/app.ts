@@ -14,6 +14,7 @@ import { sessionMiddleware } from './modules/auth/auth.middleware';
 import { createInvitesController } from './modules/invites/invites.controller';
 import { createPasswordResetController } from './modules/password-reset/password-reset.controller';
 import { createRecipesController } from './modules/recipes/recipes.controller';
+import { createShoppingController } from './modules/shopping/shopping.controller';
 import { createTagsController } from './modules/tags/tags.controller';
 import { createUnitsController } from './modules/units/units.controller';
 import { createImportController } from './modules/import/import.controller';
@@ -39,6 +40,7 @@ export function createApp(container: Container) {
   app.route('/', createRecipesController(container));
   app.route('/', createImportController(container));
   app.route('/', createCookingController(container));
+  app.route('/', createShoppingController(container));
   app.route('/', createPushController(container));
   app.route('/', createProfileController(container));
   app.route('/', createTagsController(container));

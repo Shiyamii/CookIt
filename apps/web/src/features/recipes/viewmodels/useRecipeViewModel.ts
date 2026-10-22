@@ -129,6 +129,8 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
   return {
     status: missing ? 'not_found' : recipe.isPending || !unitsReady ? 'loading' : 'ready',
     recipe: display,
+    /** The parsed recipe (its ingredients go to the shopping list). */
+    document,
     tagGroups,
     lang: detail?.lang,
     baseLang: detail?.baseLang,

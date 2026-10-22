@@ -7,6 +7,8 @@ import { createAccountSecurityService } from './modules/account-security/account
 import { createAuth } from './modules/auth/auth';
 import { createCookingRepository } from './modules/cooking/cooking.repository';
 import { createCookingService } from './modules/cooking/cooking.service';
+import { createShoppingRepository } from './modules/shopping/shopping.repository';
+import { createShoppingService } from './modules/shopping/shopping.service';
 import { createInvitesRepository } from './modules/invites/invites.repository';
 import { createInvitesService } from './modules/invites/invites.service';
 import { createPasswordResetRepository } from './modules/password-reset/password-reset.repository';
@@ -64,6 +66,7 @@ export function createContainer(db: Database) {
     }),
     passwordReset,
     cooking: createCookingService({ repository: createCookingRepository(db) }),
+    shopping: createShoppingService({ repository: createShoppingRepository(db) }),
     push: createPushService({
       repository: createPushRepository(db),
       sender: vapid ? createPushSender(vapid) : undefined,

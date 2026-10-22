@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { AddToShoppingList } from '@/features/shopping/views/AddToShoppingList';
 import { NotFoundPage } from '@/features/system/views/NotFoundPage';
 import { useRecipeViewModel } from '../viewmodels/useRecipeViewModel';
 import { RecipeContent } from './RecipeContent';
@@ -204,6 +205,15 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
       )}
       {vm.signedIn && !vm.canCook && vm.canCopy && (
         <p className="text-sm text-muted-foreground">{t('recipes.cookShared')}</p>
+      )}
+      {vm.signedIn && vm.document && vm.lang && (
+        <AddToShoppingList
+          recipeId={vm.id}
+          title={recipe.title}
+          lang={vm.lang}
+          servings={vm.servings}
+          document={vm.document}
+        />
       )}
 
       <RecipeContent recipe={recipe} durationText={vm.durationText} />

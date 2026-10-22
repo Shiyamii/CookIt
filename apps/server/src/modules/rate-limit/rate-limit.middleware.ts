@@ -24,6 +24,8 @@ export const RATE_LIMITS = {
   recipeCopyPerAccount: { name: 'recipe-copy:account', limit: 30, windowSeconds: 10 * 60 },
   // Every cooking event is a save (about one a second at most while cooking).
   cookSavePerAccount: { name: 'cook-save:account', limit: 600, windowSeconds: 10 * 60 },
+  // Every item checked in the shop is a save.
+  shoppingSavePerAccount: { name: 'shopping-save:account', limit: 600, windowSeconds: 10 * 60 },
 } satisfies Record<string, RateLimitRule>;
 
 /**

@@ -26,6 +26,11 @@ export function MainNav() {
           {t('nav.cook')}
         </NavLink>
       )}
+      {vm.signedIn && (
+        <NavLink to="/shopping" className={linkClass}>
+          {t('nav.shopping')}
+        </NavLink>
+      )}
     </nav>
   );
 }

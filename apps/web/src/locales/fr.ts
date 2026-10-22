@@ -7,6 +7,7 @@ export const fr: Translations = {
     myRecipes: 'Mes recettes',
     gallery: 'Galerie',
     cook: 'En cuisine',
+    shopping: 'Courses',
   },
   common: {
     loading: 'Chargement…',
@@ -45,6 +46,8 @@ export const fr: Translations = {
       open: 'Voir la recette',
       another: 'Une autre idée',
     },
+    shopping_one: '{{count}} article à acheter',
+    shopping_other: '{{count}} articles à acheter',
     recent: {
       title: 'Vos dernières recettes',
       all: 'Toutes mes recettes',
@@ -203,6 +206,40 @@ export const fr: Translations = {
       deleteText:
         'Vous ne pourrez plus vous connecter avec. Supprimez-la aussi de votre appareil ou de votre gestionnaire de mots de passe.',
       unsupported: 'Ce navigateur ne prend pas en charge les passkeys.',
+    },
+  },
+  shopping: {
+    title: 'Liste de courses',
+    empty: 'Ta liste de courses est vide.',
+    emptyHint:
+      "Ajoute les ingrédients d'une recette depuis sa page, ou tape un article ci-dessus. Tes recettes :",
+    allDone: 'Tout est coché.',
+    remaining_one: '{{count}} article à acheter',
+    remaining_other: '{{count}} articles à acheter',
+    item: 'Article à ajouter',
+    itemPlaceholder: 'Ajouter un article (liquide vaisselle…)',
+    addItem: 'Ajouter',
+    full: "La liste de courses est pleine : retire d'abord ce que tu as acheté.",
+    clearChecked_one: "Retirer l'article coché ({{count}})",
+    clearChecked_other: 'Retirer les articles cochés ({{count}})',
+    recipes: 'Recettes dans la liste',
+    removeRecipe: 'Retirer {{title}} de la liste',
+    clearAll: 'Vider la liste',
+    clearAllTitle: 'Vider la liste de courses ?',
+    clearAllText: 'Tous les articles et toutes les recettes quittent la liste.',
+    add: {
+      button: 'Ajouter à la liste de courses',
+      title: 'Ajouter à la liste de courses',
+      hint_one: 'Ingrédients pour {{count}} portion. Décoche ce que tu as déjà.',
+      hint_other: 'Ingrédients pour {{count}} portions. Décoche ce que tu as déjà.',
+      replaces_one:
+        'Cette recette est déjà dans la liste (pour {{count}} portion) : elle sera remplacée.',
+      replaces_other:
+        'Cette recette est déjà dans la liste (pour {{count}} portions) : elle sera remplacée.',
+      confirm_one: 'Ajouter {{count}} ingrédient',
+      confirm_other: 'Ajouter {{count}} ingrédients',
+      done: 'Ajouté à la liste de courses.',
+      see: 'Voir la liste',
     },
   },
   recipes: {
