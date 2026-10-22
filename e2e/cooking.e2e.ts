@@ -179,7 +179,7 @@ test('two recipes with two timers each stay readable and correct after reload', 
   await expect(page.getByRole('heading', { name: 'Step 1 of 5' })).toBeVisible();
   await expect(cards).toHaveCount(2);
   await expect(
-    page.getByRole('button', { name: 'Crêpes au beurre salé: step 4 of 5' }),
+    page.getByRole('button', { name: /^Crêpes au beurre salé\s*, step 4 of 5/ }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: /^Start the timer 1 h/ }).click();
@@ -218,7 +218,7 @@ test('two recipes with two timers each stay readable and correct after reload', 
   await check();
 
   // Switching recipe keeps each one's state.
-  await page.getByRole('button', { name: 'Crêpes au beurre salé: step 4 of 5' }).click();
+  await page.getByRole('button', { name: /^Crêpes au beurre salé\s*, step 4 of 5/ }).click();
   await expect(page.getByRole('heading', { name: 'Crêpes au beurre salé' })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Timer 1 min 30: .* left$/ })).toBeVisible();
   // A timer's name shows its recipe.
@@ -229,7 +229,8 @@ test('two recipes with two timers each stay readable and correct after reload', 
   await expect(page.getByRole('heading', { name: 'Salted butter crêpes' })).toBeVisible();
 
   // Removing a recipe takes its timers; the other goes on.
-  await page.getByRole('button', { name: 'Remove from cooking' }).click();
+  await page.getByRole('button', { name: 'Cooking actions' }).click();
+  await page.getByRole('menuitem', { name: 'Remove from cooking' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Remove from cooking' }).click();
   await expect(cards).toHaveCount(1);
   await expect(timers).toHaveCount(2);
@@ -276,7 +277,8 @@ test('a full session refuses another recipe; stopping ends everything', async ({
   await expect(page.getByRole('alert')).toHaveCount(0);
   expect((await session(page)).session?.state.items).toHaveLength(5);
 
-  await page.getByRole('button', { name: 'Stop cooking' }).click();
+  await page.getByRole('button', { name: 'Cooking actions' }).click();
+  await page.getByRole('menuitem', { name: 'Stop cooking' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Stop cooking' }).click();
   await expect.poll(async () => (await session(page)).session).toBeNull();
 });

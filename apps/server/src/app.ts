@@ -4,7 +4,7 @@ import type { Container } from './container';
 import { env } from './env';
 import type { AppEnv } from './http/app-env';
 import { onError } from './http/errors';
-import { apiBodyLimit, noStore, sameOrigin, securityHeaders } from './http/security';
+import { apiBodyLimit, noStore, sameOrigin, securityHeaders, staticCaching } from './http/security';
 import { createAccountSecurityController } from './modules/account-security/account-security.controller';
 import { createAuthController } from './modules/auth/auth.controller';
 import { createCookingController } from './modules/cooking/cooking.controller';
@@ -42,6 +42,7 @@ export function createApp(container: Container) {
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // SPA: static files, then index.html for client-side routes.
+  app.use('*', staticCaching());
   app.use('*', serveStatic({ root: env.STATIC_DIR }));
   app.get('*', serveStatic({ path: `${env.STATIC_DIR}/index.html` }));
 

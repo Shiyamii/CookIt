@@ -12,5 +12,6 @@
   },
   "include": ["src", "vite.config.ts"],
   // Unit tests run under Bun: type-checked by tsconfig.test.json, with Bun's types.
-  "exclude": ["src/**/*.test.ts"]
+  // The service worker has its own globals (tsconfig.sw.json).
+  "exclude": ["src/**/*.test.ts", "src/sw/sw.ts"]
 }

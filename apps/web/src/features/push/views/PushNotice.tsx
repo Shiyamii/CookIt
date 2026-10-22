@@ -18,18 +18,22 @@ export function PushNotice() {
     <div
       role="status"
       data-testid="push-notice"
-      className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2 text-sm"
+      className="grid gap-2 rounded-lg border border-dashed p-3 text-sm"
     >
-      <BellOff className="size-4 shrink-0 text-muted-foreground" />
-      <span className="min-w-0 flex-1">{t(`push.notice.${vm.status}`)}</span>
-      {vm.status === 'off' && (
-        <Button size="sm" onClick={vm.enable} disabled={vm.busy}>
-          <Bell /> {t('push.enable')}
+      <p className="flex gap-2">
+        <BellOff className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="min-w-0">{t(`push.notice.${vm.status}`)}</span>
+      </p>
+      <div className="flex flex-wrap gap-2 pl-6">
+        {vm.status === 'off' && (
+          <Button size="sm" onClick={vm.enable} disabled={vm.busy}>
+            <Bell /> {t('push.enable')}
+          </Button>
+        )}
+        <Button asChild size="sm" variant="ghost">
+          <Link to="/account/notifications">{t('push.help.link')}</Link>
         </Button>
-      )}
-      <Button asChild size="sm" variant="ghost">
-        <Link to="/account/notifications">{t('push.help.link')}</Link>
-      </Button>
+      </div>
       {vm.error && (
         <p role="alert" className="w-full text-destructive">
           {t(`errors.${vm.error}`, t('errors.unknown'))}

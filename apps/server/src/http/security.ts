@@ -32,6 +32,22 @@ export function noStore(): MiddlewareHandler {
   };
 }
 
+/**
+ * Browser caching of the SPA: built files have a content hash in their name (`/assets/`), so they
+ * never change; everything else (index.html, the service worker, the manifest, icons) is checked
+ * again each time, so a new version is picked up at once.
+ */
+export function staticCaching(): MiddlewareHandler {
+  return async (c, next) => {
+    await next();
+    if (c.req.path.startsWith('/api/') || c.res.status !== 200) return;
+    c.header(
+      'Cache-Control',
+      c.req.path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+    );
+  };
+}
+
 export function apiBodyLimit(): MiddlewareHandler {
   return bodyLimit({
     maxSize: MAX_BODY_BYTES,

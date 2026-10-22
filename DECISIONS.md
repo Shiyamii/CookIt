@@ -188,3 +188,15 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **E2E push sink + `PUSH_TEST_ENDPOINT_ORIGIN`** (tests only, like `RATE_LIMIT_FACTOR`): the real chain (scheduler, VAPID, encryption, HTTP) is checked by decrypting what the app sent; the restart criterion runs in a separate Playwright project after the others, since it stops the container.
 - **`web-push` added** to the server (imposed by the plan; it brings `http_ece`, `jws`, `asn1.js`).
 - **README configuration table**: the `WEBAUTHN_RP_ID` / `WEBAUTHN_RP_NAME` rows of the plan were removed: passkeys take their domain from `ORIGIN` (phase 3b), these variables do not exist.
+
+## Phase 9: PWA and polish
+
+- **`injectManifest` with our own service worker** (`src/sw/sw.ts`): the push handlers of phase 8 live with Workbox's precaching and routing in one file, typed. Registered by the app (no generated registration script) with `skipWaiting` + `clientsClaim`: a new version takes over at once; a page whose lazy chunk vanished after a deployment reloads once (`vite:preloadError`).
+- **API reads cached for offline use, by allowlist** (`isOfflineApi`), network first: only what opening a recipe and cooking needs. The answers are private (the API says `no-store` to every other cache), so the `cookit-api` cache is deleted at sign-out, sign-in and sign-up, and by the service worker itself as soon as the session is gone (401, or `/me` with no user: expired, disabled account, password reset) — security review. A clear counter in the service worker drops answers of requests still in flight at sign-out. Kept 14 days at most. The cooking session is never cached by the service worker: a stale copy would be taken for the server's state; it has its own local copy (phase 6).
+- **Icons drawn from the lucide CookingPot glyph** (ISC) on the theme's primary color, rendered by a tooling script with Playwright's Chromium: no image dependency, reproducible.
+- **Workbox packages and `vite-plugin-pwa` are web dev dependencies** (bundled into `sw.js`), nothing added to the server image.
+- **Static caching headers**: hashed `/assets/*` immutable for a year; `index.html`, `sw.js`, the manifest and icons `no-cache`, so updates are seen at once.
+- **`robots.txt` disallows everything**: a self-hosted family instance is not meant to be indexed (public recipes are shared by link and the gallery).
+- **Theme contrast fixes** (WCAG AA, Lighthouse): light `--muted-foreground` darker, dark `--destructive` lighter, `text-primary` no longer used for text (the tweakcn primary is a light sage).
+- **Cooking mode on a phone**: "Remove from cooking" and "Stop cooking" moved to a menu ("⋯") next to the recipe title, the recipe cards use the full width; the notification notice puts its buttons under the text.
+- **Lighthouse is run by hand** (`npx lighthouse`), not added to the repository: version 12 no longer has a PWA category; installability and offline use are covered by `e2e/pwa.e2e.ts`.

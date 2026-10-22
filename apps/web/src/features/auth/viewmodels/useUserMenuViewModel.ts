@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { clearCookingData } from '@/features/cooking/model/store';
 import { forgetPushSubscription } from '@/features/push/model/push';
+import { clearOfflineData } from '@/features/pwa/model/offline';
 import { clearDrafts } from '@/features/recipes/model/draft';
 import { signOut } from '../model/auth';
 import { useSession } from './useSession';
@@ -23,6 +24,7 @@ export function useUserMenuViewModel() {
       queryClient.clear();
       clearDrafts();
       clearCookingData();
+      await clearOfflineData();
       await navigate('/login', { replace: true });
     },
   });

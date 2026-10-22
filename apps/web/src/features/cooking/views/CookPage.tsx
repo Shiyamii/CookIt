@@ -1,4 +1,14 @@
-import { ChevronLeft, ChevronRight, Minus, Play, Plus, Timer, X, ListChecks } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  EllipsisVertical,
+  ListChecks,
+  Minus,
+  Play,
+  Plus,
+  Timer,
+  X,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Markdown } from '@/components/Markdown';
@@ -15,6 +25,12 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Sheet,
   SheetContent,
@@ -102,11 +118,19 @@ export function CookPage() {
           <div className="flex items-start gap-2">
             <ColorDot color={vm.color} className="mt-2 size-3" />
             <h1 className="min-w-0 flex-1 text-xl font-semibold wrap-anywhere">{vm.title}</h1>
-            {!vm.alone && (
-              <Button variant="ghost" size="sm" onClick={vm.askRemove}>
-                {t('cook.remove')}
-              </Button>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label={t('cook.actions')}>
+                  <EllipsisVertical />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!vm.alone && (
+                  <DropdownMenuItem onSelect={vm.askRemove}>{t('cook.remove')}</DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={vm.askEnd}>{t('cook.end')}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <IngredientsDrawer vm={vm} />
@@ -137,7 +161,7 @@ export function CookPage() {
                 {step.groupName}
               </p>
             )}
-            <h2 id="step-title" className="text-sm font-semibold text-primary">
+            <h2 id="step-title" className="text-sm font-semibold text-muted-foreground">
               {t('cook.stepOf', { n: vm.stepIndex + 1, total: vm.stepCount })}
             </h2>
           </div>
@@ -407,66 +431,68 @@ function Confirm(props: { title: string; text: string; action: string; onConfirm
 function RecipeCards({ vm }: { vm: Vm }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-start gap-2">
-      <div
-        role="group"
-        aria-label={t('cook.recipes')}
-        className="-mx-1 flex min-w-0 flex-1 gap-2 overflow-x-auto px-1 pb-1"
-      >
-        {vm.cards.map((card) => {
-          const title = card.title || (card.status === 'recipe_missing' ? '?' : '…');
-          return (
-            <button
-              key={card.recipeId}
-              type="button"
-              data-testid="cook-card"
-              aria-pressed={card.active}
-              aria-label={
-                card.stepCount > 0
-                  ? t('cook.cardLabel', { title, n: card.stepNumber, total: card.stepCount })
-                  : title
-              }
-              onClick={() => vm.select(card.recipeId)}
-              className={`grid w-40 shrink-0 gap-1 rounded-lg border p-2 text-left text-sm ${
-                card.active ? 'border-primary bg-accent' : 'bg-card'
+    <div
+      role="group"
+      aria-label={t('cook.recipes')}
+      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
+    >
+      {vm.cards.map((card) => {
+        const title = card.title || (card.status === 'recipe_missing' ? '?' : '…');
+        return (
+          <button
+            key={card.recipeId}
+            type="button"
+            data-testid="cook-card"
+            aria-pressed={card.active}
+            onClick={() => vm.select(card.recipeId)}
+            className={`grid w-40 shrink-0 gap-1 rounded-lg border p-2 text-left text-sm ${
+              card.active ? 'border-primary bg-accent text-accent-foreground' : 'bg-card'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <ColorDot color={card.color} className="size-3" />
+              <span className="line-clamp-2 font-medium wrap-anywhere">{title}</span>
+            </span>
+            <span
+              className={`flex flex-wrap items-center gap-x-2 ${
+                card.active ? '' : 'text-muted-foreground'
               }`}
             >
-              <span className="flex items-center gap-2">
-                <ColorDot color={card.color} className="size-3" />
-                <span className="line-clamp-2 font-medium wrap-anywhere">{title}</span>
-              </span>
-              <span className="flex flex-wrap items-center gap-x-2 text-muted-foreground">
-                {card.stepCount > 0 &&
-                  t('cook.cardStep', { n: card.stepNumber, total: card.stepCount })}
-                {card.nextTimer && (
-                  <span
-                    className="inline-flex items-center gap-1 tabular-nums"
-                    title={t('cook.cardTimers', { count: card.timerCount })}
-                  >
-                    <Timer className="size-3.5" />
-                    {card.nextTimer.finished ? t('cook.done') : card.nextTimer.countdown}
-                    {card.timerCount > 1 && ` +${card.timerCount - 1}`}
+              {card.stepCount > 0 && (
+                <>
+                  <span aria-hidden>
+                    {t('cook.cardStep', { n: card.stepNumber, total: card.stepCount })}
                   </span>
-                )}
-              </span>
-            </button>
-          );
-        })}
-        {vm.canAdd && (
-          <Button
-            asChild
-            variant="outline"
-            className="h-auto min-h-16 w-28 shrink-0 self-stretch whitespace-normal"
-          >
-            <Link to="/recipes">
-              <Plus /> {t('cook.addRecipe')}
-            </Link>
-          </Button>
-        )}
-      </div>
-      <Button variant="ghost" size="sm" onClick={vm.askEnd}>
-        {t('cook.end')}
-      </Button>
+                  <span className="sr-only">
+                    {t('cook.cardStepLabel', { n: card.stepNumber, total: card.stepCount })}
+                  </span>
+                </>
+              )}
+              {card.nextTimer && (
+                <span
+                  className="inline-flex items-center gap-1 tabular-nums"
+                  title={t('cook.cardTimers', { count: card.timerCount })}
+                >
+                  <Timer className="size-3.5" />
+                  {card.nextTimer.finished ? t('cook.done') : card.nextTimer.countdown}
+                  {card.timerCount > 1 && ` +${card.timerCount - 1}`}
+                </span>
+              )}
+            </span>
+          </button>
+        );
+      })}
+      {vm.canAdd && (
+        <Button
+          asChild
+          variant="outline"
+          className="h-auto min-h-16 w-28 shrink-0 self-stretch whitespace-normal"
+        >
+          <Link to="/recipes">
+            <Plus /> {t('cook.addRecipe')}
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }

@@ -4,10 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>CookIt</title>
-    <!-- Installable on the home screen: needed for notifications on iPhone and iPad. -->
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="description" content="Recipes, scaling and cooking mode with timers" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <!-- Installable (the manifest link is added by vite-plugin-pwa); iPhone: from the home
+         screen, which notifications need. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="CookIt" />
+    <meta name="theme-color" content="#fdfdfd" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#070503" media="(prefers-color-scheme: dark)" />
   </head>
   <body>
     <div id="root"></div>

@@ -548,10 +548,11 @@ export const en = {
     recipes: 'Recipes being cooked',
     addRecipe: 'Add a recipe',
     cardStep: 'Step {{n}}/{{total}}',
-    cardLabel: '{{title}}: step {{n}} of {{total}}',
+    cardStepLabel: ', step {{n}} of {{total}}',
     cardTimers_one: '{{count}} timer',
     cardTimers_other: '{{count}} timers',
     showRecipe: 'Show {{title}}',
+    actions: 'Cooking actions',
     remove: 'Remove from cooking',
     removeTitle: 'Remove “{{title}}” from cooking?',
     removeText: 'Its progress and its timers are removed. The other recipes go on.',
@@ -589,6 +590,9 @@ export const en = {
       session_full:
         'Up to 5 recipes can be cooked at once: finish or remove one before adding another.',
     },
+  },
+  pwa: {
+    offline: 'Offline: recipes already opened and the cooking mode still work.',
   },
   push: {
     title: 'Notifications',

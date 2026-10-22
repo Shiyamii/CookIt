@@ -1,5 +1,6 @@
 import { isLocale, registerInputSchema } from '@cookit/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { clearOfflineData } from '@/features/pwa/model/offline';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -40,6 +41,7 @@ export function useRegisterViewModel() {
       // Leave the page first: its own queries (the invite check) must not run again.
       await navigate('/', { replace: true });
       // Nothing cached for a previous user may show up (active queries are fetched again).
+      await clearOfflineData();
       await queryClient.resetQueries();
     },
   });

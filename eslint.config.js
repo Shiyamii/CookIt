@@ -23,8 +23,7 @@ export default defineConfig([
     languageOptions: { globals: globals.browser },
   },
   {
-    // The service worker: plain JavaScript served as is.
-    files: ['apps/web/public/sw.js'],
+    files: ['apps/web/src/sw/**'],
     languageOptions: { globals: globals.serviceworker },
   },
   {

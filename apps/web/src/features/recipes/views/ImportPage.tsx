@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useImportViewModel, type ImportTab } from '../viewmodels/useImportViewModel';
 import { DiagnosticsList } from './DiagnosticsList';
@@ -41,139 +41,145 @@ export function ImportPage({ initialTab = 'text' }: { initialTab?: ImportTab }) 
 
       {vm.items.length === 0 ? (
         <>
-          <Tabs value={vm.tab} onValueChange={(value) => vm.setTab(value as ImportTab)}>
+          <Tabs
+            value={vm.tab}
+            onValueChange={(value) => vm.setTab(value as ImportTab)}
+            className="gap-5"
+          >
             <TabsList className="w-full sm:w-auto">
               <TabsTrigger value="text">{t('recipes.import.tabs.text')}</TabsTrigger>
               <TabsTrigger value="file">{t('recipes.import.tabs.file')}</TabsTrigger>
               <TabsTrigger value="url">{t('recipes.import.tabs.url')}</TabsTrigger>
               <TabsTrigger value="ai">{t('recipes.import.tabs.ai')}</TabsTrigger>
             </TabsList>
-          </Tabs>
-
-          <div className="grid gap-2">
-            <Label htmlFor="import-lang">{t('recipes.fields.lang')}</Label>
-            <Select value={vm.lang} onValueChange={(value) => vm.setLang(value as Locale)}>
-              <SelectTrigger id="import-lang" className="h-11 w-full sm:w-60">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUPPORTED_LOCALES.map((locale) => (
-                  <SelectItem key={locale} value={locale}>
-                    {t(`language.${locale}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {vm.error && (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>
-                {t(
-                  `recipes.import.errors.${vm.error}`,
-                  t(`errors.${vm.error}`, t('errors.unknown')),
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {vm.tab === 'text' && (
-            <div className="grid gap-2">
-              <Label htmlFor="import-text">{t('recipes.import.pasteLabel')}</Label>
-              <Textarea
-                id="import-text"
-                rows={12}
-                className="font-mono text-sm wrap-anywhere"
-                value={vm.text}
-                onChange={(event) => vm.setText(event.target.value)}
-              />
-              <Button
-                className="justify-self-start"
-                disabled={!vm.text.trim()}
-                onClick={vm.analyzeText}
-              >
-                {t('recipes.import.preview')}
-              </Button>
-            </div>
-          )}
-          {vm.tab === 'file' && (
-            <div className="grid gap-2">
-              <Label htmlFor="import-file">{t('recipes.import.fileLabel')}</Label>
-              <Input
-                id="import-file"
-                type="file"
-                accept=".md,.markdown,.txt,.zip,text/markdown,application/zip"
-                className="h-11"
-                disabled={vm.reading}
-                onChange={(event) => void vm.readFile(event.target.files?.[0])}
-              />
-              <p className="text-sm text-muted-foreground">{t('recipes.import.fileHint')}</p>
-            </div>
-          )}
-          {vm.tab === 'ai' && (
-            <div className="grid gap-4">
-              <p className="text-sm text-muted-foreground">{t('recipes.ai.importText')}</p>
+            {/* The panel of the chosen tab (screen readers: the tab controls it). */}
+            <TabsContent value={vm.tab} className="grid gap-5 text-base">
               <div className="grid gap-2">
-                <Button className="justify-self-start" onClick={() => void vm.copyPrompt()}>
-                  {vm.copied ? <Check /> : <Copy />}
-                  {vm.copied ? t('common.copied') : t('recipes.ai.copyPrompt')}
-                </Button>
-                <details>
-                  <summary className="cursor-pointer text-sm font-medium">
-                    {t('recipes.ai.showPrompt')}
-                  </summary>
+                <Label htmlFor="import-lang">{t('recipes.fields.lang')}</Label>
+                <Select value={vm.lang} onValueChange={(value) => vm.setLang(value as Locale)}>
+                  <SelectTrigger id="import-lang" className="h-11 w-full sm:w-60">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_LOCALES.map((locale) => (
+                      <SelectItem key={locale} value={locale}>
+                        {t(`language.${locale}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {vm.error && (
+                <Alert variant="destructive" role="alert">
+                  <AlertDescription>
+                    {t(
+                      `recipes.import.errors.${vm.error}`,
+                      t(`errors.${vm.error}`, t('errors.unknown')),
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {vm.tab === 'text' && (
+                <div className="grid gap-2">
+                  <Label htmlFor="import-text">{t('recipes.import.pasteLabel')}</Label>
                   <Textarea
-                    readOnly
-                    aria-label={t('recipes.ai.prompt')}
-                    rows={10}
-                    className="mt-2 font-mono text-xs wrap-anywhere"
-                    value={vm.prompt}
-                    onFocus={(event) => event.target.select()}
+                    id="import-text"
+                    rows={12}
+                    className="font-mono text-sm wrap-anywhere"
+                    value={vm.text}
+                    onChange={(event) => vm.setText(event.target.value)}
                   />
-                </details>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="import-answer">{t('recipes.ai.answerLabel')}</Label>
-                <Textarea
-                  id="import-answer"
-                  rows={12}
-                  className="font-mono text-sm wrap-anywhere"
-                  placeholder={t('recipes.ai.answerPlaceholder')}
-                  value={vm.answer}
-                  onChange={(event) => vm.setAnswer(event.target.value)}
-                />
-                <Button
-                  className="justify-self-start"
-                  disabled={!vm.answer.trim()}
-                  onClick={vm.analyzeAnswer}
-                >
-                  {t('recipes.import.preview')}
-                </Button>
-              </div>
-            </div>
-          )}
-          {vm.tab === 'url' && (
-            <div className="grid gap-2">
-              <Label htmlFor="import-url">{t('recipes.import.urlLabel')}</Label>
-              <Input
-                id="import-url"
-                type="url"
-                inputMode="url"
-                className="h-11"
-                placeholder="https://…"
-                value={vm.url}
-                onChange={(event) => vm.setUrl(event.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">{t('recipes.import.urlHint')}</p>
-              <Button
-                className="justify-self-start"
-                disabled={!vm.url.trim() || vm.reading}
-                onClick={vm.fetchUrl}
-              >
-                {t('recipes.import.fetch')}
-              </Button>
-            </div>
-          )}
+                  <Button
+                    className="justify-self-start"
+                    disabled={!vm.text.trim()}
+                    onClick={vm.analyzeText}
+                  >
+                    {t('recipes.import.preview')}
+                  </Button>
+                </div>
+              )}
+              {vm.tab === 'file' && (
+                <div className="grid gap-2">
+                  <Label htmlFor="import-file">{t('recipes.import.fileLabel')}</Label>
+                  <Input
+                    id="import-file"
+                    type="file"
+                    accept=".md,.markdown,.txt,.zip,text/markdown,application/zip"
+                    className="h-11"
+                    disabled={vm.reading}
+                    onChange={(event) => void vm.readFile(event.target.files?.[0])}
+                  />
+                  <p className="text-sm text-muted-foreground">{t('recipes.import.fileHint')}</p>
+                </div>
+              )}
+              {vm.tab === 'ai' && (
+                <div className="grid gap-4">
+                  <p className="text-sm text-muted-foreground">{t('recipes.ai.importText')}</p>
+                  <div className="grid gap-2">
+                    <Button className="justify-self-start" onClick={() => void vm.copyPrompt()}>
+                      {vm.copied ? <Check /> : <Copy />}
+                      {vm.copied ? t('common.copied') : t('recipes.ai.copyPrompt')}
+                    </Button>
+                    <details>
+                      <summary className="cursor-pointer text-sm font-medium">
+                        {t('recipes.ai.showPrompt')}
+                      </summary>
+                      <Textarea
+                        readOnly
+                        aria-label={t('recipes.ai.prompt')}
+                        rows={10}
+                        className="mt-2 font-mono text-xs wrap-anywhere"
+                        value={vm.prompt}
+                        onFocus={(event) => event.target.select()}
+                      />
+                    </details>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="import-answer">{t('recipes.ai.answerLabel')}</Label>
+                    <Textarea
+                      id="import-answer"
+                      rows={12}
+                      className="font-mono text-sm wrap-anywhere"
+                      placeholder={t('recipes.ai.answerPlaceholder')}
+                      value={vm.answer}
+                      onChange={(event) => vm.setAnswer(event.target.value)}
+                    />
+                    <Button
+                      className="justify-self-start"
+                      disabled={!vm.answer.trim()}
+                      onClick={vm.analyzeAnswer}
+                    >
+                      {t('recipes.import.preview')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {vm.tab === 'url' && (
+                <div className="grid gap-2">
+                  <Label htmlFor="import-url">{t('recipes.import.urlLabel')}</Label>
+                  <Input
+                    id="import-url"
+                    type="url"
+                    inputMode="url"
+                    className="h-11"
+                    placeholder="https://…"
+                    value={vm.url}
+                    onChange={(event) => vm.setUrl(event.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">{t('recipes.import.urlHint')}</p>
+                  <Button
+                    className="justify-self-start"
+                    disabled={!vm.url.trim() || vm.reading}
+                    onClick={vm.fetchUrl}
+                  >
+                    {t('recipes.import.fetch')}
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </>
       ) : (
         <>

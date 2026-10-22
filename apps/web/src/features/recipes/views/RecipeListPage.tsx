@@ -74,7 +74,7 @@ export function RecipeListPage({ kind }: { kind: 'mine' | 'gallery' }) {
               <Button
                 variant="link"
                 size="sm"
-                className="justify-self-start"
+                className="justify-self-start text-foreground underline decoration-primary decoration-2"
                 onClick={vm.clearTags}
               >
                 {t('recipes.filters.clear')}

@@ -47,7 +47,12 @@ export function LoginPage() {
             <Button type="submit" size="lg" disabled={vm.submitting}>
               {t('auth.twoFactor.submit')}
             </Button>
-            <Button type="button" variant="link" onClick={vm.toggleCodeKind}>
+            <Button
+              type="button"
+              variant="link"
+              className="text-foreground underline decoration-primary decoration-2"
+              onClick={vm.toggleCodeKind}
+            >
               {backup ? t('auth.twoFactor.useApp') : t('auth.twoFactor.useBackup')}
             </Button>
             <Button type="button" variant="ghost" onClick={vm.backToCredentials}>

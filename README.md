@@ -17,7 +17,7 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 - **Many ways to add a recipe**: quick create, step-by-step wizard (paste ingredients/steps, automatic duration detection), markdown paste or file/zip upload, URL import (schema.org JSON-LD), or a ready-to-copy prompt for the AI assistant of your choice.
 - **Translations**: each recipe can have a French and an English version; the UI is in French and English.
 - **Tags** organized in categories, managed by the admin.
-- **Installable PWA**, mobile first, works offline for recipes already opened.
+- **Installable PWA**, mobile first, works offline for the pages and recipes already opened, cooking mode included.
 
 ## Recipe format
 
@@ -145,6 +145,8 @@ bun run parse my-recipe.md --canonical   # canonical form, as exported
 **Cooking mode**: "Cook" on a recipe opens one step at a time with large buttons, the ingredients to check in a drawer (quantities follow the servings), and timers started with a tap on the durations of a step (+1 min, cancel; a sound and a vibration when one ends while the page is open). The screen stays on. Progress is saved on the server at every action and kept in the browser during network cuts: reloading the page or opening it on another device finds the same step and timers. Several recipes can be cooked at once (up to 5): one card per recipe with its color, its step and its next timer, and one timer bar for all of them, in the order they end, each timer naming its dish.
 
 **Notifications**: from the account menu (or the notice in the cooking mode), turn on notifications on each device: when a timer ends, the server sends a notification with the dish and the timer name, even with the page closed or the phone locked; a tap opens the cooking mode on that recipe. On iPhone and iPad (iOS 16.4+), add CookIt to the home screen first and turn them on from there; the Notifications page explains it for each system.
+
+**Install and offline**: CookIt can be installed on the home screen (Android, iPhone, computer). The pages and recipes already opened stay available without network, so the cooking mode keeps working if the connection drops in the kitchen; changes are sent when it is back.
 
 **AI prompts** (no AI built in): "Import with an AI" gives a prompt to copy into the assistant of your choice, generated from the recipe format (with your tag list and units); paste the answer back, check the preview, save. On a recipe, "Add a translation" does the same for another language: the prompt holds the recipe, the pasted translation is checked live against the original (same groups, ingredients, steps and timers). A recipe is read in your interface language when it has that translation, and its page lets you switch languages.
 

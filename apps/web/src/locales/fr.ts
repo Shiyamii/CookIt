@@ -559,10 +559,11 @@ export const fr: Translations = {
     recipes: 'Recettes en cours',
     addRecipe: 'Ajouter une recette',
     cardStep: 'Étape {{n}}/{{total}}',
-    cardLabel: '{{title}} : étape {{n}} sur {{total}}',
+    cardStepLabel: ', étape {{n}} sur {{total}}',
     cardTimers_one: '{{count}} minuteur',
     cardTimers_other: '{{count}} minuteurs',
     showRecipe: 'Afficher {{title}}',
+    actions: 'Actions de cuisine',
     remove: 'Retirer de la cuisine',
     removeTitle: 'Retirer « {{title}} » de la cuisine ?',
     removeText: 'Sa progression et ses minuteurs sont supprimés. Les autres recettes continuent.',
@@ -600,6 +601,9 @@ export const fr: Translations = {
       session_full:
         'Jusqu’à 5 recettes à la fois : terminez-en ou retirez-en une avant d’en ajouter une autre.',
     },
+  },
+  pwa: {
+    offline: 'Hors ligne : les recettes déjà ouvertes et le mode cuisine restent utilisables.',
   },
   push: {
     title: 'Notifications',

@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { clearOfflineData } from '@/features/pwa/model/offline';
 import { useEffect, useEffectEvent, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { errorCode } from '@/lib/api';
@@ -54,6 +55,7 @@ export function useLoginViewModel() {
     // Nothing cached for a previous user (expired session in a shared tab) may show up:
     // reset every query (active ones, like the session, are fetched again) before leaving,
     // so that the target page already sees the new session.
+    await clearOfflineData();
     await queryClient.resetQueries();
     await navigate(safeRedirect(params.get('redirect')), { replace: true });
   };

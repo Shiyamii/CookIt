@@ -115,7 +115,10 @@ export function StepRowEditor({
                     <button
                       type="button"
                       className="flex items-center gap-1 rounded-l-full py-1 pr-1 pl-2.5 hover:underline"
-                      aria-label={t('recipes.editor.editTimer', { label: chip.label })}
+                      aria-label={t('recipes.editor.editTimer', {
+                        label:
+                          chip.label === chip.text ? chip.text : `${chip.label} · ${chip.text}`,
+                      })}
                       onClick={() =>
                         setForm({
                           segment: chip.segment,

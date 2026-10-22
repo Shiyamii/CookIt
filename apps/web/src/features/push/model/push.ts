@@ -87,13 +87,6 @@ const supported = () =>
   'PushManager' in window &&
   'Notification' in window;
 
-export function registerServiceWorker(): void {
-  if (!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('/sw.js').catch(() => {
-    // No service worker (private window, blocked): no notifications, the rest works.
-  });
-}
-
 async function currentSubscription(): Promise<PushSubscription | null> {
   if (!supported()) return null;
   const registration = await navigator.serviceWorker.getRegistration();

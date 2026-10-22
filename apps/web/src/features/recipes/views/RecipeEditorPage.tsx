@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NotFoundPage } from '@/features/system/views/NotFoundPage';
 import type { EditorMode } from '../viewmodels/useRecipeEditorViewModel';
 import { useRecipeEditorViewModel } from '../viewmodels/useRecipeEditorViewModel';
@@ -59,47 +59,53 @@ export function RecipeEditorPage() {
         </Alert>
       )}
 
-      <Tabs value={vm.mode} onValueChange={(value) => vm.switchTo(value as EditorMode)}>
+      <Tabs
+        value={vm.mode}
+        onValueChange={(value) => vm.switchTo(value as EditorMode)}
+        className="gap-5"
+      >
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="visual">{t('recipes.editor.visual')}</TabsTrigger>
           <TabsTrigger value="markdown">{t('recipes.editor.markdown')}</TabsTrigger>
           <TabsTrigger value="preview">{t('recipes.editor.preview')}</TabsTrigger>
         </TabsList>
+        {/* The panel of the chosen mode (screen readers: the tab controls it). */}
+        <TabsContent value={vm.mode} className="grid gap-5 text-base">
+          {vm.switchError && (
+            <Alert variant="destructive" role="alert">
+              <AlertDescription className="grid gap-2">
+                <p>{t('recipes.editor.cannotSwitch')}</p>
+                <DiagnosticsList diagnostics={vm.switchError} />
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {vm.mode === 'visual' && <VisualEditor vm={vm} />}
+
+          {vm.mode === 'markdown' && (
+            <div className="grid gap-3">
+              <p className="text-sm text-muted-foreground">{t('recipes.editor.markdownHint')}</p>
+              <MarkdownEditor
+                value={vm.markdown}
+                onChange={vm.setMarkdown}
+                errorLines={errorLines}
+                label={t('recipes.editor.markdown')}
+              />
+              <DiagnosticsList diagnostics={vm.markdownDiagnostics} />
+            </div>
+          )}
+
+          {vm.mode === 'preview' &&
+            (vm.preview ? (
+              <div className="grid gap-4">
+                <h2 className="text-2xl font-semibold wrap-anywhere">{vm.preview.title}</h2>
+                <RecipeContent recipe={vm.preview} durationText={vm.durationText} />
+              </div>
+            ) : (
+              <p className="text-muted-foreground">{t('recipes.editor.noPreview')}</p>
+            ))}
+        </TabsContent>
       </Tabs>
-
-      {vm.switchError && (
-        <Alert variant="destructive" role="alert">
-          <AlertDescription className="grid gap-2">
-            <p>{t('recipes.editor.cannotSwitch')}</p>
-            <DiagnosticsList diagnostics={vm.switchError} />
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {vm.mode === 'visual' && <VisualEditor vm={vm} />}
-
-      {vm.mode === 'markdown' && (
-        <div className="grid gap-3">
-          <p className="text-sm text-muted-foreground">{t('recipes.editor.markdownHint')}</p>
-          <MarkdownEditor
-            value={vm.markdown}
-            onChange={vm.setMarkdown}
-            errorLines={errorLines}
-            label={t('recipes.editor.markdown')}
-          />
-          <DiagnosticsList diagnostics={vm.markdownDiagnostics} />
-        </div>
-      )}
-
-      {vm.mode === 'preview' &&
-        (vm.preview ? (
-          <div className="grid gap-4">
-            <h2 className="text-2xl font-semibold wrap-anywhere">{vm.preview.title}</h2>
-            <RecipeContent recipe={vm.preview} durationText={vm.durationText} />
-          </div>
-        ) : (
-          <p className="text-muted-foreground">{t('recipes.editor.noPreview')}</p>
-        ))}
 
       {vm.serverDiagnostics && (
         <Alert variant="destructive" role="alert">

@@ -112,7 +112,7 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
                       href={vm.sourceHref}
                       target="_blank"
                       rel="noopener noreferrer nofollow"
-                      className="text-primary underline underline-offset-2"
+                      className="font-medium underline decoration-primary decoration-2 underline-offset-2"
                     >
                       {recipe.source}
                     </a>
@@ -166,7 +166,12 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
           </Button>
         </div>
         {vm.servings !== vm.baseServings && (
-          <Button variant="link" size="sm" onClick={vm.resetServings}>
+          <Button
+            variant="link"
+            size="sm"
+            className="text-foreground underline decoration-primary decoration-2"
+            onClick={vm.resetServings}
+          >
             {t('recipes.resetServings', { n: vm.baseServings })}
           </Button>
         )}

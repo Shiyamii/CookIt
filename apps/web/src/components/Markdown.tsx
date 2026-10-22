@@ -102,7 +102,7 @@ function renderNode(node: RootContent, depth: number): ReactNode {
           href={href}
           target="_blank"
           rel="noopener noreferrer nofollow"
-          className="text-primary underline underline-offset-2"
+          className="font-medium underline decoration-primary decoration-2 underline-offset-2"
         >
           {children()}
         </a>
