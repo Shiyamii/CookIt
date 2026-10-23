@@ -228,9 +228,8 @@ export const en = {
     inBasket_one: 'In the basket ({{count}})',
     inBasket_other: 'In the basket ({{count}})',
     inBasketList: 'In the basket',
-    organize: 'Organize',
-    organizeHint:
-      'Move the lines with the handle or the arrows. Tick lines to group them into one.',
+    groupLines: 'Group lines',
+    groupingHint: 'Tick the lines to group into one, or separate a grouped line.',
     done: 'Done',
     drag: 'Move {{name}}',
     moveUp: 'Move {{name}} up',

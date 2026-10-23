@@ -135,7 +135,10 @@ test('ingredients of recipes are added, one line per ingredient, checked off and
   await expect(page.getByRole('link', { name: /items? to buy/ })).toHaveCount(0);
 });
 
-test('lines are moved, grouped (and stay grouped) and split', async ({ browser, page: admin }) => {
+test('lines are moved at any time, grouped (and stay grouped) and split', async ({
+  browser,
+  page: admin,
+}) => {
   const { page } = await newMember(browser, admin, 'organizer');
   const cookies = uniqueName('Cookies');
   const pain = uniqueName('Pain');
@@ -146,8 +149,7 @@ test('lines are moved, grouped (and stay grouped) and split', async ({ browser, 
   );
   await page.goto('/shopping');
   const lines = toBuy(page).getByRole('listitem');
-  await page.getByRole('button', { name: 'Organize' }).click();
-  await expect(page.getByText('Move the lines with the handle or the arrows.')).toBeVisible();
+  // Moving is always there: arrows and the handle, no mode to turn on.
 
   // Arrows.
   await page.getByRole('button', { name: 'Move Oeuf up' }).click();
@@ -171,13 +173,22 @@ test('lines are moved, grouped (and stay grouped) and split', async ({ browser, 
     .poll(async () => (await serverList(page)).list?.state.lines.map((l) => l.name))
     .toEqual(['sucre', 'oeuf', 'farine']);
 
+  // Only the handle drags: pulling the text of a line moves nothing (on a phone, it scrolls).
+  const text = (await lines.nth(2).getByText('Farine (200 g)').boundingBox())!;
+  await page.mouse.move(text.x + 10, text.y + text.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(text.x + 10, to.y + 2, { steps: 10 });
+  await page.mouse.up();
+  await expect(lines.nth(0)).toContainText('Sucre');
+  await expect(lines.nth(2)).toContainText('Farine');
+
   // A recipe with `farine T55`: its own line, grouped by hand with `farine`.
-  await page.getByRole('button', { name: 'Done' }).click();
   const painId = await createRecipe(page.request, pain, '- 500 g de farine T55');
   await addToList(page, painId, 1);
   await page.goto('/shopping');
   await expect(lines).toHaveCount(4);
-  await page.getByRole('button', { name: 'Organize' }).click();
+  await page.getByRole('button', { name: 'Group lines' }).click();
+  await expect(page.getByText('Tick the lines to group into one')).toBeVisible();
   await toBuy(page)
     .getByRole('checkbox', { name: /^Farine \(200 g\)/ })
     .click();
@@ -193,14 +204,13 @@ test('lines are moved, grouped (and stay grouped) and split', async ({ browser, 
   await expect(lines.nth(2)).toContainText('Farine de blé (200 g · 500 g = 700 g)');
 
   // Added again, `farine T55` goes back to the grouped line.
-  await page.getByRole('button', { name: 'Done' }).click();
   await addToList(page, painId, 1);
   await page.goto('/shopping');
   await expect(lines).toHaveCount(3);
   await expect(lines.nth(2)).toContainText('Farine de blé (200 g · 500 g = 700 g)');
 
   // Split: one line per ingredient again.
-  await page.getByRole('button', { name: 'Organize' }).click();
+  await page.getByRole('button', { name: 'Group lines' }).click();
   await page.getByRole('button', { name: 'Separate Farine de blé' }).click();
   await expect(lines).toHaveCount(4);
   await expect(lines.nth(2)).toContainText('Farine (200 g)');

@@ -61,8 +61,8 @@ const lineText = (line: LineView) =>
   line.quantities ? `${line.name} (${line.quantities})` : line.name;
 
 /**
- * The shopping list: what is left to buy in the user's order, then what is in the basket.
- * "Organize" lets lines be moved (handle or arrows) and grouped or split.
+ * The shopping list: what is left to buy in the user's order (handle or arrows), then what is
+ * in the basket. "Group lines" selects lines to group into one, or splits a grouped line.
  */
 export function ShoppingPage() {
   const { t } = useTranslation();
@@ -85,7 +85,7 @@ export function ShoppingPage() {
         )}
       </header>
 
-      {!vm.organizing && (
+      {!vm.grouping && (
         <form
           className="flex gap-2"
           onSubmit={(event) => {
@@ -124,37 +124,25 @@ export function ShoppingPage() {
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {vm.organizing ? (
+            {vm.grouping ? (
               <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-                {t('shopping.organizeHint')}
+                {t('shopping.groupingHint')}
               </p>
             ) : (
               <span />
             )}
-            {vm.organizing ? (
-              <Button onClick={vm.stopOrganizing}>
+            {vm.grouping ? (
+              <Button onClick={vm.stopGrouping}>
                 <Check /> {t('shopping.done')}
               </Button>
             ) : (
-              <Button variant="outline" onClick={vm.startOrganizing}>
-                <ArrowUp className="-mr-1.5" />
-                <ArrowDown /> {t('shopping.organize')}
+              <Button variant="outline" onClick={vm.startGrouping}>
+                <Group /> {t('shopping.groupLines')}
               </Button>
             )}
           </div>
 
-          {vm.toBuy.length > 0 &&
-            (vm.organizing ? (
-              <SortableLines vm={vm} />
-            ) : (
-              <ul className="grid gap-1" aria-label={t('shopping.toBuy')}>
-                {vm.toBuy.map((line) => (
-                  <li key={line.id}>
-                    <CheckLine line={line} vm={vm} />
-                  </li>
-                ))}
-              </ul>
-            ))}
+          {vm.toBuy.length > 0 && <SortableLines vm={vm} />}
 
           {vm.inBasket.length > 0 && (
             <section aria-labelledby="shopping-basket" className="grid gap-2">
@@ -164,15 +152,11 @@ export function ShoppingPage() {
               <ul className="grid gap-1" aria-label={t('shopping.inBasketList')}>
                 {vm.inBasket.map((line) => (
                   <li key={line.id}>
-                    {vm.organizing ? (
-                      <OrganizeLine line={line} vm={vm} />
-                    ) : (
-                      <CheckLine line={line} vm={vm} />
-                    )}
+                    <ListLine line={line} vm={vm} />
                   </li>
                 ))}
               </ul>
-              {!vm.organizing && (
+              {!vm.grouping && (
                 <Button variant="outline" className="justify-self-start" onClick={vm.clearChecked}>
                   <ListChecks /> {t('shopping.clearChecked', { count: vm.inBasket.length })}
                 </Button>
@@ -180,7 +164,7 @@ export function ShoppingPage() {
             </section>
           )}
 
-          {vm.organizing && (
+          {vm.grouping && (
             <div className="sticky bottom-[max(1rem,env(safe-area-inset-bottom))] justify-self-start">
               <Button size="lg" onClick={vm.askGroup} disabled={vm.selectedCount < 2}>
                 <Group /> {t('shopping.group', { count: vm.selectedCount })}
@@ -190,7 +174,7 @@ export function ShoppingPage() {
         </>
       )}
 
-      {!vm.organizing && vm.recipes.length > 0 && (
+      {!vm.grouping && vm.recipes.length > 0 && (
         <section aria-labelledby="shopping-recipes" className="grid gap-2">
           <h2 id="shopping-recipes" className="text-lg font-semibold">
             {t('shopping.recipes')}
@@ -216,7 +200,7 @@ export function ShoppingPage() {
         </section>
       )}
 
-      {!vm.organizing && !vm.empty && (
+      {!vm.grouping && !vm.empty && (
         <Button variant="destructive" className="justify-self-start" onClick={vm.askClear}>
           <Trash2 /> {t('shopping.clearAll')}
         </Button>
@@ -286,21 +270,7 @@ function LineLabel({ line }: { line: LineView }) {
   );
 }
 
-/** While shopping: tap to check off. */
-function CheckLine({ line, vm }: { line: LineView; vm: Vm }) {
-  return (
-    <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-1 py-1 hover:bg-muted">
-      <Checkbox
-        className="size-6"
-        checked={line.checked}
-        onCheckedChange={(checked) => vm.toggle(line.id, checked === true)}
-      />
-      <LineLabel line={line} />
-    </label>
-  );
-}
-
-/** Lines left to buy, in organize mode: dragged by their handle. */
+/** Lines left to buy: moved with their handle (only: elsewhere a touch scrolls) or arrows. */
 function SortableLines({ vm }: { vm: Vm }) {
   const { t } = useTranslation();
   const sensors = useSensors(
@@ -325,7 +295,7 @@ function SortableLines({ vm }: { vm: Vm }) {
               label={t('shopping.drag', { name: line.name })}
             >
               {(handle) => (
-                <OrganizeLine
+                <ListLine
                   line={line}
                   vm={vm}
                   handle={handle}
@@ -357,7 +327,7 @@ function SortableLine({
         <button
           type="button"
           aria-label={label}
-          className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="-my-1 flex h-12 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           {...attributes}
           {...listeners}
         >
@@ -368,8 +338,11 @@ function SortableLine({
   );
 }
 
-/** Organize mode: select (to group), move, split. Lines in the basket are not moved. */
-function OrganizeLine({
+/**
+ * A line: tap to check it off, or to select it while grouping. Lines left to buy also get their
+ * handle and arrows; a grouped line can be split while grouping.
+ */
+function ListLine({
   line,
   vm,
   handle,
@@ -384,17 +357,25 @@ function OrganizeLine({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex min-h-11 items-center gap-1 rounded-md bg-card py-1">
+    <div className="flex min-h-11 items-center gap-1 rounded-md bg-background">
       {handle}
-      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-1">
-        <Checkbox
-          className="size-5"
-          checked={vm.isSelected(line.id)}
-          onCheckedChange={(checked) => vm.select(line.id, checked === true)}
-        />
+      <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md px-1 py-1 hover:bg-muted">
+        {vm.grouping ? (
+          <Checkbox
+            className="size-6"
+            checked={vm.isSelected(line.id)}
+            onCheckedChange={(checked) => vm.select(line.id, checked === true)}
+          />
+        ) : (
+          <Checkbox
+            className="size-6"
+            checked={line.checked}
+            onCheckedChange={(checked) => vm.toggle(line.id, checked === true)}
+          />
+        )}
         <LineLabel line={line} />
       </label>
-      {line.merged && (
+      {vm.grouping && line.merged && (
         <Button
           variant="ghost"
           size="icon"

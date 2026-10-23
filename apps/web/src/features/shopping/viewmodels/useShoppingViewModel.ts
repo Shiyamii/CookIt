@@ -16,8 +16,8 @@ import { useShoppingSync } from './useShoppingSync';
 
 /**
  * The shopping list page (`/shopping`): lines to check off, in the user's order, then what is in
- * the basket. "Organize" shows the handles, arrows, grouping and splitting (out of the way while
- * shopping). Every change is saved (local copy, then server), so it works in the shop offline.
+ * the basket. Lines are moved with their handle or arrows at any time; "Group lines" selects
+ * lines to group (or splits one). Every change is saved (local copy, then server), so it works in the shop offline.
  */
 export function useShoppingViewModel() {
   const { sync, snapshot } = useShoppingSync();
@@ -25,7 +25,7 @@ export function useShoppingViewModel() {
   const { toBuy, inBasket } = useMemo(() => shoppingLines(state), [state]);
   const [item, setItem] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
-  const [organizing, setOrganizing] = useState(false);
+  const [grouping, setGrouping] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [naming, setNaming] = useState<string>();
   const full = state.lines.reduce((n, line) => n + line.entries.length, 0) >= MAX_SHOPPING_ENTRIES;
@@ -68,10 +68,10 @@ export function useShoppingViewModel() {
       sync?.update(() => EMPTY_LIST);
     },
 
-    organizing,
-    startOrganizing: () => setOrganizing(true),
-    stopOrganizing: () => {
-      setOrganizing(false);
+    grouping,
+    startGrouping: () => setGrouping(true),
+    stopGrouping: () => {
+      setGrouping(false);
       setSelected(new Set());
     },
     moveTo,

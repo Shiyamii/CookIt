@@ -231,9 +231,8 @@ export const fr: Translations = {
     inBasket_one: 'Dans le panier ({{count}})',
     inBasket_other: 'Dans le panier ({{count}})',
     inBasketList: 'Dans le panier',
-    organize: 'Organiser',
-    organizeHint:
-      'Déplace les lignes avec la poignée ou les flèches. Coche des lignes pour les regrouper en une seule.',
+    groupLines: 'Regrouper des lignes',
+    groupingHint: 'Coche les lignes à regrouper en une seule, ou sépare une ligne regroupée.',
     done: 'Terminé',
     drag: 'Déplacer {{name}}',
     moveUp: 'Monter {{name}}',

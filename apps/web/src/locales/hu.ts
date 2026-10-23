@@ -231,9 +231,8 @@ export const hu: Translations = {
     inBasket_one: 'A kosárban ({{count}})',
     inBasket_other: 'A kosárban ({{count}})',
     inBasketList: 'A kosárban',
-    organize: 'Rendezés',
-    organizeHint:
-      'A sorokat a fogantyúval vagy a nyilakkal mozgathatod. Pipáld ki a sorokat, hogy egybe vond őket.',
+    groupLines: 'Sorok összevonása',
+    groupingHint: 'Pipáld ki az egybevonandó sorokat, vagy válaszd szét egy összevont sort.',
     done: 'Kész',
     drag: '{{name}} mozgatása',
     moveUp: '{{name}} feljebb',
