@@ -15,6 +15,9 @@ jobs:
   checks:
     name: Format, lint, typecheck, test, build
     runs-on: ubuntu-latest
+    env:
+      # Empty when the release workflow calls this one, or on a pull request from a fork.
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -24,7 +27,15 @@ jobs:
       - run: bun run format:check
       - run: bun run lint
       - run: bun run typecheck
-      - run: bun test
+      # Unit test coverage (pure logic only: the server and the pages are covered by Playwright).
+      - run: bun test --coverage --coverage-reporter=text --coverage-reporter=lcov
+      - name: Upload coverage to Codecov
+        if: env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          fail_ci_if_error: false
       - run: bun run build
 
   docker:
@@ -97,8 +108,9 @@ jobs:
           # The push sink as the app container sees it (host network).
           E2E_PUSH_ORIGIN: http://localhost:4567
         run: bun run test:e2e
+      # Every run (not only failures): traces and durations of passing runs are useful too.
       - name: Upload Playwright report
-        if: failure()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report

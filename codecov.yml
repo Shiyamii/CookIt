@@ -1,0 +1,10 @@
+# Coverage of the unit tests only (pure logic): reported, never a failing check.
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+comment: false

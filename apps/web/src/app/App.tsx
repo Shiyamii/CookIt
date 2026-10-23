@@ -18,6 +18,7 @@ import { HomePage } from '@/features/home/views/HomePage';
 import { AddRecipePage } from '@/features/recipes/views/AddRecipePage';
 import { RecipeListPage } from '@/features/recipes/views/RecipeListPage';
 import { RecipePage } from '@/features/recipes/views/RecipePage';
+import { AboutPage } from '@/features/system/views/AboutPage';
 import { NotFoundPage } from '@/features/system/views/NotFoundPage';
 import { AppLayout } from './AppLayout';
 
@@ -77,6 +78,7 @@ const router = createBrowserRouter([
       // Readable without an account when public (the server decides).
       { path: 'recipes/:id', element: <RecipePage source="id" /> },
       { path: 'gallery', element: <RecipeListPage kind="gallery" /> },
+      { path: 'about', element: <AboutPage /> },
       // Unlisted recipes: `/shared#token=…`.
       { path: 'shared', element: <RecipePage source="shared" /> },
       {

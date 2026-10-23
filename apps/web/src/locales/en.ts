@@ -27,6 +27,25 @@ export const en = {
     dark: 'Dark',
     system: 'System',
   },
+  about: {
+    link: 'About CookIt',
+    title: 'CookIt',
+    tagline: 'Your self-hosted recipe book: keep your recipes, scale them, cook them step by step.',
+    version: 'Version {{version}}',
+    what: 'What CookIt is',
+    intro:
+      'CookIt is a recipe book you host yourself: it runs on your own server, your recipes stay with you, and only the people you invite can join.',
+    cooking:
+      'It is made for cooking, not only for keeping recipes: servings that scale, a step-by-step cooking mode with several dishes at once, timers that ring even with the app closed, and a shopping list built from your recipes.',
+    yours:
+      'Import recipes from a website, a file or an AI assistant, translate them, share them with a link or in the public gallery, and export them all at any time as plain markdown files.',
+    links: 'The project',
+    github: 'Source code',
+    githubText: 'On GitHub: code, issues and releases.',
+    docker: 'Docker image',
+    dockerText: 'On Docker Hub: the image to install CookIt.',
+    license: 'Open source, under the MIT license.',
+  },
   home: {
     hello: 'Hello, {{name}}',
     browseGallery: 'Browse the gallery',
@@ -53,7 +72,8 @@ export const en = {
       add: 'Add a recipe',
     },
     title: 'Welcome to CookIt',
-    subtitle: 'Your recipes, step by step, with timers that never forget.',
+    subtitle:
+      'Your self-hosted recipe book: keep your recipes, scale them, cook them step by step.',
     apiStatus: 'Server status',
     status: {
       loading: 'Checking…',

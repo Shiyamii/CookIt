@@ -266,3 +266,8 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Lists show the reader's language when the recipe has it** (one left join on the translation asked for); the search matches the base language or that translation, ranked by the better of the two.
 - **The author's note is plain text outside the markdown**: one public word per recipe, not translated, not copied (the copier is not the author), and saving it is not an edit of the recipe (no editor conflict).
 - **Private notes are per reader and per recipe**, on any recipe the reader may read (an unlisted one with its link); they are never shown to anyone else, never copied, and go away with the recipe or the account. Plain text, not markdown.
+
+## Test coverage
+
+- **Codecov (free Developer plan) for the badge**: the CI sends the unit tests' `lcov` report (`bun test --coverage`); the check is informational and comments are off, so coverage never blocks a merge or a release. Only unit tests are counted (the server and the pages are covered by Playwright, which measures no coverage of the image). Skipped when there is no token (release workflow, forks). `bun test --coverage` crashes on Windows with Bun 1.3.10 (assertion failure while writing the report): run it in CI or under Linux.
+- **The Playwright report is uploaded on every run**, not only on failure (7 days).

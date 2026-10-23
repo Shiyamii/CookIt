@@ -29,6 +29,26 @@ export const fr: Translations = {
     dark: 'Sombre',
     system: 'Système',
   },
+  about: {
+    link: 'À propos de CookIt',
+    title: 'CookIt',
+    tagline:
+      'Votre livre de recettes auto-hébergé : gardez vos recettes, adaptez les portions, cuisinez pas à pas.',
+    version: 'Version {{version}}',
+    what: 'Ce qu’est CookIt',
+    intro:
+      'CookIt est un livre de recettes que vous hébergez vous-même : il tourne sur votre propre serveur, vos recettes restent chez vous, et seules les personnes que vous invitez peuvent le rejoindre.',
+    cooking:
+      'Il est fait pour cuisiner, pas seulement pour ranger des recettes : des portions qui s’adaptent, un mode cuisine pas à pas avec plusieurs plats à la fois, des minuteurs qui sonnent même appli fermée, et une liste de courses construite à partir de vos recettes.',
+    yours:
+      'Importez des recettes depuis un site, un fichier ou un assistant IA, traduisez-les, partagez-les par un lien ou dans la galerie publique, et exportez-les toutes à tout moment en simples fichiers markdown.',
+    links: 'Le projet',
+    github: 'Code source',
+    githubText: 'Sur GitHub : le code, les tickets et les versions.',
+    docker: 'Image Docker',
+    dockerText: 'Sur Docker Hub : l’image pour installer CookIt.',
+    license: 'Logiciel libre, sous licence MIT.',
+  },
   home: {
     hello: 'Bonjour, {{name}}',
     browseGallery: 'Parcourir la galerie',
@@ -55,7 +75,8 @@ export const fr: Translations = {
       add: 'Ajouter une recette',
     },
     title: 'Bienvenue sur CookIt',
-    subtitle: 'Vos recettes, étape par étape, avec des minuteurs qui n’oublient rien.',
+    subtitle:
+      'Votre livre de recettes auto-hébergé : gardez vos recettes, adaptez les portions, cuisinez pas à pas.',
     apiStatus: 'État du serveur',
     status: {
       loading: 'Vérification…',

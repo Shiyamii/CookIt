@@ -22,7 +22,7 @@ export default defineConfig({
       manifest: {
         name: 'CookIt',
         short_name: 'CookIt',
-        description: 'Recipes, scaling and cooking mode with timers',
+        description: 'Self-hosted recipe book: recipes, servings, step-by-step cooking with timers',
         start_url: '/',
         scope: '/',
         display: 'standalone',

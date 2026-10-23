@@ -342,8 +342,11 @@ test.describe('security headers', () => {
         '/account/profile',
         '/account/security',
         '/account/notifications',
+        '/account/alarm',
         '/recipes',
         '/gallery',
+        '/about',
+        '/forgot-password',
         // Lazily loaded pages (their own chunks).
         '/recipes/new',
         '/recipes/new/editor',
@@ -351,6 +354,7 @@ test.describe('security headers', () => {
         '/recipes/import',
         '/recipes/import/ai',
         '/cook',
+        '/shopping',
         // Unknown recipe: the translation page's chunk still loads (then "not found").
         '/recipes/00000000-0000-4000-8000-000000000000/translate/en',
         '/some/unknown/route',

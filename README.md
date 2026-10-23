@@ -1,8 +1,21 @@
 # CookIt
 
-A self-hosted recipe app built for actually cooking: step-by-step cooking mode, several dishes at once, and timers that notify you even when the page is closed.
+**Your self-hosted recipe book.** CookIt keeps your recipes on your own server and helps you actually cook them: scale the servings, follow the steps one at a time, run several dishes at once, and get timers that ring even with the app closed.
 
-> **Status:** early development. The project is built in phases (see `plan-site-recettes.md`, in French). Commands below describe the target setup and will be kept up to date as each phase lands.
+[GitHub](https://github.com/Shiyamii/CookIt) · [Docker Hub: `shiyamii/cookit`](https://hub.docker.com/r/shiyamii/cookit) · [![codecov](https://codecov.io/gh/Shiyamii/CookIt/graph/badge.svg)](https://codecov.io/gh/Shiyamii/CookIt)
+
+The coverage badge counts the unit tests (parser, scaling, services, page logic); the server routes, the database and the pages are tested end to end with Playwright against the built image.
+
+## Why CookIt
+
+Recipes end up scattered: bookmarks, screenshots, paper notes, sites full of ads. CookIt gathers them in one book that you host yourself (one Docker image and PostgreSQL), so they stay yours:
+
+- **Private by default**, invite-only: you decide who joins (family, friends) and what each recipe shows (private, shared by link, or public in the gallery).
+- **Made for the kitchen**: a phone-friendly cooking mode, timers with notifications, a shopping list built from the recipes you plan to cook.
+- **Open format**: recipes are plain markdown with a small syntax for timers and quantities; import them from a website, a file or an AI assistant, and export them all at any time.
+- **Multilingual**: French, English and Hungarian interface, and translations of each recipe.
+
+> **Status:** 1.0 in preparation (release candidates on Docker Hub). The project was built in phases (see `plan-site-recettes.md`, in French).
 
 ## Features
 

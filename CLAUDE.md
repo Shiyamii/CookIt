@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository. The full functional spec (i
 
 ## Project
 
-**CookIt** is a self-hosted recipe web app (deployed on Coolify): invite-only accounts, private/unlisted/public recipes, markdown import/export with a custom syntax for timers and quantities, serving scaling, a multi-recipe cooking mode with server-scheduled Web Push timers, installable PWA, French/English/Hungarian UI.
+**CookIt** is a self-hosted recipe book (a web app deployed on Coolify): keep your recipes on your own server and cook them step by step. It has invite-only accounts, private/unlisted/public recipes, markdown import/export with a custom syntax for timers and quantities, serving scaling, a multi-recipe cooking mode with server-scheduled Web Push timers, installable PWA, French/English/Hungarian UI.
 
 ## Working rules
 
@@ -62,6 +62,7 @@ Plain **Bun workspaces monorepo, no Turborepo**:
 
 - `packages/shared` is used by **both** front (preview, cooking mode, scaling) and back (import, validation).
 - Same origin for SPA and API (Hono serves both): **no CORS**. REST JSON API under `/api/v1`. Hono serves `/api/*`, then static files, with `index.html` fallback for SPA routes.
+- `/about` (public): what CookIt is, its version, links to the GitHub repository and the Docker Hub image (`PROJECT_LINKS`, brand logos in `components/BrandIcons.tsx`), linked from the layout's footer.
 - `/healthz` checks DB access. Drizzle migrations run automatically on startup, before listening.
 - The notification scheduler lives in `apps/server` and starts with Hono: **one process, no separate worker**.
 
@@ -329,7 +330,7 @@ End-to-end tests live in `e2e/` and are named `*.e2e.ts` (so `bun test` ignores 
 
 The global setup (`e2e/global-setup.ts`) gets the test admin `e2e_admin` in through the rescue CLI run in the app container (`docker exec $E2E_CONTAINER node dist/cli.js …`, default container `cookit-app-1`, `cookit` in CI) and saves its session to `e2e/.auth/admin.json` (`test.use({ storageState: ADMIN_STATE })`). Tests must be rerunnable on the same database: unique usernames (`uniqueName`), never sign out, disable or delete `e2e_admin`. The dev compose and CI set `RATE_LIMIT_FACTOR=50` so that the suite (one IP) does not hit the rate limits; never set it in production.
 
-CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests and build, then builds the Docker image, starts it against Postgres, checks migrations were applied and runs the Playwright suite against it.
+CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests with coverage (sent to Codecov when `CODECOV_TOKEN` is set, informational only, `codecov.yml`; `bun test --coverage` crashes on Windows with Bun 1.3.10) and build, then builds the Docker image, starts it against Postgres, checks migrations were applied and runs the Playwright suite against it.
 
 ## Releases
 

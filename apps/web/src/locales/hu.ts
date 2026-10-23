@@ -29,6 +29,26 @@ export const hu: Translations = {
     dark: 'Sötét',
     system: 'Rendszer',
   },
+  about: {
+    link: 'A CookItről',
+    title: 'CookIt',
+    tagline:
+      'Saját szerveren futó receptkönyved: őrizd meg a receptjeidet, igazítsd az adagokat, főzz lépésről lépésre.',
+    version: 'Verzió: {{version}}',
+    what: 'Mi a CookIt',
+    intro:
+      'A CookIt egy receptkönyv, amelyet te magad üzemeltetsz: a saját szervereden fut, a receptjeid nálad maradnak, és csak az csatlakozhat, akit meghívsz.',
+    cooking:
+      'Főzésre készült, nem csak receptek tárolására: igazodó adagok, lépésről lépésre főzési mód több étellel egyszerre, időzítők, amelyek bezárt alkalmazásnál is szólnak, és a receptjeidből összeállított bevásárlólista.',
+    yours:
+      'Importálj recepteket weboldalról, fájlból vagy egy MI-asszisztenstől, fordítsd le őket, oszd meg linkkel vagy a nyilvános galériában, és bármikor exportáld mindet egyszerű markdown-fájlokként.',
+    links: 'A projekt',
+    github: 'Forráskód',
+    githubText: 'A GitHubon: kód, hibajegyek és kiadások.',
+    docker: 'Docker-kép',
+    dockerText: 'A Docker Hubon: a kép a CookIt telepítéséhez.',
+    license: 'Nyílt forráskódú, MIT-licenc alatt.',
+  },
   home: {
     hello: 'Szia, {{name}}!',
     browseGallery: 'Galéria böngészése',
@@ -55,7 +75,8 @@ export const hu: Translations = {
       add: 'Recept hozzáadása',
     },
     title: 'Üdv a CookItben',
-    subtitle: 'Receptjeid lépésről lépésre, időzítőkkel, amelyek sosem felejtenek.',
+    subtitle:
+      'Saját szerveren futó receptkönyved: őrizd meg a receptjeidet, igazítsd az adagokat, főzz lépésről lépésre.',
     apiStatus: 'Szerver állapota',
     status: {
       loading: 'Ellenőrzés…',

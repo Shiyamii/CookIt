@@ -60,3 +60,20 @@ test.describe('app shell', () => {
     await expect(page.getByRole('heading', { name: 'Welcome to CookIt' })).toBeVisible();
   });
 });
+
+test('the about page: what CookIt is, its version, its code and its image', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'About CookIt' }).click();
+  await expect(page).toHaveURL('/about');
+  await expect(page.getByRole('heading', { name: 'CookIt', level: 1 })).toBeVisible();
+  await expect(page.getByText('Your self-hosted recipe book')).toBeVisible();
+  await expect(page.getByText(/^Version /)).toBeVisible();
+  const github = page.getByRole('link', { name: /Source code/ });
+  await expect(github).toHaveAttribute('href', 'https://github.com/Shiyamii/CookIt');
+  await expect(github).toHaveAttribute('target', '_blank');
+  await expect(github).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(page.getByRole('link', { name: /Docker image/ })).toHaveAttribute(
+    'href',
+    'https://hub.docker.com/r/shiyamii/cookit',
+  );
+});
