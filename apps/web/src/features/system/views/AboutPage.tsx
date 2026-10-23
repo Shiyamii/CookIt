@@ -1,4 +1,4 @@
-import { ChefHat, ExternalLink } from 'lucide-react';
+import { CookingPot, ExternalLink } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DockerIcon, GitHubIcon } from '@/components/BrandIcons';
@@ -13,7 +13,7 @@ export function AboutPage() {
     <div className="grid grid-cols-1 gap-6">
       <header className="grid justify-items-center gap-3 text-center">
         <span className="grid size-20 place-items-center rounded-3xl bg-primary text-primary-foreground">
-          <ChefHat className="size-11" aria-hidden />
+          <CookingPot className="size-11" aria-hidden />
         </span>
         <h1 className="text-3xl font-semibold">{t('about.title')}</h1>
         <p className="text-lg">{t('about.tagline')}</p>
