@@ -6,7 +6,7 @@ import { cookSyncFor } from '@/features/cooking/model/store';
 import { fetchMyRecipes, fetchRecipe, RECIPES_QUERY_KEY } from '@/features/recipes/model/recipes';
 import { remainingCount } from '@/features/shopping/model/list';
 import { useShoppingSync } from '@/features/shopping/viewmodels/useShoppingSync';
-import { fetchMeta, type ApiStatus } from '@/features/system/model/meta';
+import { fetchMeta, META_QUERY_KEY, type ApiStatus } from '@/features/system/model/meta';
 import { cookingSummary, fetchIdea, localDay } from '../model/home';
 
 const RECENT_COUNT = 4;
@@ -19,7 +19,7 @@ const noSubscription = () => () => undefined;
 export function useHomeViewModel() {
   const { user, isLoading } = useSession();
   const { i18n } = useTranslation();
-  const meta = useQuery({ queryKey: ['meta'], queryFn: fetchMeta });
+  const meta = useQuery({ queryKey: META_QUERY_KEY, queryFn: fetchMeta });
   const apiStatus: ApiStatus = meta.isPending ? 'loading' : meta.isError ? 'error' : 'ok';
 
   // The clock moves on (next timer, the day of the idea) without re-rendering every second.

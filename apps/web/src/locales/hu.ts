@@ -114,6 +114,17 @@ export const hu: Translations = {
       title: 'Rendszergazdai fiók létrehozása',
       subtitle: 'Első indítás: ez a fiók kezeli majd a meghívókat és a felhasználókat.',
     },
+    forgot: {
+      link: 'Elfelejtetted a jelszavad?',
+      title: 'Elfelejtetted a jelszavad?',
+      subtitle:
+        'Add meg a felhasználóneved vagy az e-mail-címed: elküldjük a címedre az új jelszó beállításához szükséges linket.',
+      submit: 'Link küldése',
+      sent: 'Ha van ilyen fiók, úton van egy e-mail egy óráig érvényes linkkel. Nézd meg a levélszemét mappát is.',
+      unavailable:
+        'Ez a szerver nem küld e-maileket: kérj visszaállító linket egy adminisztrátortól.',
+      back: 'Vissza a bejelentkezéshez',
+    },
     reset: {
       title: 'Válassz új jelszót',
       submit: 'Jelszó mentése',
@@ -641,12 +652,27 @@ export const hu: Translations = {
       revoke: 'Visszavonás',
       expires: 'Lejár: {{date}}',
       usedBy: 'Felhasználta: {{user}}, {{date}}',
+      email: 'E-mail (nem kötelező)',
+      emailHint: 'A linket erre a címre küldjük, és a regisztrációnál előre kitöltjük.',
+      emailLanguage: 'Az e-mail nyelve',
+      send: 'Meghívó küldése',
+      emailed: 'Meghívó elküldve ide: {{email}}.',
+      emailFailed: 'Az e-mailt nem sikerült elküldeni: küldd el te a linket.',
+      alsoLink: 'A link, ha szükség van rá (csak most látható):',
+      sentTo: 'Elküldve ide: {{email}}',
       status: {
         pending: 'Függőben',
         used: 'Felhasználva',
         expired: 'Lejárt',
         revoked: 'Visszavonva',
       },
+    },
+    email: {
+      title: 'E-mail',
+      on: 'A szerver e-maileket küld: meghívókat és jelszó-visszaállító linkeket.',
+      off: 'Az e-mail nincs beállítva (SMTP_HOST…): a meghívó- és visszaállító linkeket kézzel kell átadni.',
+      test: 'Teszt e-mail küldése nekem',
+      testSent: 'Teszt e-mail elküldve ide: {{email}}.',
     },
     users: {
       title: 'Felhasználók',
@@ -776,6 +802,8 @@ export const hu: Translations = {
     },
   },
   errors: {
+    email_not_configured: 'Ezen a szerveren nincs beállítva az e-mail.',
+    email_failed: 'Az e-mailt nem sikerült elküldeni.',
     push_failed: 'Az értesítéseket nem sikerült bekapcsolni ezen az eszközön. Próbáld újra később.',
     push_failed_brave:
       'A Brave blokkolja a push-értesítéseket: kapcsold be a „Google-szolgáltatások használata a push-üzenetekhez” beállítást a brave://settings/privacy oldalon, indítsd újra a Brave-et, majd próbáld újra.',

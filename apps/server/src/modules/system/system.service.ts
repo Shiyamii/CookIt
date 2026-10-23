@@ -3,7 +3,12 @@ import type { SystemRepository } from './system.repository';
 
 export type SystemService = ReturnType<typeof createSystemService>;
 
-export function createSystemService(deps: { repository: SystemRepository; version: string }) {
+export function createSystemService(deps: {
+  repository: SystemRepository;
+  version: string;
+  /** Email is configured: the app offers to send invites and reset links. */
+  email?: boolean;
+}) {
   return {
     async isHealthy(): Promise<boolean> {
       try {
@@ -15,7 +20,12 @@ export function createSystemService(deps: { repository: SystemRepository; versio
     },
 
     meta() {
-      return { name: APP_NAME, version: deps.version, locales: SUPPORTED_LOCALES };
+      return {
+        name: APP_NAME,
+        version: deps.version,
+        locales: SUPPORTED_LOCALES,
+        email: deps.email ?? false,
+      };
     },
   };
 }

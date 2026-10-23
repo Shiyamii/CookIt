@@ -42,6 +42,22 @@ const envSchema = z.object({
   // Contact given to the push services: `mailto:` or `https:` URL. Default: ADMIN_EMAIL, else
   // ORIGIN when it is https.
   VAPID_SUBJECT: optionalText(z.string().regex(/^(mailto:|https:\/\/)\S+$/)),
+  // Email (optional): invitations, "forgot your password?" and a test email. Unset SMTP_HOST:
+  // email is off and links are copied by hand, as before.
+  SMTP_HOST: optionalText(z.string().max(253)),
+  // `starttls` (port 587, TLS required), `tls` (port 465) or `none` (a relay on a local network,
+  // or tests: no encryption at all).
+  SMTP_SECURITY: z.enum(['starttls', 'tls', 'none']).default('starttls'),
+  SMTP_PORT: optionalText(z.coerce.number().int().min(1).max(65535)),
+  SMTP_USER: optionalText(z.string().max(320)),
+  SMTP_PASSWORD: optionalText(z.string().max(1000)),
+  // Sender: `cookit@example.com` or `CookIt <cookit@example.com>`.
+  SMTP_FROM: optionalText(
+    z
+      .string()
+      .max(320)
+      .regex(/^(?:[^<>\r\n]*<[^<>@\s]+@[^<>\s]+>|[^<>@\s]+@[^<>\s]+)$/, 'Invalid SMTP_FROM'),
+  ),
   // End-to-end tests only: push endpoints on this origin are accepted (a local sink). Never set
   // it in production.
   PUSH_TEST_ENDPOINT_ORIGIN: optionalText(
@@ -92,6 +108,26 @@ export const env = envSchema
       path: ['VAPID_SUBJECT'],
     },
   )
+  .refine((value) => !value.SMTP_HOST || value.SMTP_FROM, {
+    message: 'Set SMTP_FROM (the sender address) with SMTP_HOST',
+    path: ['SMTP_FROM'],
+  })
+  .refine((value) => !value.SMTP_USER === !value.SMTP_PASSWORD, {
+    message: 'Set both SMTP_USER and SMTP_PASSWORD, or neither',
+    path: ['SMTP_PASSWORD'],
+  })
+  .refine(
+    (value) =>
+      !(
+        value.ORIGIN.startsWith('https://') &&
+        value.SMTP_SECURITY === 'none' &&
+        value.SMTP_PASSWORD
+      ),
+    {
+      message: 'SMTP_SECURITY=none would send SMTP_PASSWORD unencrypted: use starttls or tls',
+      path: ['SMTP_SECURITY'],
+    },
+  )
   .parse(process.env);
 export const secureCookies = env.ORIGIN.startsWith('https://');
 
@@ -102,5 +138,22 @@ export const vapid =
         publicKey: env.VAPID_PUBLIC_KEY,
         privateKey: env.VAPID_PRIVATE_KEY,
         subject: env.VAPID_SUBJECT ?? (env.ADMIN_EMAIL ? `mailto:${env.ADMIN_EMAIL}` : env.ORIGIN),
+      }
+    : undefined;
+
+/** The SMTP server, when email is configured. */
+export const smtp =
+  env.SMTP_HOST && env.SMTP_FROM
+    ? {
+        host: env.SMTP_HOST,
+        port:
+          env.SMTP_PORT ??
+          (env.SMTP_SECURITY === 'tls' ? 465 : env.SMTP_SECURITY === 'starttls' ? 587 : 25),
+        security: env.SMTP_SECURITY,
+        auth:
+          env.SMTP_USER && env.SMTP_PASSWORD
+            ? { user: env.SMTP_USER, pass: env.SMTP_PASSWORD }
+            : undefined,
+        from: env.SMTP_FROM,
       }
     : undefined;

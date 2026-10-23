@@ -241,3 +241,14 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **Moving is always available, only from the handle** (or the arrows): a touch on the line checks it off, a swipe scrolls, nothing moves by mistake. Grouping has its own mode (the same tap selects instead of checking off). Checked lines go to "In the basket" and get their place back when unchecked.
 - **A stored list in the shape before lines is read as no list** (not converted): the change came before any release.
 - **Limits** (300 ingredients, 50 recipes, 200 characters per text, 20 names per line and 600 in all) keep a full list well under the 1 MB API body limit; an amount above 1,000,000 stays in the name, not added up.
+
+## Optional email (from phase 11, done before phase 10)
+
+- **SMTP settings in environment variables, not in an admin page**: the SMTP password never goes in the database, like the VAPID keys; a test email checks them from the admin page.
+- **nodemailer** sends (pure JavaScript, maintained, TLS/STARTTLS, encoding): writing an SMTP client would be a security risk. `starttls` requires TLS by default; `none` exists for local relays and tests.
+- **MJML compiled at build time** (`bun run emails`, `mjml` as a dev dependency) into committed HTML templates, with the web theme's colors read from `index.css` (oklch → hex): MJML and its dependencies stay out of the image and nothing is compiled per email. Values are HTML-escaped when filled in; a unit test checks the compiled file matches the sources. No web font is loaded (privacy, client support): the theme font first, then system fonts.
+- **Emailed reset links keep 2FA and passkeys** (an admin link still removes them, as before): access to the mailbox alone must not get past the second factor. One hour instead of three days, and they never cancel an admin's link.
+- **"Forgot your password?" never tells** whether an account exists: same answer, sent before the work is done, a per-account limit (on the account id, 3 an hour and 6 a day) that silently drops extra requests.
+- **Reset links only go to verified addresses**: an address is verified when the account was created from an invite emailed to it (the person received it). An address typed at sign-up was never proven and could be someone else's (a typo, a placeholder): emailing it a reset link would hand the account over. Accounts created before email, or from a link handed over by hand, keep asking an admin.
+- **The invite email is in a language the admin picks** (the admin's by default): the invitee has no account language yet; the sign-up page opens in it.
+- **Mailpit for development and end-to-end tests** (dev compose and CI only, never in the production files): a real SMTP server to test against, and a web UI to look at the emails.

@@ -1,31 +1,80 @@
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { Database } from '../../db';
 import { account, passkey, passwordResets, session, twoFactor, user } from '../auth/auth.schema';
 
 export type PasswordResetRow = typeof passwordResets.$inferSelect;
 
+/** An account a reset can be emailed to. */
+export type ResetAccount = {
+  id: string;
+  email: string;
+  username: string;
+  locale: string;
+  disabled: boolean;
+  /** Only a verified address gets reset links (see the invites service). */
+  emailVerified: boolean;
+};
+
 export type PasswordResetRepository = {
+  /**
+   * Stores a new link. An admin link replaces every pending link of the user; an emailed one
+   * only the previous emailed ones (asking by email must not cancel the link an admin gave).
+   */
   create(reset: typeof passwordResets.$inferInsert): Promise<void>;
+  /** The account with this email or username (case-insensitive). */
+  findAccount(identifier: string): Promise<ResetAccount | undefined>;
   findByTokenHash(tokenHash: string): Promise<PasswordResetRow | undefined>;
   /**
-   * In one transaction: consumes the link (row locked), sets the new password, turns 2FA off,
-   * removes the passkeys and signs the user out everywhere (plan §5.1 bis: the reset is the way
-   * back in after losing the second factor). False if the link is unknown, used or expired.
+   * In one transaction: consumes the link (row locked), sets the new password and signs the user
+   * out everywhere. An admin link also turns 2FA off and removes the passkeys (plan §5.1 bis: the
+   * way back in after losing the second factor); an emailed one keeps them. False if the link is
+   * unknown, used or expired.
    */
   consume(tokenHash: string, passwordHash: string, now: Date): Promise<boolean>;
 };
 
 export function createPasswordResetRepository(db: Database): PasswordResetRepository {
   return {
-    // Only the newest link of a user works: creating one invalidates the previous ones.
     async create(reset) {
       await db.transaction(async (tx) => {
         await tx
           .update(passwordResets)
           .set({ usedAt: sql`now()` })
-          .where(and(eq(passwordResets.userId, reset.userId), isNull(passwordResets.usedAt)));
+          .where(
+            and(
+              eq(passwordResets.userId, reset.userId),
+              isNull(passwordResets.usedAt),
+              reset.kind === 'email' ? eq(passwordResets.kind, 'email') : undefined,
+            ),
+          );
         await tx.insert(passwordResets).values(reset);
       });
+    },
+
+    async findAccount(identifier) {
+      const value = identifier.trim().toLowerCase();
+      const [row] = await db
+        .select({
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          locale: user.locale,
+          disabledAt: user.disabledAt,
+          emailVerified: user.emailVerified,
+        })
+        .from(user)
+        .where(or(sql`lower(${user.email}) = ${value}`, eq(user.username, value)))
+        .limit(1);
+      return row
+        ? {
+            id: row.id,
+            email: row.email,
+            username: row.username ?? '',
+            locale: row.locale,
+            disabled: row.disabledAt !== null,
+            emailVerified: row.emailVerified,
+          }
+        : undefined;
     },
 
     async findByTokenHash(tokenHash) {
@@ -59,9 +108,11 @@ export function createPasswordResetRepository(db: Database): PasswordResetReposi
             password: passwordHash,
           });
         }
-        await tx.delete(twoFactor).where(eq(twoFactor.userId, reset.userId));
-        await tx.update(user).set({ twoFactorEnabled: false }).where(eq(user.id, reset.userId));
-        await tx.delete(passkey).where(eq(passkey.userId, reset.userId));
+        if (reset.kind === 'admin') {
+          await tx.delete(twoFactor).where(eq(twoFactor.userId, reset.userId));
+          await tx.update(user).set({ twoFactorEnabled: false }).where(eq(user.id, reset.userId));
+          await tx.delete(passkey).where(eq(passkey.userId, reset.userId));
+        }
         await tx.delete(session).where(eq(session.userId, reset.userId));
         // This link and any other pending one of the user.
         await tx

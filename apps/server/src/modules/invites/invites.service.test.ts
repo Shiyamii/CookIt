@@ -22,6 +22,7 @@ function fakeRepository() {
   const accepted: { tokenHash: string; account: NewAccount; now: Date }[] = [];
   const state = {
     adminExists: false,
+    takenEmails: [] as string[],
     acceptResult: { ok: true, userId: 'new-user', role: 'user' } as AcceptResult,
   };
 
@@ -34,6 +35,8 @@ function fakeRepository() {
         role: invite.role ?? 'user',
         createdBy: invite.createdBy ?? null,
         label: invite.label ?? null,
+        email: invite.email ?? null,
+        locale: invite.locale ?? null,
         expiresAt: invite.expiresAt,
         usedBy: invite.usedBy ?? null,
         usedAt: invite.usedAt ?? null,
@@ -65,6 +68,9 @@ function fakeRepository() {
     async adminExists() {
       return state.adminExists;
     },
+    async emailTaken(email) {
+      return state.takenEmails.includes(email);
+    },
     async accept(tokenHash, account, now) {
       accepted.push({ tokenHash, account, now });
       return state.acceptResult;
@@ -73,10 +79,15 @@ function fakeRepository() {
   return { repository, rows, calls, accepted, state };
 }
 
-function setup(options: { adminEmail?: string; now?: Date } = {}) {
+type SentInvite = { to: string; locale: string; inviter: string; url: string; expiresAt: Date };
+
+function setup(options: { adminEmail?: string; now?: Date; mail?: 'on' | 'off' | 'failing' } = {}) {
   const fake = fakeRepository();
   let ids = 0;
   const hashed: string[] = [];
+  const sent: SentInvite[] = [];
+  const logs: string[] = [];
+  const mail = options.mail ?? 'off';
   const service = createInvitesService({
     repository: fake.repository,
     origin: ORIGIN,
@@ -85,10 +96,30 @@ function setup(options: { adminEmail?: string; now?: Date } = {}) {
       hashed.push(password);
       return `hashed(${password})`;
     },
+    mail: {
+      enabled: mail !== 'off',
+      async invite(input) {
+        if (mail === 'failing') throw Object.assign(new Error('x'), { responseCode: 550 });
+        sent.push(input);
+      },
+    },
+    log: (message) => logs.push(message),
     now: () => options.now ?? NOW,
     newId: () => `id-${++ids}`,
   });
-  return { service, hashed, ...fake };
+  return { service, hashed, sent, logs, ...fake };
+}
+
+const ADMIN = { id: 'admin-1', name: 'Ada', locale: 'fr' as const };
+
+/** An invite created without error. */
+async function created(
+  service: ReturnType<typeof setup>['service'],
+  input: Parameters<ReturnType<typeof setup>['service']['create']>[1],
+) {
+  const result = await service.create(ADMIN, input);
+  if ('error' in result) throw new Error(result.error);
+  return result;
 }
 
 function tokenOf(url: string): string {
@@ -104,6 +135,8 @@ function row(overrides: Partial<InviteWithUser> = {}): InviteWithUser {
     role: 'user',
     createdBy: 'admin-1',
     label: null,
+    email: null,
+    locale: null,
     expiresAt: new Date(NOW.getTime() + DAY_MS),
     usedBy: null,
     usedAt: null,
@@ -121,7 +154,7 @@ function setupLink(overrides: Partial<InviteRow> = {}): InviteWithUser {
 describe('invites service: create', () => {
   test('returns an /invite link whose token is stored only as its hash', async () => {
     const { service, rows } = setup();
-    const { url } = await service.create('admin-1', { expiresInDays: 7 });
+    const { url } = await created(service, { expiresInDays: 7 });
 
     expect(url.startsWith(`${ORIGIN}/invite#token=`)).toBe(true);
     const token = tokenOf(url);
@@ -133,35 +166,100 @@ describe('invites service: create', () => {
 
   test('creates a user-role invite with the creator and the injected id', async () => {
     const { service, rows } = setup();
-    await service.create('admin-1', {});
+    await created(service, {});
     expect(rows[0]).toMatchObject({ id: 'id-1', role: 'user', createdBy: 'admin-1' });
   });
 
   test('expires after 7 days by default', async () => {
     const { service, rows } = setup();
-    await service.create('admin-1', {});
+    await created(service, {});
     expect(rows[0]?.expiresAt).toEqual(new Date(NOW.getTime() + 7 * DAY_MS));
   });
 
   test('uses a custom expiry in days', async () => {
     const { service, rows } = setup();
-    await service.create('admin-1', { expiresInDays: 30 });
+    await created(service, { expiresInDays: 30 });
     expect(rows[0]?.expiresAt).toEqual(new Date(NOW.getTime() + 30 * DAY_MS));
   });
 
   test('stores the label, or null without one', async () => {
     const { service, rows } = setup();
-    await service.create('admin-1', { label: 'For Mum' });
-    await service.create('admin-1', {});
+    await created(service, { label: 'For Mum' });
+    await created(service, {});
     expect(rows[0]?.label).toBe('For Mum');
     expect(rows[1]?.label).toBeNull();
   });
 
   test('generates a different token for each invite', async () => {
     const { service } = setup();
-    const a = await service.create('admin-1', {});
-    const b = await service.create('admin-1', {});
+    const a = await created(service, {});
+    const b = await created(service, {});
     expect(tokenOf(a.url)).not.toBe(tokenOf(b.url));
+  });
+});
+
+describe('invites service: by email', () => {
+  test('sends the link to the address, in the language chosen, from the admin', async () => {
+    const { service, rows, sent } = setup({ mail: 'on' });
+    const result = await service.create(ADMIN, { email: ' Bob@Example.com ', locale: 'hu' });
+    expect(result).toMatchObject({ emailed: true });
+    expect(sent).toEqual([
+      {
+        to: 'bob@example.com',
+        locale: 'hu',
+        inviter: 'Ada',
+        url: (result as { url: string }).url,
+        expiresAt: new Date(NOW.getTime() + 7 * DAY_MS),
+      },
+    ]);
+    expect(rows[0]).toMatchObject({ email: 'bob@example.com', locale: 'hu' });
+  });
+
+  test("uses the admin's language by default", async () => {
+    const { service, sent } = setup({ mail: 'on' });
+    await service.create(ADMIN, { email: 'bob@example.com' });
+    expect(sent[0]?.locale).toBe('fr');
+  });
+
+  test('pre-fills the address and the language at sign-up', async () => {
+    const { service } = setup({ mail: 'on' });
+    const { url } = await created(service, { email: 'bob@example.com', locale: 'en' });
+    expect(await service.check(tokenOf(url))).toEqual({
+      role: 'user',
+      email: 'bob@example.com',
+      locale: 'en',
+    });
+  });
+
+  test('refused without email settings, or for an address an account already has', async () => {
+    const off = setup();
+    expect(await off.service.create(ADMIN, { email: 'bob@example.com' })).toEqual({
+      error: 'email_not_configured',
+    });
+    expect(off.rows).toHaveLength(0);
+    const on = setup({ mail: 'on' });
+    on.state.takenEmails.push('bob@example.com');
+    expect(await on.service.create(ADMIN, { email: 'BOB@example.com' })).toEqual({
+      error: 'email_taken',
+    });
+    expect(on.rows).toHaveLength(0);
+  });
+
+  test('an email that cannot be sent still leaves the link to copy', async () => {
+    const { service, rows, logs } = setup({ mail: 'failing' });
+    const result = await service.create(ADMIN, { email: 'bob@example.com' });
+    expect(result).toMatchObject({ emailed: false });
+    expect((result as { url: string }).url.startsWith(`${ORIGIN}/invite#token=`)).toBe(true);
+    expect(rows).toHaveLength(1);
+    expect(logs.join(' ')).toContain('550');
+    expect(logs.join(' ')).not.toContain('bob@example.com');
+  });
+
+  test('without an address nothing is sent, even with email settings', async () => {
+    const { service, sent, rows } = setup({ mail: 'on' });
+    expect(await service.create(ADMIN, {})).toMatchObject({ emailed: false });
+    expect(sent).toHaveLength(0);
+    expect(rows[0]).toMatchObject({ email: null, locale: null });
   });
 });
 
@@ -215,6 +313,7 @@ describe('invites service: list', () => {
       expiresAt: new Date(NOW.getTime() + DAY_MS).toISOString(),
       usedAt: NOW.toISOString(),
       usedByUsername: 'Bob',
+      email: null,
     });
     expect(JSON.stringify(summary)).not.toContain(hashToken(TOKEN));
   });
@@ -291,7 +390,7 @@ describe('invites service: check', () => {
 
   test('works with the token returned by create', async () => {
     const { service } = setup();
-    const { url } = await service.create('admin-1', {});
+    const { url } = await created(service, {});
     expect(await service.check(tokenOf(url))).toEqual({ role: 'user' });
   });
 });

@@ -14,6 +14,7 @@
     "test": "bun test",
     "test:e2e": "playwright test",
     "parse": "bun packages/shared/scripts/parse-recipe.ts",
+    "emails": "bun apps/server/scripts/emails.ts && prettier --write apps/server/src/modules/mail/templates.generated.ts",
     "typecheck": "bun run --filter '*' typecheck && tsc --noEmit -p e2e",
     "db:generate": "bun run --filter '@cookit/server' db:generate",
     "db:migrate": "bun run --filter '@cookit/server' db:migrate",

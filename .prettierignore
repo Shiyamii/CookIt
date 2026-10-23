@@ -9,3 +9,6 @@ test-results/
 
 # Recipe examples: kept exactly as written (they test the parser on real-world variations).
 packages/shared/src/recipe/fixtures/
+
+# Email templates: compiled by `bun run emails`, kept as written.
+*.mjml

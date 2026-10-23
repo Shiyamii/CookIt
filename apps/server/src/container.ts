@@ -1,5 +1,6 @@
 import type { Database } from './db';
-import { env, vapid } from './env';
+import { env, smtp, vapid } from './env';
+import { createMailer } from './lib/mailer';
 import { hashPassword, verifyPassword } from './lib/password';
 import { generateToken } from './lib/tokens';
 import { createAccountSecurityRepository } from './modules/account-security/account-security.repository';
@@ -11,6 +12,7 @@ import { createShoppingRepository } from './modules/shopping/shopping.repository
 import { createShoppingService } from './modules/shopping/shopping.service';
 import { createInvitesRepository } from './modules/invites/invites.repository';
 import { createInvitesService } from './modules/invites/invites.service';
+import { createMailService } from './modules/mail/mail.service';
 import { createPasswordResetRepository } from './modules/password-reset/password-reset.repository';
 import { createPasswordResetService } from './modules/password-reset/password-reset.service';
 import { createRecipesRepository } from './modules/recipes/recipes.repository';
@@ -38,15 +40,25 @@ import { createUsersService } from './modules/users/users.service';
  * app and by the rescue CLI.
  */
 export function createContainer(db: Database) {
+  const log = (message: string) => console.warn(message);
+  // Optional: without SMTP settings, links are copied by hand.
+  const mail = createMailService({
+    mailer: smtp ? createMailer(smtp) : undefined,
+    origin: env.ORIGIN,
+  });
   const passwordReset = createPasswordResetService({
     repository: createPasswordResetRepository(db),
     origin: env.ORIGIN,
     hashPassword,
+    mail,
+    log,
   });
   const units = createUnitsService({ repository: createUnitsRepository(db) });
   const tags = createTagsService({ repository: createTagsRepository(db) });
   return {
     auth: createAuth(db),
+    mail,
+    log,
     units,
     tags,
     accountSecurity: createAccountSecurityService({
@@ -56,6 +68,7 @@ export function createContainer(db: Database) {
     system: createSystemService({
       repository: createSystemRepository(db),
       version: env.APP_VERSION,
+      email: mail.enabled,
     }),
     rateLimits: createRateLimitService({ repository: createRateLimitRepository(db) }),
     invites: createInvitesService({
@@ -63,6 +76,8 @@ export function createContainer(db: Database) {
       origin: env.ORIGIN,
       adminEmail: env.ADMIN_EMAIL,
       hashPassword,
+      mail,
+      log,
     }),
     passwordReset,
     cooking: createCookingService({ repository: createCookingRepository(db) }),

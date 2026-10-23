@@ -12,6 +12,7 @@ import { LoginPage } from '@/features/auth/views/LoginPage';
 import { RegisterPage } from '@/features/auth/views/RegisterPage';
 import { RequireAccess } from '@/features/auth/views/RequireAccess';
 import { ResetPasswordPage } from '@/features/auth/views/ResetPasswordPage';
+import { ForgotPasswordPage } from '@/features/auth/views/ForgotPasswordPage';
 import { HomePage } from '@/features/home/views/HomePage';
 import { AddRecipePage } from '@/features/recipes/views/AddRecipePage';
 import { RecipeListPage } from '@/features/recipes/views/RecipeListPage';
@@ -57,6 +58,7 @@ const router = createBrowserRouter([
       { path: 'invite', element: <RegisterPage /> },
       { path: 'setup', element: <RegisterPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
+      { path: 'forgot-password', element: <ForgotPasswordPage /> },
       {
         path: 'recipes',
         element: <RequireAccess level="user" />,

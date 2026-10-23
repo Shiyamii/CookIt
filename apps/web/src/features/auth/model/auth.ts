@@ -113,7 +113,7 @@ export async function saveLocale(locale: Locale): Promise<void> {
   await apiPost('/auth/update-user', { locale });
 }
 
-export type InviteCheck = { role: 'admin' | 'user'; email?: string };
+export type InviteCheck = { role: 'admin' | 'user'; email?: string; locale?: Locale };
 
 export function checkInvite(token: string): Promise<InviteCheck> {
   return apiPost<InviteCheck>('/invites/check', { token });
@@ -123,10 +123,17 @@ export async function register(input: RegisterInput): Promise<void> {
   await apiPost('/register', input);
 }
 
-/** Resolves to true for a usable link (a query must not resolve to `undefined`). */
-export async function checkPasswordReset(token: string): Promise<true> {
-  await apiPost('/password-reset/check', { token });
-  return true;
+/** The kind of a usable link: an `admin` one also turns 2FA off, an `email` one does not. */
+export async function checkPasswordReset(token: string): Promise<'admin' | 'email'> {
+  const { kind } = await apiPost<{ ok: true; kind: 'admin' | 'email' }>('/password-reset/check', {
+    token,
+  });
+  return kind;
+}
+
+/** "Forgot your password?": the answer is the same whether the account exists or not. */
+export async function requestPasswordReset(identifier: string, locale: Locale): Promise<void> {
+  await apiPost('/password-reset/request', { identifier, locale });
 }
 
 export async function resetPassword(input: PasswordResetInput): Promise<void> {

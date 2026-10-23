@@ -27,6 +27,8 @@ export function useResetPasswordViewModel() {
         : link.isPending
           ? 'loading'
           : 'ready',
+    /** An admin's link also turns 2FA off and removes the passkeys. */
+    removesSecondFactor: link.data === 'admin',
     password,
     confirmation,
     setPassword,

@@ -1,4 +1,4 @@
-import type { CreateInviteInput, InviteSummary, UserSummary } from '@cookit/shared';
+import type { CreatedInvite, CreateInviteInput, InviteSummary, UserSummary } from '@cookit/shared';
 import { apiDelete, apiGet, apiPost } from '@/lib/api';
 
 export const INVITES_QUERY_KEY = ['admin', 'invites'] as const;
@@ -7,7 +7,10 @@ export const USERS_QUERY_KEY = ['admin', 'users'] as const;
 export const listInvites = () => apiGet<InviteSummary[]>('/admin/invites');
 
 export const createInvite = (input: CreateInviteInput) =>
-  apiPost<{ url: string }>('/admin/invites', input);
+  apiPost<CreatedInvite>('/admin/invites', input);
+
+/** A test email to the signed-in admin's address. */
+export const sendTestEmail = () => apiPost<{ ok: true; to: string }>('/admin/email/test');
 
 export const revokeInvite = (id: string) =>
   apiPost(`/admin/invites/${encodeURIComponent(id)}/revoke`);

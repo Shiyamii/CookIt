@@ -20,6 +20,7 @@
     "drizzle-orm": "^0.45.4",
     "fflate": "0.8.3",
     "hono": "^4.13.13",
+    "nodemailer": "^10",
     "postgres": "^3.4.9",
     "web-push": "^3.6.7",
     "zod": "^4.6.7"
@@ -28,6 +29,7 @@
     "@types/node": "^26.6.5",
     "@types/web-push": "^3.6.4",
     "drizzle-kit": "^0.31.11",
+    "mjml": "^5.4.1",
     "tsx": "^4.23.15"
   }
 }

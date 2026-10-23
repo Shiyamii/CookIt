@@ -1,7 +1,7 @@
 import { isLocale, registerInputSchema } from '@cookit/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { clearOfflineData } from '@/features/pwa/model/offline';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { errorCode } from '@/lib/api';
@@ -24,6 +24,12 @@ export function useRegisterViewModel() {
     retry: false,
   });
 
+  // An invite sent by email opens in the language it was written in.
+  const inviteLocale = invite.data?.locale;
+  useEffect(() => {
+    if (inviteLocale) void i18n.changeLanguage(inviteLocale);
+  }, [inviteLocale, i18n]);
+
   const [values, setValues] = useState<Record<RegisterField, string>>({
     username: '',
     email: '',
@@ -32,7 +38,8 @@ export function useRegisterViewModel() {
     confirmation: '',
   });
   const [invalid, setInvalid] = useState<RegisterField[]>([]);
-  // The first admin's email is pre-filled (ADMIN_EMAIL) until the user types their own.
+  // Pre-filled (the first admin's ADMIN_EMAIL, or the address an invite was sent to) until the
+  // user types their own.
   const email = values.email || invite.data?.email || '';
 
   const mutation = useMutation({

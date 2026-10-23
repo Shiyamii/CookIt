@@ -24,6 +24,16 @@ export const RATE_LIMITS = {
   recipeCopyPerAccount: { name: 'recipe-copy:account', limit: 30, windowSeconds: 10 * 60 },
   // Every cooking event is a save (about one a second at most while cooking).
   cookSavePerAccount: { name: 'cook-save:account', limit: 600, windowSeconds: 10 * 60 },
+  // Emails sent by an admin (invites, test email): the SMTP server and its reputation.
+  emailSendPerAccount: { name: 'email-send:account', limit: 30, windowSeconds: 60 * 60 },
+  // "Forgot your password?": per IP, and per account asked for (whoever asks).
+  passwordForgotPerIp: { name: 'password-forgot:ip', limit: 10, windowSeconds: 60 * 60 },
+  passwordForgotPerAccount: { name: 'password-forgot:account', limit: 3, windowSeconds: 60 * 60 },
+  passwordForgotPerAccountDay: {
+    name: 'password-forgot:account-day',
+    limit: 6,
+    windowSeconds: 24 * 60 * 60,
+  },
   // Every item checked in the shop is a save.
   shoppingSavePerAccount: { name: 'shopping-save:account', limit: 600, windowSeconds: 10 * 60 },
 } satisfies Record<string, RateLimitRule>;

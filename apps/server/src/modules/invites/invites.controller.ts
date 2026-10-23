@@ -1,4 +1,9 @@
-import { createInviteInputSchema, registerInputSchema, tokenCheckSchema } from '@cookit/shared';
+import {
+  createInviteInputSchema,
+  isLocale,
+  registerInputSchema,
+  tokenCheckSchema,
+} from '@cookit/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../http/app-env';
 import { parseJson } from '../../http/validate';
@@ -47,13 +52,23 @@ export function createInvitesController(deps: {
 
   app.get('/api/v1/admin/invites', async (c) => c.json(await deps.invites.list()));
 
-  app.post('/api/v1/admin/invites', async (c) => {
-    const input = await parseJson(c, createInviteInputSchema);
-    if (!input.ok) return input.response;
-    const admin = c.var.user;
-    if (!admin) return c.json({ error: 'unauthorized' }, 401);
-    return c.json(await deps.invites.create(admin.id, input.data), 201);
-  });
+  app.post(
+    '/api/v1/admin/invites',
+    // Each invite may send an email: limited like any sending.
+    rateLimit(deps.rateLimits, RATE_LIMITS.emailSendPerAccount, (c) => c.var.user?.id),
+    async (c) => {
+      const input = await parseJson(c, createInviteInputSchema);
+      if (!input.ok) return input.response;
+      const admin = c.var.user;
+      if (!admin) return c.json({ error: 'unauthorized' }, 401);
+      const result = await deps.invites.create(
+        { id: admin.id, name: admin.name, locale: isLocale(admin.locale) ? admin.locale : 'en' },
+        input.data,
+      );
+      if ('error' in result) return c.json(result, result.error === 'email_taken' ? 409 : 400);
+      return c.json(result, 201);
+    },
+  );
 
   app.post('/api/v1/admin/invites/:id/revoke', async (c) => {
     const revoked = await deps.invites.revoke(c.req.param('id'));

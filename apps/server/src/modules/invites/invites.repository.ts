@@ -16,6 +16,8 @@ export type NewAccount = {
   displayUsername: string;
   locale: string;
   passwordHash: string;
+  /** The address is the one the invite was emailed to: receiving the link proved it. */
+  emailVerified: boolean;
 };
 
 export type AcceptResult =
@@ -30,6 +32,8 @@ export type InvitesRepository = {
   revoke(id: string, now: Date): Promise<boolean>;
   /** Revokes the unused first-admin setup links (a new one is created at each start). */
   revokePendingSetupLinks(now: Date): Promise<void>;
+  /** Whether an account already uses this email (lowercase). */
+  emailTaken(email: string): Promise<boolean>;
   /** Whether an enabled admin exists (if every admin got disabled, a setup link is the way back). */
   adminExists(): Promise<boolean>;
   /**
@@ -55,6 +59,15 @@ export function createInvitesRepository(db: Database): InvitesRepository {
         .orderBy(desc(invites.createdAt))
         .limit(500);
       return rows.map((row) => ({ ...row.invite, usedByUsername: row.usedByUsername }));
+    },
+
+    async emailTaken(email) {
+      const [row] = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(sql`lower(${user.email}) = ${email}`)
+        .limit(1);
+      return row !== undefined;
     },
 
     async findByTokenHash(tokenHash) {
@@ -152,6 +165,7 @@ export function createInvitesRepository(db: Database): InvitesRepository {
         username: newAccount.username,
         displayUsername: newAccount.displayUsername,
         locale: newAccount.locale,
+        emailVerified: newAccount.emailVerified,
         role: invite.role,
       });
       // Same shape as Better Auth's email/password accounts.

@@ -136,8 +136,29 @@ export type AccountSecurity = {
 export const createInviteInputSchema = z.object({
   label: optionalText(100),
   expiresInDays: z.number().int().min(1).max(INVITE_MAX_DAYS).default(INVITE_DEFAULT_DAYS),
+  /** Sends the link to this address (email configured only); pre-filled at sign-up. */
+  email: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    emailSchema.optional(),
+  ),
+  /** Language of the email (and of the sign-up page it opens). */
+  locale: z.enum(SUPPORTED_LOCALES).optional(),
 });
 export type CreateInviteInput = z.infer<typeof createInviteInputSchema>;
+
+/** What creating an invite gives: the link (shown once), and whether it was emailed. */
+export type CreatedInvite = { url: string; emailed: boolean };
+
+/** "Forgot your password?": the account's email or username (email configured only). */
+export const forgotPasswordInputSchema = z.object({
+  identifier: z.string().trim().min(1).max(254),
+  /** The interface language, for an account that has none. */
+  locale: z.enum(SUPPORTED_LOCALES).optional(),
+});
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordInputSchema>;
+
+/** Errors of the email features (`{ error }`), translated by the UI. */
+export const EMAIL_ERRORS = ['email_not_configured', 'email_failed', 'email_taken'] as const;
 
 export const INVITE_STATUSES = ['pending', 'used', 'expired', 'revoked'] as const;
 export type InviteStatus = (typeof INVITE_STATUSES)[number];
@@ -152,6 +173,8 @@ export type InviteSummary = {
   expiresAt: string;
   usedAt: string | null;
   usedByUsername: string | null;
+  /** Where the link was emailed, if it was. */
+  email: string | null;
 };
 
 export type UserSummary = {

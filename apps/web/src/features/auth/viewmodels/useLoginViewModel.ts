@@ -1,4 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchMeta, META_QUERY_KEY } from '@/features/system/model/meta';
 import { clearOfflineData } from '@/features/pwa/model/offline';
 import { useEffect, useEffectEvent, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -49,6 +50,7 @@ export function useLoginViewModel() {
   const [params] = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useSession();
+  const meta = useQuery({ queryKey: META_QUERY_KEY, queryFn: fetchMeta });
 
   const finish = async () => {
     setFinished(true);
@@ -129,6 +131,8 @@ export function useLoginViewModel() {
     code,
     setCode,
     passkeysAvailable: passkeysSupported(),
+    /** Email is configured: a reset link can be asked for. */
+    canResetByEmail: meta.data?.email === true,
     submitting: busy,
     error,
     submit: (event: FormEvent) => {

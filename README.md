@@ -6,7 +6,7 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 
 ## Features
 
-- **Invite-only accounts**: admins create one-click invitation links and manage users. Optional **2FA (TOTP)** and **passkeys**.
+- **Invite-only accounts**: admins create one-click invitation links (sent by email when SMTP is configured) and manage users. Optional **2FA (TOTP)** and **passkeys**. **Optional email**: invitations, "forgot your password?", a test email.
 - **Recipe visibility**: private, unlisted (secret link) or public (public gallery, no account needed). Copy any shared recipe into your own library.
 - **Markdown import/export** with a simple, human-readable format and special syntax for timers and scalable quantities.
 - **Two editors**: a structured visual editor (mobile friendly) and a markdown editor, switchable without losing anything.
@@ -164,7 +164,7 @@ No admin account yet. Create it within 24 hours with this one-time link:
   https://cookit.example.com/setup#token=…
 ```
 
-Open it to create the administrator account (`ADMIN_EMAIL`, if set, is pre-filled). Everyone else joins through an invitation link created on the **Invitations** admin page; there is no open sign-up and no email sending: the admin hands links over (chat, message…). From the **Users** page the admin can disable, delete a user or create a password reset link.
+Open it to create the administrator account (`ADMIN_EMAIL`, if set, is pre-filled). Everyone else joins through an invitation link created on the **Invitations** admin page; there is no open sign-up. Without email the admin hands links over (chat, message…); with SMTP configured, the invitation can be emailed and users can ask for a password reset link from the sign-in page. Only addresses that received their invitation by email get reset links: other accounts (created before, or from a link handed over by hand) still ask an admin. From the **Users** page the admin can disable, delete a user or create a password reset link.
 
 Rescue commands, from the container's terminal (`docker exec -it <container> sh`, or Coolify's terminal):
 
@@ -178,15 +178,19 @@ Each user can turn on **two-step verification** (authenticator app + 10 single-u
 
 ## Configuration
 
-| Variable                                 | Description                                                                                                                                   |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                           | PostgreSQL connection string                                                                                                                  |
-| `ORIGIN`                                 | Public HTTPS URL of the app (CSRF checks, secure cookies; its domain is the passkeys' domain)                                                 |
-| `BETTER_AUTH_SECRET`                     | Session signing secret: `openssl rand -base64 32`. Also encrypts 2FA secrets: changing it turns 2FA off in practice (users need a reset link) |
-| `ADMIN_EMAIL`                            | Optional: email pre-filled on the first-admin page                                                                                            |
-| `TRUST_PROXY`                            | `true` behind one reverse proxy (client IP from `X-Forwarded-For`)                                                                            |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Web Push keys for the timer notifications. Unset: no notifications. Keep them: new keys make every device turn notifications on again         |
-| `VAPID_SUBJECT`                          | Contact for the push services: `mailto:you@example.com` or an https URL (default: `ADMIN_EMAIL`, else `ORIGIN`)                               |
+| Variable                                    | Description                                                                                                                                   |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                              | PostgreSQL connection string                                                                                                                  |
+| `ORIGIN`                                    | Public HTTPS URL of the app (CSRF checks, secure cookies; its domain is the passkeys' domain)                                                 |
+| `BETTER_AUTH_SECRET`                        | Session signing secret: `openssl rand -base64 32`. Also encrypts 2FA secrets: changing it turns 2FA off in practice (users need a reset link) |
+| `ADMIN_EMAIL`                               | Optional: email pre-filled on the first-admin page                                                                                            |
+| `TRUST_PROXY`                               | `true` behind one reverse proxy (client IP from `X-Forwarded-For`)                                                                            |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`    | Web Push keys for the timer notifications. Unset: no notifications. Keep them: new keys make every device turn notifications on again         |
+| `VAPID_SUBJECT`                             | Contact for the push services: `mailto:you@example.com` or an https URL (default: `ADMIN_EMAIL`, else `ORIGIN`)                               |
+| `SMTP_HOST`                                 | Optional email server. Unset: no email (links copied by hand)                                                                                 |
+| `SMTP_SECURITY`                             | `starttls` (default, port 587, TLS required), `tls` (port 465) or `none` (local relay only)                                                   |
+| `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Port (default from `SMTP_SECURITY`) and credentials (both or neither)                                                                         |
+| `SMTP_FROM`                                 | Sender, e.g. `CookIt <cookit@example.com>` (required with `SMTP_HOST`)                                                                        |
 
 Generate the VAPID keys once, with the image (or `npx web-push generate-vapid-keys`):
 
@@ -195,6 +199,8 @@ docker run --rm --entrypoint node shiyamii/cookit:latest -e "console.log(require
 ```
 
 In a running container, `node dist/cli.js push:vapid-keys` prints a new pair too.
+
+With SMTP set, check it from **Invitations → Send me a test email**. Locally, `docker-compose.dev.yml` sends every email to Mailpit: read them at http://localhost:8025. The email templates are MJML (`apps/server/src/modules/mail/templates/`), compiled with the web theme's colors by `bun run emails`.
 
 ## Releases
 

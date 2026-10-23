@@ -65,7 +65,9 @@ function setup(initial: UserRow[]) {
       resetLinks.push({ userId, createdBy });
       return { url: `https://cook.example/reset-password#token=for-${userId}` };
     },
+    requestByEmail: async () => undefined,
     isValid: async () => false,
+    linkKind: async () => undefined,
     reset: async () => false,
   };
 

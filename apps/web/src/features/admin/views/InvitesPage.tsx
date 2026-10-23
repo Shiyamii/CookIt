@@ -5,7 +5,15 @@ import { FormField } from '@/components/FormField';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useInvitesViewModel } from '../viewmodels/useInvitesViewModel';
 
 const statusVariant: Record<InviteStatus, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -45,6 +53,36 @@ export function InvitesPage() {
               value={vm.label}
               onChange={(event) => vm.setLabel(event.target.value)}
             />
+            {vm.emailEnabled && (
+              <>
+                <FormField
+                  label={t('admin.invites.email')}
+                  hint={t('admin.invites.emailHint')}
+                  type="email"
+                  autoComplete="off"
+                  value={vm.email}
+                  onChange={(event) => vm.setEmail(event.target.value)}
+                  error={vm.invalidEmail ? t('auth.invalid.email') : undefined}
+                />
+                {vm.email.trim() && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="invite-locale">{t('admin.invites.emailLanguage')}</Label>
+                    <Select value={vm.locale} onValueChange={vm.setLocale}>
+                      <SelectTrigger id="invite-locale" className="h-11 w-full sm:w-72">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vm.locales.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {t(`language.${value}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </>
+            )}
             <FormField
               label={t('admin.invites.days')}
               type="number"
@@ -60,11 +98,23 @@ export function InvitesPage() {
               }
             />
             <Button type="submit" size="lg" disabled={vm.creating}>
-              {t('admin.invites.create')}
+              {vm.email.trim() ? t('admin.invites.send') : t('admin.invites.create')}
             </Button>
             {vm.newLink && (
               <div className="grid gap-2" role="status">
-                <p className="text-sm">{t('admin.invites.created')}</p>
+                {vm.emailedTo && (
+                  <p className="text-sm font-medium">
+                    {t('admin.invites.emailed', { email: vm.emailedTo })}
+                  </p>
+                )}
+                {vm.emailFailed && (
+                  <p className="text-sm font-medium text-destructive">
+                    {t('admin.invites.emailFailed')}
+                  </p>
+                )}
+                <p className="text-sm">
+                  {vm.emailedTo ? t('admin.invites.alsoLink') : t('admin.invites.created')}
+                </p>
                 <CopyableLink
                   url={vm.newLink}
                   copied={vm.copied}
@@ -75,6 +125,42 @@ export function InvitesPage() {
             )}
           </form>
         </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>{t('admin.email.title')}</h2>
+          </CardTitle>
+          <CardDescription>
+            {vm.emailEnabled ? t('admin.email.on') : t('admin.email.off')}
+          </CardDescription>
+        </CardHeader>
+        {vm.emailEnabled && (
+          <CardContent className="grid gap-3">
+            <Button
+              variant="outline"
+              className="justify-self-start"
+              onClick={vm.sendTestEmail}
+              disabled={vm.testing}
+            >
+              {t('admin.email.test')}
+            </Button>
+            {vm.testSentTo && (
+              <p role="status" className="text-sm">
+                {t('admin.email.testSent', { email: vm.testSentTo })}
+              </p>
+            )}
+            {vm.testError && (
+              <Alert variant="destructive" role="alert">
+                <AlertDescription className="wrap-anywhere">
+                  {t(`errors.${vm.testError}`, t('errors.unknown'))}
+                  {vm.testDetail && ` (${vm.testDetail})`}
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        )}
       </Card>
 
       <section className="grid grid-cols-1 gap-3" aria-labelledby="invites-list">
@@ -101,6 +187,11 @@ export function InvitesPage() {
                   {t(`admin.invites.status.${invite.status}`)}
                 </Badge>
               </div>
+              {invite.email && (
+                <span className="truncate text-sm">
+                  {t('admin.invites.sentTo', { email: invite.email })}
+                </span>
+              )}
               <span className="truncate text-sm text-muted-foreground">
                 {invite.status === 'used'
                   ? t('admin.invites.usedBy', {

@@ -111,6 +111,16 @@ export const en = {
       title: 'Create the administrator account',
       subtitle: 'First start: this account will manage invitations and users.',
     },
+    forgot: {
+      link: 'Forgot your password?',
+      title: 'Forgot your password?',
+      subtitle:
+        'Enter your username or email: a link to choose a new password is sent to your address.',
+      submit: 'Send the link',
+      sent: 'If an account matches, an email is on its way with a link valid for one hour. Check your spam folder too.',
+      unavailable: 'This server does not send emails: ask an administrator for a reset link.',
+      back: 'Back to sign-in',
+    },
     reset: {
       title: 'Choose a new password',
       submit: 'Save the password',
@@ -635,12 +645,27 @@ export const en = {
       revoke: 'Revoke',
       expires: 'Expires on {{date}}',
       usedBy: 'Used by {{user}} on {{date}}',
+      email: 'Email (optional)',
+      emailHint: 'The link is sent to this address, and it is pre-filled at sign-up.',
+      emailLanguage: 'Language of the email',
+      send: 'Send the invitation',
+      emailed: 'Invitation sent to {{email}}.',
+      emailFailed: 'The email could not be sent: send this link yourself.',
+      alsoLink: 'The link, if needed (it is only shown now):',
+      sentTo: 'Sent to {{email}}',
       status: {
         pending: 'Pending',
         used: 'Used',
         expired: 'Expired',
         revoked: 'Revoked',
       },
+    },
+    email: {
+      title: 'Email',
+      on: 'The server sends emails: invitations, password reset links.',
+      off: 'Email is not configured (SMTP_HOST…): invitation and reset links are copied by hand.',
+      test: 'Send me a test email',
+      testSent: 'Test email sent to {{email}}.',
     },
     users: {
       title: 'Users',
@@ -768,6 +793,8 @@ export const en = {
     },
   },
   errors: {
+    email_not_configured: 'Email is not configured on this server.',
+    email_failed: 'The email could not be sent.',
     push_failed: 'Notifications could not be turned on on this device. Try again later.',
     push_failed_brave:
       'Brave blocks push notifications: turn on "Use Google services for push messaging" in brave://settings/privacy, restart Brave, then try again.',

@@ -12,6 +12,7 @@ import { createProfileController } from './modules/profile/profile.controller';
 import { createPushController } from './modules/push/push.controller';
 import { sessionMiddleware } from './modules/auth/auth.middleware';
 import { createInvitesController } from './modules/invites/invites.controller';
+import { createMailController } from './modules/mail/mail.controller';
 import { createPasswordResetController } from './modules/password-reset/password-reset.controller';
 import { createRecipesController } from './modules/recipes/recipes.controller';
 import { createShoppingController } from './modules/shopping/shopping.controller';
@@ -36,6 +37,7 @@ export function createApp(container: Container) {
   app.route('/', createAccountSecurityController(container));
   app.route('/', createInvitesController(container));
   app.route('/', createPasswordResetController(container));
+  app.route('/', createMailController(container));
   app.route('/', createUsersController(container));
   app.route('/', createRecipesController(container));
   app.route('/', createImportController(container));

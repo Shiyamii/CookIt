@@ -114,6 +114,17 @@ export const fr: Translations = {
       title: 'Créer le compte administrateur',
       subtitle: 'Premier démarrage : ce compte gérera les invitations et les utilisateurs.',
     },
+    forgot: {
+      link: 'Mot de passe oublié ?',
+      title: 'Mot de passe oublié ?',
+      subtitle:
+        'Saisissez votre nom d’utilisateur ou votre email : un lien pour choisir un nouveau mot de passe est envoyé à votre adresse.',
+      submit: 'Envoyer le lien',
+      sent: 'Si un compte correspond, un email est en route avec un lien valable une heure. Pensez à regarder dans les indésirables.',
+      unavailable:
+        'Ce serveur n’envoie pas d’emails : demandez un lien de réinitialisation à un administrateur.',
+      back: 'Retour à la connexion',
+    },
     reset: {
       title: 'Choisir un nouveau mot de passe',
       submit: 'Enregistrer le mot de passe',
@@ -647,12 +658,27 @@ export const fr: Translations = {
       revoke: 'Révoquer',
       expires: 'Expire le {{date}}',
       usedBy: 'Utilisée par {{user}} le {{date}}',
+      email: 'Email (facultatif)',
+      emailHint: 'Le lien est envoyé à cette adresse, pré-remplie à l’inscription.',
+      emailLanguage: 'Langue de l’email',
+      send: 'Envoyer l’invitation',
+      emailed: 'Invitation envoyée à {{email}}.',
+      emailFailed: 'L’email n’a pas pu être envoyé : transmettez ce lien vous-même.',
+      alsoLink: 'Le lien, au besoin (il n’est affiché que maintenant) :',
+      sentTo: 'Envoyée à {{email}}',
       status: {
         pending: 'En attente',
         used: 'Utilisée',
         expired: 'Expirée',
         revoked: 'Révoquée',
       },
+    },
+    email: {
+      title: 'Email',
+      on: 'Le serveur envoie des emails : invitations, liens de réinitialisation du mot de passe.',
+      off: 'L’email n’est pas configuré (SMTP_HOST…) : les liens d’invitation et de réinitialisation se copient à la main.',
+      test: 'M’envoyer un email de test',
+      testSent: 'Email de test envoyé à {{email}}.',
     },
     users: {
       title: 'Utilisateurs',
@@ -781,6 +807,8 @@ export const fr: Translations = {
     },
   },
   errors: {
+    email_not_configured: 'L’email n’est pas configuré sur ce serveur.',
+    email_failed: 'L’email n’a pas pu être envoyé.',
     push_failed:
       'Les notifications n’ont pas pu être activées sur cet appareil. Réessayez plus tard.',
     push_failed_brave:

@@ -45,6 +45,12 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # Catches the emails the app sends; the tests read them through its API.
+      mailpit:
+        image: axllent/mailpit:v1.27.0
+        ports:
+          - 1025:1025
+          - 8025:8025
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t cookit:ci .
@@ -59,6 +65,10 @@ jobs:
           -e VAPID_PRIVATE_KEY=zQTQQENw_38kQ1zDvLJrGKyd8S4RW1cVT5joaH1Ovkc
           -e VAPID_SUBJECT=mailto:ci@example.com
           -e PUSH_TEST_ENDPOINT_ORIGIN=http://localhost:4567
+          -e SMTP_HOST=localhost
+          -e SMTP_PORT=1025
+          -e SMTP_SECURITY=none
+          -e "SMTP_FROM=CookIt <cookit@localhost>"
           cookit:ci
       - name: Wait for the app
         run: |

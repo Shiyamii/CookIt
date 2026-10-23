@@ -1,6 +1,6 @@
 import { KeyRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Navigate } from 'react-router';
+import { Link, Navigate } from 'react-router';
 import { FormField } from '@/components/FormField';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -105,6 +105,14 @@ export function LoginPage() {
             >
               <KeyRound /> {t('auth.login.passkey')}
             </Button>
+          )}
+          {vm.canResetByEmail && (
+            <Link
+              to="/forgot-password"
+              className="justify-self-start text-sm font-medium underline decoration-primary decoration-2 underline-offset-2"
+            >
+              {t('auth.forgot.link')}
+            </Link>
           )}
           <p className="text-sm text-muted-foreground">{t('auth.login.inviteOnly')}</p>
         </form>
