@@ -22,13 +22,14 @@ function setup() {
   return { service: createShoppingService({ repository, now: () => T0 }), lists };
 }
 
-const entry = (id: string, recipeId: string | null, text: string) => ({
-  id,
-  recipeId,
-  text,
-  name: text,
-  quantity: null,
+let n = 0;
+const uuid = () => `aaaaaaaa-aaaa-4aaa-8aaa-${String(++n).padStart(12, '0')}`;
+const line = (recipeId: string | null, name: string) => ({
+  id: uuid(),
+  name,
+  keys: recipeId ? [name] : [],
   checked: false,
+  entries: [{ id: uuid(), recipeId, name, quantity: null }],
 });
 
 const state: ShoppingState = {
@@ -36,11 +37,10 @@ const state: ShoppingState = {
     { recipeId: CREPES, title: 'Crêpes', servings: 4, lang: 'fr' },
     { recipeId: GATEAU, title: 'Gâteau', servings: 6, lang: 'fr' },
   ],
-  entries: [
-    entry('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', CREPES, 'lait'),
-    entry('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', null, 'papier toilette'),
-  ],
+  lines: [line(CREPES, 'lait'), line(null, 'papier toilette')],
 };
+
+const EMPTY: ShoppingState = { recipes: [], lines: [] };
 
 describe('shopping lists', () => {
   test('no list yet: null', async () => {
@@ -55,7 +55,7 @@ describe('shopping lists', () => {
     const { list } = await service.get('u1');
     expect(list?.version).toBe(2);
     expect(list?.updatedAt).toBe(T0.toISOString());
-    expect(list?.state.entries).toEqual(state.entries);
+    expect(list?.state.lines).toEqual(state.lines);
   });
 
   test('a recipe nothing refers to any more is dropped', async () => {
@@ -66,34 +66,20 @@ describe('shopping lists', () => {
 
   test('an empty list is saved as such, not as no list', async () => {
     const { service } = setup();
-    await service.save('u1', { recipes: [], entries: [] });
-    expect((await service.get('u1')).list?.state).toEqual({ recipes: [], entries: [] });
+    await service.save('u1', EMPTY);
+    expect((await service.get('u1')).list?.state).toEqual(EMPTY);
   });
 
-  test('recipes with items keep their order and entries are untouched', async () => {
+  test('a list saved in an older shape is not read back', async () => {
     const { service, lists } = setup();
-    const both: ShoppingState = {
-      recipes: state.recipes,
-      entries: [
-        entry('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', GATEAU, 'sucre'),
-        entry('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', CREPES, 'lait'),
-      ],
-    };
-    await service.save('u1', both);
-    expect(lists.get('u1')?.state).toEqual(both);
-  });
-
-  test('only free items: every recipe is dropped', async () => {
-    const { service, lists } = setup();
-    await service.save('u1', { recipes: state.recipes, entries: [state.entries[1]!] });
-    expect(lists.get('u1')?.state.recipes).toEqual([]);
-  });
-
-  test('the next save replaces the previous list', async () => {
-    const { service } = setup();
-    await service.save('u1', state);
-    await service.save('u1', { recipes: [], entries: [] });
-    expect((await service.get('u1')).list?.state.entries).toEqual([]);
+    lists.set('u1', {
+      version: 3,
+      updatedAt: T0,
+      state: { recipes: [], entries: [] } as unknown as ShoppingState,
+    });
+    expect(await service.get('u1')).toEqual({ list: null });
+    // The next save starts it again.
+    expect(await service.save('u1', EMPTY)).toEqual({ version: 4 });
   });
 
   test('each user has their own list', async () => {

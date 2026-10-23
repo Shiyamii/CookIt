@@ -19,7 +19,7 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 - **Photos**: a cover and a gallery for each recipe (resized in the browser), a display name and a profile picture for each user.
 - **Tags** organized in categories, managed by the admin.
 - **Home page**: resume the cooking in progress, an idea of the day, your recent recipes.
-- **Shopping list**: add a recipe's ingredients (for the servings you want, minus what you have), the same ingredients are added up, check them off in the shop, offline too.
+- **Shopping list**: add a recipe's ingredients (for the servings you want, minus what you have), one line per ingredient with each recipe's quantity, group lines by hand, order them (drag and drop or arrows), check them off in the shop, offline too.
 - **Installable PWA**, mobile first, works offline for the pages and recipes already opened, cooking mode included.
 
 ## Recipe format

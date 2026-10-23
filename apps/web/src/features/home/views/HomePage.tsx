@@ -136,7 +136,7 @@ function Shopping({ count }: { count: number }) {
   return (
     <Link
       to="/shopping"
-      className="flex min-h-11 items-center gap-3 rounded-lg border bg-card p-4 hover:bg-accent"
+      className="flex min-h-11 items-center gap-3 rounded-lg border bg-card p-4 hover:bg-muted"
     >
       <ShoppingCart className="size-5 shrink-0" aria-hidden />
       <span className="flex-1 font-medium">{t('home.shopping', { count })}</span>

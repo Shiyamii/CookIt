@@ -183,6 +183,39 @@ describe('createStateSync without offset', () => {
     expect(sync.getSnapshot().state).toEqual({ items: ['new'] });
   });
 
+  test('once disposed, nothing is persisted, notified or sent', async () => {
+    const { sync, saved, persisted } = setup();
+    let calls = 0;
+    sync.subscribe(() => (calls += 1));
+    sync.dispose();
+    const persistedBefore = persisted.length;
+    sync.update(add('a'));
+    await sync.flush();
+    await sync.refresh();
+    expect(saved).toEqual([]);
+    expect(persisted.length).toBe(persistedBefore);
+    expect(calls).toBe(0);
+  });
+
+  test('a save in flight when disposed does not write its result back', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const { sync, persisted } = setup({
+      save: async () => {
+        await gate;
+        return { version: 4 };
+      },
+    });
+    sync.update(add('a'));
+    const sending = sync.flush();
+    sync.dispose();
+    const persistedBefore = persisted.length;
+    release();
+    await sending;
+    expect(persisted.length).toBe(persistedBefore);
+    expect(sync.getSnapshot().version).not.toBe(4);
+  });
+
   test('listeners are told of changes until they unsubscribe', () => {
     const { sync } = setup();
     let calls = 0;

@@ -6,20 +6,25 @@ import {
   canAdd,
   clearChecked,
   EMPTY_LIST,
-  ingredientKey,
+  groupLines,
+  groupName,
+  moveLine,
+  nameKey,
   recipeCandidates,
   remainingCount,
   removeRecipe,
   setChecked,
   shoppingLines,
+  splitLine,
 } from './list';
 
 const CREPES = '11111111-1111-4111-8111-111111111111';
 const GATEAU = '22222222-2222-4222-8222-222222222222';
+const COOKIES = '33333333-3333-4333-8333-333333333333';
 
-function doc(title: string, servings: number, ingredients: string): RecipeDocument {
+function doc(servings: number, ingredients: string): RecipeDocument {
   const result = parseRecipe(
-    `# ${title}\n\nportions: ${servings}\n\n---\n\n${ingredients}\n\n---\n\n1. Mélanger.\n`,
+    `# Recette\n\nportions: ${servings}\n\n---\n\n${ingredients}\n\n---\n\n1. Mélanger.\n`,
   );
   if (!result.ok) throw new Error('unparsable');
   return result.document;
@@ -29,27 +34,31 @@ let next = 0;
 const newId = () => `00000000-0000-4000-8000-${String(++next).padStart(12, '0')}`;
 
 const crepes = doc(
-  'Crêpes',
   4,
   '- 250 g de farine\n- 3 œufs\n- 50 cl de lait\n- 1 pincée de sel\n\nUne ligne de texte.',
 );
-const gateau = doc('Gâteau', 6, '- 200 g farine\n- 2 oeufs\n- 2-3 c. à soupe de sucre\n- sel');
+const gateau = doc(6, '- 200 g farine\n- 2 oeufs\n- 2-3 c. à soupe de sucre\n- sel');
+const cookies = doc(4, '- 1 tasse de farine T55\n- 1 tasse de farine');
 
-function withBoth() {
-  let state = addRecipe(
-    EMPTY_LIST,
-    { recipeId: CREPES, title: 'Crêpes', servings: 4, lang: 'fr' },
-    recipeCandidates(crepes, 4, 'fr'),
-    newId,
-  );
-  state = addRecipe(
+const add = (
+  state = EMPTY_LIST,
+  id: string,
+  title: string,
+  document: RecipeDocument,
+  servings = document.servings,
+) =>
+  addRecipe(
     state,
-    { recipeId: GATEAU, title: 'Gâteau', servings: 6, lang: 'fr' },
-    recipeCandidates(gateau, 6, 'fr'),
+    { recipeId: id, title, servings, lang: 'fr' },
+    recipeCandidates(document, servings, 'fr'),
     newId,
   );
-  return state;
-}
+
+const both = () => add(add(EMPTY_LIST, CREPES, 'Crêpes', crepes), GATEAU, 'Gâteau', gateau);
+const texts = (state: typeof EMPTY_LIST) =>
+  shoppingLines(state).toBuy.map((line) =>
+    line.quantities ? `${line.name} (${line.quantities})` : line.name,
+  );
 
 describe('ingredients of a recipe', () => {
   test('scaled to the servings chosen, text lines left out', () => {
@@ -60,115 +69,157 @@ describe('ingredients of a recipe', () => {
       '100 cl de lait',
       '2 pincée de sel',
     ]);
-    expect(candidates[0]?.quantity).toEqual({
-      value: 500,
-      unit: 'g',
-      rounding: 'decimal',
-      before: '',
-      after: ' g de farine',
+    expect(candidates[0]).toEqual({
+      text: '500 g de farine',
+      name: 'farine',
+      quantity: { value: 500, unit: 'g', unitText: 'g', rounding: 'decimal' },
+    });
+    expect(candidates[1]?.quantity).toEqual({
+      value: 6,
+      unit: null,
+      unitText: '',
+      rounding: 'fraction',
     });
   });
 
-  test('a line without a number has no quantity', () => {
-    const sel = recipeCandidates(gateau, 6, 'fr')[3];
-    expect(sel).toEqual({ text: 'sel', name: 'sel', quantity: null });
+  test('a line without a number has no quantity; a range keeps both bounds', () => {
+    const candidates = recipeCandidates(gateau, 12, 'fr');
+    expect(candidates[3]).toEqual({ text: 'sel', name: 'sel', quantity: null });
+    expect(candidates[2]?.quantity).toMatchObject({ value: 4, max: 6, unitText: 'c. à soupe' });
   });
 
-  test('a range keeps both bounds', () => {
-    expect(recipeCandidates(gateau, 12, 'fr')[2]?.quantity).toMatchObject({ value: 4, max: 6 });
+  test('a huge amount stays in the name', () => {
+    const [huge] = recipeCandidates(doc(1, '- 999999 g de sel'), 1000, 'fr');
+    expect(huge?.quantity).toBeNull();
+    expect(huge?.name).toContain('sel');
   });
 });
 
-describe('merged lines', () => {
-  test('the same ingredient and unit is added up, in the first text', () => {
-    const lines = shoppingLines(withBoth());
-    expect(lines.map((line) => line.text)).toEqual([
-      '450 g de farine',
-      '5 œufs',
-      '50 cl de lait',
-      '1 pincée de sel',
-      '2-3 c. à soupe de sucre',
-      'sel',
+describe('lines', () => {
+  test('one line per ingredient name, whatever the unit, with each recipe’s quantity', () => {
+    const state = add(both(), COOKIES, 'Cookies', cookies);
+    expect(texts(state)).toEqual([
+      'Farine (250 g · 200 g · 1 tasse)',
+      'Œufs (3 · 2 = 5)',
+      'Lait (50 cl)',
+      'Sel (1 pincée)',
+      'Sucre (2-3 c. à soupe)',
+      'Farine T55 (1 tasse)',
     ]);
-    expect(lines[0]?.recipes).toEqual(['Crêpes', 'Gâteau']);
-    expect(lines[2]?.recipes).toEqual(['Crêpes']);
+    expect(shoppingLines(state).toBuy[0]?.recipes).toEqual(['Crêpes', 'Gâteau', 'Cookies']);
+  });
+
+  test('the same unit everywhere gives a total', () => {
+    const state = add(
+      add(EMPTY_LIST, CREPES, 'A', doc(4, '- 250 g farine')),
+      GATEAU,
+      'B',
+      doc(4, '- 100 g farine'),
+    );
+    expect(texts(state)).toEqual(['Farine (250 g · 100 g = 350 g)']);
   });
 
   test('names match without case, accents, ligatures or plural', () => {
-    const key = (name: string) => ingredientKey({ name, text: name, quantity: null });
-    expect(key('Œufs')).toBe(key('oeuf'));
-    expect(key('Pommes de terre')).toBe(key('pomme de terre'));
-    expect(key('farine')).not.toBe(key('sucre'));
+    expect(nameKey('Œufs')).toBe(nameKey('oeuf'));
+    expect(nameKey('Pommes de terre')).toBe(nameKey('pomme de terre'));
+    expect(nameKey('farine')).not.toBe(nameKey('farine T55'));
   });
 
-  test('a free item is never merged', () => {
-    let state = addItem(EMPTY_LIST, ' lait ', newId());
-    state = addItem(state, 'lait', newId());
-    expect(shoppingLines(state).map((line) => line.text)).toEqual(['lait', 'lait']);
-    expect(addItem(state, '   ', newId())).toBe(state);
+  test('a free item is its own line, never joined by an ingredient', () => {
+    let state = addItem(EMPTY_LIST, ' farine ', { line: newId(), entry: newId() });
+    state = add(state, CREPES, 'Crêpes', crepes);
+    expect(texts(state).slice(0, 2)).toEqual(['Farine', 'Farine (250 g)']);
+    expect(addItem(state, '   ', { line: newId(), entry: newId() })).toBe(state);
   });
 
-  test('a merged line is checked when all its entries are; checked lines go last', () => {
-    let state = withBoth();
-    const farine = shoppingLines(state)[0]!;
-    state = setChecked(state, farine.entryIds, true);
-    const lines = shoppingLines(state);
-    expect(lines.at(-1)?.text).toBe('450 g de farine');
-    expect(lines.at(-1)?.checked).toBe(true);
-    expect(remainingCount(state)).toBe(5);
-    // Adding the recipe again brings back what is needed, unchecked.
-    state = addRecipe(
-      state,
-      { recipeId: GATEAU, title: 'Gâteau', servings: 6, lang: 'fr' },
-      recipeCandidates(gateau, 6, 'fr'),
-      newId,
-    );
-    expect(shoppingLines(state).find((line) => line.text.includes('farine'))?.checked).toBe(false);
+  test('checked lines go to the basket; more of an ingredient unchecks its line', () => {
+    let state = both();
+    const farine = shoppingLines(state).toBuy[0]!;
+    state = setChecked(state, farine.id, true);
+    expect(shoppingLines(state).inBasket.map((line) => line.id)).toEqual([farine.id]);
+    expect(remainingCount(state)).toBe(4);
+    state = add(state, COOKIES, 'Cookies', cookies);
+    expect(shoppingLines(state).toBuy[0]?.id).toBe(farine.id);
   });
 });
 
 describe('changes', () => {
-  test('adding a recipe again replaces it', () => {
-    let state = withBoth();
-    state = addRecipe(
-      state,
-      { recipeId: CREPES, title: 'Crêpes', servings: 2, lang: 'fr' },
-      recipeCandidates(crepes, 2, 'fr').slice(0, 1),
-      newId,
-    );
+  test('adding a recipe again replaces its ingredients, in their lines', () => {
+    const state = add(both(), CREPES, 'Crêpes', crepes, 8);
+    expect(texts(state).slice(0, 2)).toEqual([
+      'Farine (200 g · 500 g = 700 g)',
+      'Œufs (2 · 6 = 8)',
+    ]);
     expect(state.recipes.map((recipe) => [recipe.title, recipe.servings])).toEqual([
       ['Gâteau', 6],
-      ['Crêpes', 2],
+      ['Crêpes', 8],
     ]);
-    // 200 g (gâteau) + 125 g (crêpes for 2), in the text of the one now first in the list.
-    expect(shoppingLines(state)[0]?.text).toBe('325 g farine');
-    expect(shoppingLines(state).map((line) => line.text)).not.toContain('6 œufs');
   });
 
-  test('removing a recipe removes its items', () => {
-    const state = removeRecipe(withBoth(), CREPES);
+  test('removing a recipe removes its ingredients and the lines left empty', () => {
+    const state = removeRecipe(both(), CREPES);
+    expect(texts(state)).toEqual(['Farine (200 g)', 'Œufs (2)', 'Sel', 'Sucre (2-3 c. à soupe)']);
     expect(state.recipes.map((recipe) => recipe.title)).toEqual(['Gâteau']);
-    expect(shoppingLines(state).map((line) => line.text)).toEqual([
-      '200 g farine',
-      '2 oeufs',
-      '2-3 c. à soupe de sucre',
-      'sel',
-    ]);
   });
 
-  test('clearing what was bought drops the recipes nothing is left of', () => {
-    let state = withBoth();
-    const gateauIds = state.entries
-      .filter((entry) => entry.recipeId === GATEAU)
-      .map((entry) => entry.id);
-    state = setChecked(state, gateauIds, true);
+  test('clearing the basket drops the recipes nothing is left of', () => {
+    let state = add(EMPTY_LIST, COOKIES, 'Cookies', cookies);
+    for (const line of shoppingLines(state).toBuy) state = setChecked(state, line.id, true);
     state = clearChecked(state);
-    expect(state.recipes.map((recipe) => recipe.title)).toEqual(['Crêpes']);
-    expect(state.entries).toHaveLength(4);
+    expect(state).toEqual(EMPTY_LIST);
+  });
+
+  test('moving a line before or after another', () => {
+    const state = both();
+    const [farine, oeufs, lait] = shoppingLines(state).toBuy;
+    const moved = moveLine(state, lait!.id, farine!.id, 'before');
+    expect(
+      shoppingLines(moved)
+        .toBuy.slice(0, 3)
+        .map((line) => line.id),
+    ).toEqual([lait!.id, farine!.id, oeufs!.id]);
+    const back = moveLine(moved, lait!.id, oeufs!.id, 'after');
+    expect(back.lines.map((line) => line.id)).toEqual(state.lines.map((line) => line.id));
+    expect(moveLine(state, farine!.id, farine!.id, 'after')).toBe(state);
+  });
+
+  test('a checked line keeps its place when unchecked', () => {
+    let state = both();
+    const oeufs = shoppingLines(state).toBuy[1]!;
+    state = setChecked(state, oeufs.id, true);
+    state = setChecked(state, oeufs.id, false);
+    expect(shoppingLines(state).toBuy[1]?.id).toBe(oeufs.id);
+  });
+
+  test('grouping lines: one line where the first was, and the names stay grouped', () => {
+    let state = add(EMPTY_LIST, COOKIES, 'Cookies', cookies);
+    const [t55, farine] = shoppingLines(state).toBuy;
+    expect(groupName(state, [t55!.id, farine!.id])).toBe('farine');
+    state = groupLines(state, [t55!.id, farine!.id], 'farine');
+    expect(texts(state)).toEqual(['Farine (1 tasse · 1 tasse = 2 tasse)']);
+    // A recipe added later with `farine T55` joins it.
+    state = add(state, CREPES, 'Crêpes', doc(4, '- 100 g de farine T55'));
+    expect(texts(state)).toEqual(['Farine (1 tasse · 1 tasse · 100 g)']);
+    expect(shoppingStateSchema.safeParse(state).success).toBe(true);
+  });
+
+  test('splitting a line: one line per ingredient, where it was', () => {
+    let state = add(both(), COOKIES, 'Cookies', cookies);
+    const farine = shoppingLines(state).toBuy[0]!;
+    state = splitLine(state, farine.id, newId);
+    expect(texts(state).slice(0, 3)).toEqual([
+      'Farine (250 g)',
+      'Farine (200 g)',
+      'Farine (1 tasse)',
+    ]);
+    expect(shoppingLines(state).toBuy[0]?.id).toBe(farine.id);
+    expect(shoppingStateSchema.safeParse(state).success).toBe(true);
   });
 
   test('every state built is accepted by the API schema', () => {
-    const state = addItem(withBoth(), 'papier toilette', newId());
+    let state = addItem(both(), 'papier toilette', { line: newId(), entry: newId() });
+    const ids = shoppingLines(state).toBuy.map((line) => line.id);
+    state = groupLines(state, [ids[0]!, ids.at(-1)!], 'Farine et papier');
     expect(shoppingStateSchema.safeParse(state).success).toBe(true);
     expect(shoppingStateSchema.safeParse(clearChecked(state)).success).toBe(true);
   });
@@ -176,8 +227,8 @@ describe('changes', () => {
   test('the list has room limits', () => {
     expect(canAdd(EMPTY_LIST, 300)).toBe(true);
     expect(canAdd(EMPTY_LIST, 301)).toBe(false);
-    const state = withBoth();
-    // Replacing a recipe frees its own items first.
+    const state = both();
+    // Replacing a recipe frees its own ingredients first.
     expect(canAdd(state, 300 - 4, GATEAU)).toBe(true);
     expect(canAdd(state, 300 - 4)).toBe(false);
   });

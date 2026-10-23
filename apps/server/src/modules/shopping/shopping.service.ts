@@ -1,4 +1,4 @@
-import type { ShoppingListResponse, ShoppingState } from '@cookit/shared';
+import { shoppingStateSchema, type ShoppingListResponse, type ShoppingState } from '@cookit/shared';
 import type { ShoppingRepository } from './shopping.repository';
 
 /**
@@ -12,19 +12,24 @@ export function createShoppingService(deps: { repository: ShoppingRepository; no
   return {
     async get(userId: string): Promise<ShoppingListResponse> {
       const row = await deps.repository.find(userId);
+      // A list saved in an older shape (before lines, phase 9e) is not read back: it starts empty.
+      const state = row && shoppingStateSchema.safeParse(row.state);
       return {
-        list: row
-          ? { version: row.version, updatedAt: row.updatedAt.toISOString(), state: row.state }
-          : null,
+        list:
+          row && state?.success
+            ? { version: row.version, updatedAt: row.updatedAt.toISOString(), state: state.data }
+            : null,
       };
     },
 
     async save(userId: string, state: ShoppingState): Promise<{ version: number }> {
       // Recipes no item refers to any more are dropped: the list never keeps empty recipes.
-      const used = new Set(state.entries.map((entry) => entry.recipeId));
+      const used = new Set(
+        state.lines.flatMap((line) => line.entries.map((entry) => entry.recipeId)),
+      );
       const kept: ShoppingState = {
         recipes: state.recipes.filter((recipe) => used.has(recipe.recipeId)),
-        entries: state.entries,
+        lines: state.lines,
       };
       return { version: await deps.repository.save(userId, kept, now()) };
     },

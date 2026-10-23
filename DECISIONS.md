@@ -235,6 +235,9 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 
 - **One list per user, saved whole, last change wins** (like the cooking session, same sync code, now generic in `lib/state-sync.ts`): one person shops at a time; a list shared by a household would need members and access rules.
 - **Entries are copies of the ingredient lines** (scaled text + parsed quantity), not references: the list works offline, survives recipe edits or lost access, and the server checks nothing but its shape.
-- **Merged by name and unit only**, never converting units (`250 g` and `1 kg` of flour stay two lines) nor guessing synonyms: a wrong sum in the shop is worse than two lines. Plural `s`/`x`, case, accents and `œ` are ignored in names.
-- **Free items are never merged** (typed text, no parsed quantity). No aisle grouping (would need a store-section table and a mapping per ingredient).
-- **Limits** (300 entries, 50 recipes, 200 characters per line) keep a full list well under the 1 MB API body limit; an amount above 1,000,000 or a line cut to the limit is kept as text, not added up.
+- **One line per ingredient name, whatever the unit, showing each recipe's quantity** (`Farine (250 g · 1 tasse)`; a total only when every amount has the same unit): no unit conversion and no guessed synonyms, a wrong sum in the shop is worse than two numbers. Plural `s`/`x`, case, accents and `œ` are ignored in names.
+- **Lines are stored (ids, order, names they take), not recomputed**: the user's order, hand-made groups and their names need an identity. A hand-made group is remembered by the line itself (its `keys`), not in a per-user synonym table: simpler, and it goes away with the line.
+- **Free items are never joined automatically** (typed text, no parsed quantity), but can be grouped by hand. No aisle grouping (would need a store-section table and a mapping per ingredient).
+- **Organize mode** for handles, arrows and grouping: in the shop, a tap only checks a line off, nothing moves by mistake. Checked lines go to "In the basket" and get their place back when unchecked.
+- **A stored list in the shape before lines is read as no list** (not converted): the change came before any release.
+- **Limits** (300 ingredients, 50 recipes, 200 characters per text, 20 names per line and 600 in all) keep a full list well under the 1 MB API body limit; an amount above 1,000,000 stays in the name, not added up.

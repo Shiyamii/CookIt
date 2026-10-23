@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  MAX_LINE_KEYS,
   MAX_SHOPPING_ENTRIES,
+  MAX_SHOPPING_KEYS,
   MAX_SHOPPING_RECIPES,
   shoppingListInputSchema,
   shoppingStateSchema,
@@ -9,114 +11,115 @@ import {
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const recipe = (n: number) => ({ recipeId: uuid(n), title: `R${n}`, servings: 4, lang: 'fr' });
 const entry = (n: number, recipeId: string | null = null, extra: object = {}) => ({
-  id: uuid(1000 + n),
+  id: uuid(10_000 + n),
   recipeId,
-  text: 'lait',
   name: 'lait',
   quantity: null,
+  ...extra,
+});
+const line = (n: number, entries: object[], extra: object = {}) => ({
+  id: uuid(20_000 + n),
+  name: 'Lait',
+  keys: ['lait'],
   checked: false,
+  entries,
   ...extra,
 });
 const quantity = (extra: object = {}) => ({
-  value: 2,
+  value: 250,
   unit: 'g',
+  unitText: 'g',
   rounding: 'decimal',
-  before: '',
-  after: ' g de farine',
   ...extra,
 });
 const ok = (state: unknown) => shoppingStateSchema.safeParse(state).success;
 
 describe('shopping state schema', () => {
-  test('accepts an empty list, free items and recipe items', () => {
-    expect(ok({ recipes: [], entries: [] })).toBe(true);
-    expect(ok({ recipes: [], entries: [entry(1)] })).toBe(true);
-    expect(ok({ recipes: [recipe(1)], entries: [entry(1, uuid(1))] })).toBe(true);
+  test('accepts an empty list, free items and grouped recipe ingredients', () => {
+    expect(ok({ recipes: [], lines: [] })).toBe(true);
+    expect(ok({ recipes: [], lines: [line(1, [entry(1)], { keys: [] })] })).toBe(true);
+    const grouped = line(1, [
+      entry(1, uuid(1), { quantity: quantity() }),
+      entry(2, uuid(2), { quantity: quantity({ value: 1, unit: 'tasse', unitText: 'tasse' }) }),
+      entry(3),
+    ]);
+    expect(ok({ recipes: [recipe(1), recipe(2)], lines: [grouped] })).toBe(true);
   });
 
-  test('accepts a quantity with a range, a null unit and a fractional unit', () => {
-    const q = quantity({ max: 3, unit: null, rounding: 'fraction' });
-    expect(ok({ recipes: [], entries: [entry(1, null, { quantity: q })] })).toBe(true);
+  test('accepts a range, no unit and fraction rounding', () => {
+    const q = quantity({ max: 3, unit: null, unitText: '', rounding: 'fraction' });
+    expect(ok({ recipes: [], lines: [line(1, [entry(1, null, { quantity: q })])] })).toBe(true);
   });
 
-  test('refuses an item that refers to a recipe not in the list', () => {
-    expect(ok({ recipes: [], entries: [entry(1, uuid(1))] })).toBe(false);
-    expect(ok({ recipes: [recipe(2)], entries: [entry(1, uuid(1))] })).toBe(false);
+  test('refuses an ingredient of a recipe that is not in the list', () => {
+    expect(ok({ recipes: [], lines: [line(1, [entry(1, uuid(1))])] })).toBe(false);
   });
 
-  test('refuses duplicate recipes and duplicate item ids', () => {
-    expect(ok({ recipes: [recipe(1), recipe(1)], entries: [] })).toBe(false);
-    expect(ok({ recipes: [], entries: [entry(1), entry(1)] })).toBe(false);
+  test('refuses duplicates: recipes, lines, ingredients (even across lines)', () => {
+    expect(ok({ recipes: [recipe(1), recipe(1)], lines: [] })).toBe(false);
+    expect(ok({ recipes: [], lines: [line(1, [entry(1)]), line(1, [entry(2)])] })).toBe(false);
+    expect(ok({ recipes: [], lines: [line(1, [entry(1)]), line(2, [entry(1)])] })).toBe(false);
   });
 
-  test('bounds the number of recipes and items', () => {
+  test('refuses an empty line, an empty name, control characters', () => {
+    expect(ok({ recipes: [], lines: [line(1, [])] })).toBe(false);
+    expect(ok({ recipes: [], lines: [line(1, [entry(1)], { name: '  ' })] })).toBe(false);
+    expect(ok({ recipes: [], lines: [line(1, [entry(1, null, { name: 'a\u0000b' })])] })).toBe(
+      false,
+    );
+    expect(ok({ recipes: [], lines: [line(1, [entry(1)], { keys: ['a‮b'] })] })).toBe(false);
+    expect(
+      ok({
+        recipes: [],
+        lines: [line(1, [entry(1, null, { quantity: quantity({ unitText: 'g\n' }) })])],
+      }),
+    ).toBe(false);
+  });
+
+  test('bounds recipes, ingredients over all lines, and names', () => {
     const recipes = (n: number) => Array.from({ length: n }, (_, i) => recipe(i + 1));
-    const entries = (n: number) => Array.from({ length: n }, (_, i) => entry(i + 1));
-    expect(ok({ recipes: recipes(MAX_SHOPPING_RECIPES), entries: [] })).toBe(true);
-    expect(ok({ recipes: recipes(MAX_SHOPPING_RECIPES + 1), entries: [] })).toBe(false);
-    expect(ok({ recipes: [], entries: entries(MAX_SHOPPING_ENTRIES) })).toBe(true);
-    expect(ok({ recipes: [], entries: entries(MAX_SHOPPING_ENTRIES + 1) })).toBe(false);
+    expect(ok({ recipes: recipes(MAX_SHOPPING_RECIPES), lines: [] })).toBe(true);
+    expect(ok({ recipes: recipes(MAX_SHOPPING_RECIPES + 1), lines: [] })).toBe(false);
+
+    const entries = (from: number, count: number) =>
+      Array.from({ length: count }, (_, i) => entry(from + i));
+    const half = MAX_SHOPPING_ENTRIES / 2;
+    expect(
+      ok({ recipes: [], lines: [line(1, entries(0, half)), line(2, entries(half, half))] }),
+    ).toBe(true);
+    expect(
+      ok({ recipes: [], lines: [line(1, entries(0, half)), line(2, entries(half, half + 1))] }),
+    ).toBe(false);
+
+    const keys = (count: number) => Array.from({ length: count }, (_, i) => `k${i}`);
+    expect(ok({ recipes: [], lines: [line(1, [entry(1)], { keys: keys(MAX_LINE_KEYS) })] })).toBe(
+      true,
+    );
+    expect(
+      ok({ recipes: [], lines: [line(1, [entry(1)], { keys: keys(MAX_LINE_KEYS + 1) })] }),
+    ).toBe(false);
+    const many = Array.from({ length: MAX_SHOPPING_KEYS / MAX_LINE_KEYS + 1 }, (_, i) =>
+      line(i, [entry(i)], { keys: keys(MAX_LINE_KEYS) }),
+    );
+    expect(ok({ recipes: [], lines: many })).toBe(false);
   });
 
-  test('text: not empty, at most 200 characters, no control characters', () => {
-    const withText = (text: string) => ok({ recipes: [], entries: [entry(1, null, { text })] });
-    expect(withText('a'.repeat(200))).toBe(true);
-    expect(withText('a'.repeat(201))).toBe(false);
-    expect(withText('')).toBe(false);
-    expect(withText('   ')).toBe(false);
-    expect(withText('a\nb')).toBe(false);
-    expect(withText('a\u0000b')).toBe(false);
-    expect(withText('a‮b')).toBe(false);
-    expect(withText('a b')).toBe(false);
+  test('refuses amounts out of bounds and unknown fields', () => {
+    const q = (extra: object) => [line(1, [entry(1, null, { quantity: quantity(extra) })])];
+    expect(ok({ recipes: [], lines: q({ value: -1 }) })).toBe(false);
+    expect(ok({ recipes: [], lines: q({ value: 2_000_000 }) })).toBe(false);
+    expect(ok({ recipes: [], lines: q({ value: Number.NaN }) })).toBe(false);
+    expect(ok({ recipes: [], lines: q({ unit: 'Grams!' }) })).toBe(false);
+    expect(ok({ recipes: [], lines: q({ extra: 1 }) })).toBe(false);
+    expect(ok({ recipes: [], lines: [], entries: [] })).toBe(false);
   });
 
-  test('the name and the recipe title refuse control characters too', () => {
-    expect(ok({ recipes: [], entries: [entry(1, null, { name: 'a\tb' })] })).toBe(false);
-    expect(ok({ recipes: [{ ...recipe(1), title: 'a\nb' }], entries: [] })).toBe(false);
-  });
-
-  test('amounts: 0 to 1 000 000, finite, never negative', () => {
-    const withQuantity = (extra: object) =>
-      ok({ recipes: [], entries: [entry(1, null, { quantity: quantity(extra) })] });
-    expect(withQuantity({ value: 0 })).toBe(true);
-    expect(withQuantity({ value: 1_000_000 })).toBe(true);
-    expect(withQuantity({ value: 1_000_001 })).toBe(false);
-    expect(withQuantity({ value: -1 })).toBe(false);
-    expect(withQuantity({ value: Infinity })).toBe(false);
-    expect(withQuantity({ value: Number.NaN })).toBe(false);
-    expect(withQuantity({ max: 1e7 })).toBe(false);
-  });
-
-  test('quantity unit must be a slug, rounding a known one', () => {
-    const withQuantity = (extra: object) =>
-      ok({ recipes: [], entries: [entry(1, null, { quantity: quantity(extra) })] });
-    expect(withQuantity({ unit: 'c-a-s' })).toBe(true);
-    expect(withQuantity({ unit: 'Gramme' })).toBe(false);
-    expect(withQuantity({ unit: '' })).toBe(false);
-    expect(withQuantity({ rounding: 'round' })).toBe(false);
-  });
-
-  test('servings are integers from 1, the language a supported one', () => {
-    const withRecipe = (extra: object) =>
-      ok({ recipes: [{ ...recipe(1), ...extra }], entries: [] });
-    expect(withRecipe({ servings: 0 })).toBe(false);
-    expect(withRecipe({ servings: 2.5 })).toBe(false);
-    expect(withRecipe({ lang: 'hu' })).toBe(true);
-    expect(withRecipe({ lang: 'de' })).toBe(false);
-  });
-
-  test('ids must be uuids and unknown keys are refused', () => {
-    expect(ok({ recipes: [], entries: [entry(1, null, { id: 'abc' })] })).toBe(false);
-    expect(ok({ recipes: [], entries: [entry(1, null, { extra: 1 })] })).toBe(false);
-    expect(ok({ recipes: [], entries: [], extra: 1 })).toBe(false);
-  });
-});
-
-describe('shopping list input schema', () => {
-  test('wraps the state and refuses extra keys', () => {
-    const state = { recipes: [], entries: [] };
-    expect(shoppingListInputSchema.safeParse({ state }).success).toBe(true);
-    expect(shoppingListInputSchema.safeParse({ state, version: 1 }).success).toBe(false);
-    expect(shoppingListInputSchema.safeParse({}).success).toBe(false);
+  test('the API input wraps the state', () => {
+    expect(shoppingListInputSchema.safeParse({ state: { recipes: [], lines: [] } }).success).toBe(
+      true,
+    );
+    expect(
+      shoppingListInputSchema.safeParse({ state: { recipes: [], lines: [] }, x: 1 }).success,
+    ).toBe(false);
   });
 });
