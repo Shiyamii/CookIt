@@ -1,14 +1,22 @@
 import type { Locale, RecipeVisibility } from '@cookit/shared';
 import { and, asc, desc, eq, exists, like, ne, or, sql, type SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import type { Database } from '../../db';
 import { uniqueViolation } from '../../db/errors';
 import { user } from '../auth/auth.schema';
-import { recipeImages, recipes, recipeTags, recipeTranslations } from './recipes.schema';
+import {
+  recipeImages,
+  recipeNotes,
+  recipes,
+  recipeTags,
+  recipeTranslations,
+} from './recipes.schema';
 
 /** The language-dependent part of a recipe (plan §3), as stored. */
 export type TranslationContent = {
   title: string;
   description: string;
+  summary: string;
   extraMeta: Record<string, string>;
   bodyMarkdown: string;
   searchText: string;
@@ -36,6 +44,7 @@ export type RecipeRow = {
   copiedFromId: string | null;
   title: string;
   description: string;
+  summary: string;
   extraMeta: Record<string, string>;
   bodyMarkdown: string;
   tagIds: string[];
@@ -43,6 +52,7 @@ export type RecipeRow = {
   /** Photos, cover first. */
   imageIds: string[];
   hasSteps: boolean;
+  authorNote: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -53,6 +63,7 @@ export type RecipeListRow = Pick<
   | 'lang'
   | 'title'
   | 'description'
+  | 'summary'
   | 'servings'
   | 'visibility'
   | 'ownerName'
@@ -68,6 +79,7 @@ export type RecipeContent = {
   sourceUrl: string | null;
   title: string;
   description: string;
+  summary: string;
   extraMeta: Record<string, string>;
   bodyMarkdown: string;
   searchText: string;
@@ -103,6 +115,8 @@ export type ListQuery = {
   tsquery?: string;
   /** Recipes having all these tags. */
   tagIds?: string[];
+  /** Show titles, descriptions and summaries in this language when the recipe has it. */
+  lang?: Locale;
   limit: number;
   offset: number;
 };
@@ -140,7 +154,12 @@ export type RecipesRepository = {
    * One recipe with steps among the owner's and the public ones, picked by `seed` (the same seed
    * gives the same recipe while they do not change), other than `exclude`.
    */
-  pick(ownerId: string, seed: string, exclude?: string): Promise<RecipeListRow | undefined>;
+  pick(
+    ownerId: string,
+    seed: string,
+    exclude?: string,
+    lang?: Locale,
+  ): Promise<RecipeListRow | undefined>;
   /** Every recipe of the owner in its base language (export of all recipes), oldest first. */
   listAllByOwner(ownerId: string): Promise<Omit<RecipeRow, 'translations' | 'imageIds'>[]>;
   /** Creates or replaces a translation (never the base language: the service checks it). */
@@ -152,6 +171,12 @@ export type RecipesRepository = {
   ): Promise<void>;
   /** False when there was no such translation. */
   deleteTranslation(recipeId: string, lang: Locale): Promise<boolean>;
+  /** The author's public note (does not change `updated_at`: no editor conflict). */
+  setAuthorNote(recipeId: string, text: string): Promise<void>;
+  /** A reader's private note, if any. */
+  findNote(userId: string, recipeId: string): Promise<string | undefined>;
+  /** Saves a reader's note; an empty text deletes it. */
+  saveNote(userId: string, recipeId: string, text: string, now: Date): Promise<void>;
   /** Adds a photo after the others; `too_many` when the recipe already has `max`. */
   addImage(recipeId: string, image: NewImage, max: number): Promise<'ok' | 'too_many'>;
   /** False when the recipe has no such photo. */
@@ -184,19 +209,27 @@ const rowColumns = {
   sourceUrl: recipes.sourceUrl,
   copiedFromId: recipes.copiedFromId,
   hasSteps: recipes.hasSteps,
+  authorNote: recipes.authorNote,
   title: recipeTranslations.title,
   description: recipeTranslations.description,
+  summary: recipeTranslations.summary,
   extraMeta: recipeTranslations.extraMeta,
   bodyMarkdown: recipeTranslations.bodyMarkdown,
   createdAt: recipes.createdAt,
   updatedAt: recipes.updatedAt,
 };
 
+/** The translation shown in lists: the one asked for, when the recipe has it. */
+const shown = alias(recipeTranslations, 'shown');
+const shownJoin = (lang: Locale | undefined) =>
+  and(eq(shown.recipeId, recipes.id), eq(shown.lang, lang ?? sql`${recipes.baseLang}`));
+
 const listColumns = {
   id: recipes.id,
-  lang: sql<Locale>`${recipes.baseLang}`,
-  title: recipeTranslations.title,
-  description: recipeTranslations.description,
+  lang: sql<Locale>`coalesce(${shown.lang}, ${recipes.baseLang})`,
+  title: sql<string>`coalesce(${shown.title}, ${recipeTranslations.title})`,
+  description: sql<string>`coalesce(${shown.description}, ${recipeTranslations.description})`,
+  summary: sql<string>`coalesce(${shown.summary}, ${recipeTranslations.summary})`,
   servings: recipes.servings,
   visibility: recipes.visibility,
   ownerName: user.name,
@@ -214,7 +247,9 @@ const imageBytes =
     Number,
   );
 
-const searchConfig = sql`(case ${recipeTranslations.lang} when 'fr' then 'french'::regconfig when 'hu' then 'hungarian'::regconfig else 'english'::regconfig end)`;
+const searchConfigOf = (lang: SQL | typeof recipeTranslations.lang | typeof shown.lang) =>
+  sql`(case ${lang} when 'fr' then 'french'::regconfig when 'hu' then 'hungarian'::regconfig else 'english'::regconfig end)`;
+const searchConfig = searchConfigOf(recipeTranslations.lang);
 
 export function createRecipesRepository(db: Database): RecipesRepository {
   const findOne = async (where: SQL): Promise<RecipeRow | undefined> => {
@@ -234,6 +269,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         lang: sql<Locale>`${recipeTranslations.lang}`,
         title: recipeTranslations.title,
         description: recipeTranslations.description,
+        summary: recipeTranslations.summary,
         extraMeta: recipeTranslations.extraMeta,
         bodyMarkdown: recipeTranslations.bodyMarkdown,
         searchText: recipeTranslations.searchText,
@@ -267,8 +303,9 @@ export function createRecipesRepository(db: Database): RecipesRepository {
   };
 
   const list = (where: SQL | undefined, query: ListQuery) => {
+    // Words found in the base language or in the language shown.
     const matches = query.tsquery
-      ? sql`${recipeTranslations.search} @@ to_tsquery(${searchConfig}, ${query.tsquery})`
+      ? sql`(${recipeTranslations.search} @@ to_tsquery(${searchConfig}, ${query.tsquery}) or coalesce(${shown.search} @@ to_tsquery(${searchConfigOf(shown.lang)}, ${query.tsquery}), false))`
       : undefined;
     const tagged = (query.tagIds ?? []).map((tagId) =>
       exists(
@@ -281,7 +318,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
     const order = query.tsquery
       ? [
           desc(
-            sql`ts_rank(${recipeTranslations.search}, to_tsquery(${searchConfig}, ${query.tsquery}))`,
+            sql`greatest(ts_rank(${recipeTranslations.search}, to_tsquery(${searchConfig}, ${query.tsquery})), coalesce(ts_rank(${shown.search}, to_tsquery(${searchConfigOf(shown.lang)}, ${query.tsquery})), 0))`,
           ),
           desc(recipes.updatedAt),
         ]
@@ -290,6 +327,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
       .select(listColumns)
       .from(recipes)
       .innerJoin(recipeTranslations, baseTranslation)
+      .leftJoin(shown, shownJoin(query.lang))
       .innerJoin(user, eq(user.id, recipes.ownerId))
       .where(and(where, matches, ...tagged))
       .orderBy(...order, recipes.id)
@@ -316,6 +354,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         lang: recipe.lang,
         title: recipe.title,
         description: recipe.description,
+        summary: recipe.summary,
         extraMeta: recipe.extraMeta,
         bodyMarkdown: recipe.bodyMarkdown,
         searchText: recipe.searchText,
@@ -391,6 +430,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
           .set({
             title: content.title,
             description: content.description,
+            summary: content.summary,
             extraMeta: content.extraMeta,
             bodyMarkdown: content.bodyMarkdown,
             searchText: content.searchText,
@@ -426,11 +466,12 @@ export function createRecipesRepository(db: Database): RecipesRepository {
 
     listPublic: (query) => list(eq(recipes.visibility, 'public'), query),
 
-    async pick(ownerId, seed, exclude) {
+    async pick(ownerId, seed, exclude, lang) {
       const [row] = await db
         .select(listColumns)
         .from(recipes)
         .innerJoin(recipeTranslations, baseTranslation)
+        .leftJoin(shown, shownJoin(lang))
         .innerJoin(user, eq(user.id, recipes.ownerId))
         .where(
           and(
@@ -470,6 +511,34 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         .onConflictDoUpdate({
           target: [recipeTranslations.recipeId, recipeTranslations.lang],
           set: { ...content, updatedAt: now },
+        });
+    },
+
+    async setAuthorNote(recipeId, text) {
+      await db.update(recipes).set({ authorNote: text }).where(eq(recipes.id, recipeId));
+    },
+
+    async findNote(userId, recipeId) {
+      const [row] = await db
+        .select({ text: recipeNotes.text })
+        .from(recipeNotes)
+        .where(and(eq(recipeNotes.userId, userId), eq(recipeNotes.recipeId, recipeId)));
+      return row?.text;
+    },
+
+    async saveNote(userId, recipeId, text, now) {
+      if (!text) {
+        await db
+          .delete(recipeNotes)
+          .where(and(eq(recipeNotes.userId, userId), eq(recipeNotes.recipeId, recipeId)));
+        return;
+      }
+      await db
+        .insert(recipeNotes)
+        .values({ userId, recipeId, text, updatedAt: now })
+        .onConflictDoUpdate({
+          target: [recipeNotes.userId, recipeNotes.recipeId],
+          set: { text, updatedAt: now },
         });
     },
 

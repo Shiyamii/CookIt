@@ -1,5 +1,5 @@
 import type { Locale } from '../locale';
-import { META_KEYS, CURRENT_FORMAT } from '../recipe/meta-keys';
+import { CURRENT_FORMAT, META_KEYS, RECIPE_SUMMARY_MAX } from '../recipe/meta-keys';
 import { parseRecipe } from '../recipe/parse';
 import { serializeRecipe } from '../recipe/serialize';
 import { MAX_RECIPE_MARKDOWN_LENGTH } from '../recipe/split';
@@ -98,7 +98,7 @@ type Texts = {
   several: string;
   importPrompt: (input: {
     lang: string;
-    keys: { servings: string; tags: string };
+    keys: { servings: string; summary: string; tags: string };
     units: string;
     tags: string[];
     example: string;
@@ -118,7 +118,7 @@ const TEXTS: Record<Locale, Texts> = {
       '',
       'Un document markdown en trois parties, séparées par une ligne `---` seule, avec une ligne vide avant et après :',
       '',
-      `1. **Présentation** : \`# Titre\` (obligatoire), la description éventuelle en citation (\`> …\`), puis des lignes \`clé: valeur\` : \`${keys.servings}: N\` (nombre de portions, entier), \`source: …\` (adresse de la recette si elle est connue)${tags.length ? `, \`${keys.tags}: …\` (voir plus bas)` : ''} et \`format: ${CURRENT_FORMAT}\`.`,
+      `1. **Présentation** : \`# Titre\` (obligatoire), la description éventuelle en citation (\`> …\`), puis des lignes \`clé: valeur\` : \`${keys.summary}: …\` (une phrase de ${RECIPE_SUMMARY_MAX} caractères au plus qui donne envie, affichée dans les listes), \`${keys.servings}: N\` (nombre de portions, entier), \`source: …\` (adresse de la recette si elle est connue)${tags.length ? `, \`${keys.tags}: …\` (voir plus bas)` : ''} et \`format: ${CURRENT_FORMAT}\`.`,
       "2. **Ingrédients** : une ligne `- ` par ingrédient, dans l'ordre quantité, unité, nom (`- 250 g de farine`, `- 2 à 3 c. à soupe de sucre`, `- 3 œufs`, `- sel`). Quantités : entiers, décimaux, fractions (`1/2`, `½`, `1 ½`) ou plages (`2-3`, `2 à 3`).",
       '3. **Étapes** : une étape par ligne, numérotée (`1. …`).',
       '',
@@ -160,10 +160,10 @@ const TEXTS: Record<Locale, Texts> = {
       '## Consignes',
       '',
       "- Conserve exactement la structure : les trois parties séparées par une ligne `---`, les mêmes groupes `###` dans le même ordre, le même nombre d'ingrédients et d'étapes dans chaque groupe.",
-      "- Traduis le titre, la description, les noms des groupes, les ingrédients, les étapes et les noms des minuteurs (le texte entre guillemets d'un lien `timer:`).",
+      "- Traduis le titre, la description, le résumé, les noms des groupes, les ingrédients, les étapes et les noms des minuteurs (le texte entre guillemets d'un lien `timer:`).",
       '- Garde les liens `timer:` et `q:` tels quels : même syntaxe, même durée (`timer:10m`) ; seul le texte entre crochets et le nom du minuteur se traduisent.',
       "- Ne convertis ni les unités ni les quantités (250 g reste 250 g) ; seul le nom de l'unité se traduit.",
-      '- Garde les lignes `clé: valeur` de la présentation (portions, source, format) avec les mêmes valeurs.',
+      '- Garde les lignes `clé: valeur` de la présentation (résumé traduit, portions, source, format) avec les mêmes valeurs.',
       '- Réponds uniquement avec un bloc de code markdown contenant la recette traduite, sans texte avant ni après.',
       '',
       '## Recette',
@@ -182,7 +182,7 @@ const TEXTS: Record<Locale, Texts> = {
       '',
       'A markdown document in three parts, separated by a line containing only `---`, with a blank line before and after:',
       '',
-      `1. **Presentation**: \`# Title\` (required), the description if any as a quote (\`> …\`), then \`key: value\` lines: \`${keys.servings}: N\` (number of servings, an integer), \`source: …\` (the recipe's address when known)${tags.length ? `, \`${keys.tags}: …\` (see below)` : ''} and \`format: ${CURRENT_FORMAT}\`.`,
+      `1. **Presentation**: \`# Title\` (required), the description if any as a quote (\`> …\`), then \`key: value\` lines: \`${keys.summary}: …\` (one appealing sentence of at most ${RECIPE_SUMMARY_MAX} characters, shown in the lists), \`${keys.servings}: N\` (number of servings, an integer), \`source: …\` (the recipe's address when known)${tags.length ? `, \`${keys.tags}: …\` (see below)` : ''} and \`format: ${CURRENT_FORMAT}\`.`,
       '2. **Ingredients**: one `- ` line per ingredient, as quantity, unit, name (`- 250 g flour`, `- 2-3 tbsp sugar`, `- 3 eggs`, `- salt`). Quantities: integers, decimals, fractions (`1/2`, `½`, `1 ½`) or ranges (`2-3`).',
       '3. **Steps**: one step per line, numbered (`1. …`).',
       '',
@@ -224,10 +224,10 @@ const TEXTS: Record<Locale, Texts> = {
       '## Rules',
       '',
       '- Keep exactly the same structure: the three parts separated by a `---` line, the same `###` groups in the same order, the same number of ingredients and steps in each group.',
-      '- Translate the title, the description, the group names, the ingredients, the steps and the timer names (the quoted text of a `timer:` link).',
+      '- Translate the title, the description, the summary, the group names, the ingredients, the steps and the timer names (the quoted text of a `timer:` link).',
       '- Keep the `timer:` and `q:` links as they are: same syntax, same duration (`timer:10m`); only the text in brackets and the timer name are translated.',
       '- Convert neither units nor quantities (250 g stays 250 g); only the name of the unit is translated.',
-      '- Keep the `key: value` lines of the presentation (servings, source, format) with the same values.',
+      '- Keep the `key: value` lines of the presentation (servings, source, format; the summary translated) with the same values.',
       '- Answer only with a markdown code block containing the translated recipe, with no text before or after it.',
       '',
       '## Recipe',
@@ -246,7 +246,7 @@ const TEXTS: Record<Locale, Texts> = {
       '',
       'Háromrészes markdown dokumentum; a részeket egy önálló `---` sor választja el, előtte és utána egy üres sorral:',
       '',
-      `1. **Bemutatás**: \`# Cím\` (kötelező), az esetleges leírás idézetként (\`> …\`), majd \`kulcs: érték\` sorok: \`${keys.servings}: N\` (adagok száma, egész szám), \`source: …\` (a recept címe, ha ismert)${tags.length ? `, \`${keys.tags}: …\` (lásd lent)` : ''} és \`format: ${CURRENT_FORMAT}\`.`,
+      `1. **Bemutatás**: \`# Cím\` (kötelező), az esetleges leírás idézetként (\`> …\`), majd \`kulcs: érték\` sorok: \`${keys.summary}: …\` (egy kedvcsináló mondat, legfeljebb ${RECIPE_SUMMARY_MAX} karakter, a listákban jelenik meg), \`${keys.servings}: N\` (adagok száma, egész szám), \`source: …\` (a recept címe, ha ismert)${tags.length ? `, \`${keys.tags}: …\` (lásd lent)` : ''} és \`format: ${CURRENT_FORMAT}\`.`,
       '2. **Hozzávalók**: hozzávalónként egy `- ` sor, ebben a sorrendben: mennyiség, mértékegység, név (`- 25 dkg liszt`, `- 2-3 ek cukor`, `- 3 tojás`, `- só`). Mennyiségek: egész számok, tizedes törtek, törtek (`1/2`, `½`, `1 ½`) vagy tartományok (`2-3`).',
       '3. **Elkészítés**: soronként egy lépés, számozva (`1. …`).',
       '',
@@ -288,10 +288,10 @@ const TEXTS: Record<Locale, Texts> = {
       '## Szabályok',
       '',
       '- Pontosan tartsd meg a szerkezetet: a három részt, amelyeket egy `---` sor választ el, ugyanazokat a `###` csoportokat ugyanabban a sorrendben, és csoportonként ugyanannyi hozzávalót és lépést.',
-      '- Fordítsd le a címet, a leírást, a csoportok nevét, a hozzávalókat, a lépéseket és az időzítők nevét (a `timer:` hivatkozás idézőjeles szövegét).',
+      '- Fordítsd le a címet, a leírást, az összefoglalót, a csoportok nevét, a hozzávalókat, a lépéseket és az időzítők nevét (a `timer:` hivatkozás idézőjeles szövegét).',
       '- A `timer:` és `q:` hivatkozásokat hagyd változatlanul: ugyanaz a szintaxis, ugyanaz az időtartam (`timer:10m`); csak a szögletes zárójelben lévő szöveg és az időzítő neve fordítandó.',
       '- Ne váltsd át se a mértékegységeket, se a mennyiségeket (a 250 g 250 g marad); csak a mértékegység neve fordítandó.',
-      '- Tartsd meg a bemutatás `kulcs: érték` sorait (adag, source, format) ugyanazokkal az értékekkel.',
+      '- Tartsd meg a bemutatás `kulcs: érték` sorait (adag, source, format; az összefoglaló lefordítva) ugyanazokkal az értékekkel.',
       '- Csak egy markdown kódblokkal válaszolj, amely a lefordított receptet tartalmazza, előtte és utána szöveg nélkül.',
       '',
       '## Recept',
@@ -317,7 +317,11 @@ export function importPrompt(options: {
   const example = promptExample(options.lang, tags.length ? exampleTags(categories) : []);
   const lines = TEXTS[options.locale].importPrompt({
     lang: LANGUAGE_NAMES[options.locale][options.lang],
-    keys: { servings: META_KEYS.servings[options.lang][0] ?? 'servings', tags: 'tags' },
+    keys: {
+      servings: META_KEYS.servings[options.lang][0] ?? 'servings',
+      summary: META_KEYS.summary[options.lang][0] ?? 'summary',
+      tags: 'tags',
+    },
     units: unitList(options.units ?? DEFAULT_UNITS, options.lang),
     tags,
     example: fence(example),

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { fold } from '../text';
 import { CURRENT_FORMAT, META_FIELDS, META_KEYS, metaFieldOf } from './meta-keys';
+import { parseRecipe } from './parse';
 import { parsePresentation } from './presentation';
 import { splitParts } from './split';
 
@@ -564,5 +565,61 @@ describe('parsePresentation: hardening', () => {
 
     const long = parsePresentation(part('# T', `portions: ${'9'.repeat(500)}`));
     expect(String(long.diagnostics[0]?.params?.value).length).toBeLessThanOrEqual(81);
+  });
+});
+
+describe('summary', () => {
+  const summaryOf = (...lines: string[]) =>
+    parsePresentation(part('# T', '', ...lines, '')).presentation?.summary;
+
+  test.each([
+    ['résumé: Rapide et bon.', 'Rapide et bon.'],
+    ['resume: Sans accent.', 'Sans accent.'],
+    ['summary: Quick and good.', 'Quick and good.'],
+    ['összefoglaló: Gyors és finom.', 'Gyors és finom.'],
+    ['összegzés: Másik kulcs.', 'Másik kulcs.'],
+    ['RÉSUMÉ: Casse ignorée.', 'Casse ignorée.'],
+  ])('%s is read as the summary', (line, expected) => {
+    const result = parsePresentation(part('# T', '', line, 'portions: 2', ''));
+    expect(result.diagnostics).toEqual([]);
+    expect(result.presentation?.summary).toBe(expected);
+    expect(result.presentation?.extraMeta).toEqual({});
+  });
+
+  test('an empty value is ignored without diagnostic', () => {
+    const result = parsePresentation(part('# T', '', 'summary:', 'portions: 2', ''));
+    expect(result.presentation?.summary).toBeUndefined();
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  test('exactly 160 code points is accepted, 161 is an error with max and length', () => {
+    expect(summaryOf(`summary: ${'a'.repeat(160)}`, 'portions: 2')).toHaveLength(160);
+    const result = parsePresentation(part('# T', '', `summary: ${'a'.repeat(161)}`, 'portions: 2'));
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'summary_too_long',
+        severity: 'error',
+        params: { max: 160, length: 161 },
+      }),
+    ]);
+  });
+
+  test('an emoji counts as one code point at the boundary', () => {
+    const ok = `${'a'.repeat(159)}🍰`;
+    expect(ok.length).toBe(161);
+    expect(summaryOf(`summary: ${ok}`, 'portions: 2')).toBe(ok);
+    const tooLong = `${'a'.repeat(160)}🍰`;
+    const result = parsePresentation(part('# T', '', `summary: ${tooLong}`, 'portions: 2'));
+    expect(codes(result)).toContain('summary_too_long');
+  });
+
+  test('a too long summary rejects the document', () => {
+    const result = parseRecipe(`# T\n\nsummary: ${'a'.repeat(161)}\nportions: 2\n\n---\n\n---\n`);
+    expect(result.ok).toBe(false);
+  });
+
+  test('a duplicate summary key is an error', () => {
+    const result = parsePresentation(part('# T', '', 'summary: a', 'résumé: b', 'portions: 2', ''));
+    expect(result.diagnostics.some((d) => d.severity === 'error')).toBe(true);
   });
 });

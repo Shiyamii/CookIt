@@ -70,6 +70,9 @@ export function serializePresentation(
     }
   }
   out.blank();
+  if (presentation.summary) {
+    out.line(`${META_KEYS.summary[options.locale][0]}: ${oneLine(presentation.summary)}`);
+  }
   out.line(`${META_KEYS.servings[options.locale][0]}: ${presentation.servings}`);
   if (presentation.source) out.line(`source: ${oneLine(presentation.source)}`);
   if (options.includeTags && presentation.tags.length) {

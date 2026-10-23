@@ -201,3 +201,35 @@ describe('recipeIdeaQuerySchema', () => {
     expect(parse({ day: '2026-10-22', exclude: '' }).success).toBe(false);
   });
 });
+
+describe('summary', () => {
+  test('a blank summary becomes undefined, a text is kept trimmed', () => {
+    expect(recipeFieldsSchema.parse({ ...FIELDS, summary: '   ' }).summary).toBeUndefined();
+    expect(recipeFieldsSchema.parse({ ...FIELDS, summary: ' Rapide ' }).summary).toBe('Rapide');
+    expect(recipeFieldsSchema.parse(FIELDS).summary).toBeUndefined();
+  });
+  test('refuses more than 160 characters, accepts exactly 160', () => {
+    const ok = recipeFieldsSchema.safeParse({ ...FIELDS, summary: 'a'.repeat(160) });
+    expect(ok.success).toBe(true);
+    const tooLong = recipeFieldsSchema.safeParse({ ...FIELDS, summary: 'a'.repeat(161) });
+    expect(tooLong.success).toBe(false);
+  });
+  test('refuses line breaks', () => {
+    expect(recipeFieldsSchema.safeParse({ ...FIELDS, summary: 'a\nb' }).success).toBe(false);
+  });
+  test('the summary keys are reserved in extraMeta', () => {
+    for (const key of ['summary', 'résumé', 'resume', 'összefoglaló', 'Summary']) {
+      expect(extraMetaSchema.safeParse({ [key]: 'x' }).success).toBe(false);
+    }
+  });
+  test('composeRecipeMarkdown writes the summary and it parses back', () => {
+    const md = composeRecipeMarkdown(
+      { title: 'T', description: '', summary: 'Court.', servings: 2, extraMeta: {} },
+      '- a\n\n---\n\n1. b',
+      { locale: 'en' },
+    );
+    expect(md).toContain('summary: Court.');
+    const result = parseRecipe(md);
+    expect(result.ok && result.document.summary).toBe('Court.');
+  });
+});

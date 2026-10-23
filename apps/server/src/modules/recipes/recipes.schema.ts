@@ -41,6 +41,8 @@ export const recipes = pgTable(
     copiedFromId: text('copied_from_id'),
     // No step yet: "to complete" in lists, cannot be cooked (derived from the body on save).
     hasSteps: boolean('has_steps').notNull().default(false),
+    // The author's public note (plain text, not part of the markdown nor translated).
+    authorNote: text('author_note').notNull().default(''),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -77,6 +79,8 @@ export const recipeTranslations = pgTable(
     lang: text('lang').notNull(),
     title: text('title').notNull(),
     description: text('description').notNull().default(''),
+    // The `summary:` line (one line for the cards), '' without one.
+    summary: text('summary').notNull().default(''),
     extraMeta: jsonb('extra_meta').$type<Record<string, string>>().notNull().default({}),
     bodyMarkdown: text('body_markdown').notNull().default(''),
     searchText: text('search_text').notNull().default(''),
@@ -130,4 +134,20 @@ export const recipeImages = pgTable(
     index('recipe_images_recipe_idx').on(table.recipeId, table.position),
     check('recipe_images_type_check', sql`${table.contentType} in ('image/webp', 'image/jpeg')`),
   ],
+);
+
+/** A reader's private note on a recipe (only they see it). Deleted with the recipe or the user. */
+export const recipeNotes = pgTable(
+  'recipe_notes',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    recipeId: text('recipe_id')
+      .notNull()
+      .references(() => recipes.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.recipeId] })],
 );

@@ -33,9 +33,9 @@ export function RecipeCard({ recipe, showOwner }: { recipe: RecipeSummary; showO
             />
           )}
         </span>
-        {recipe.description && (
+        {(recipe.summary || recipe.description) && (
           <span className="line-clamp-2 text-sm wrap-anywhere text-muted-foreground">
-            {recipe.description}
+            {recipe.summary || recipe.description}
           </span>
         )}
         {recipe.incomplete && (

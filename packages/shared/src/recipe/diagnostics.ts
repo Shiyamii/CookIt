@@ -27,6 +27,8 @@ export type DiagnosticCode =
   | 'missing_servings'
   /** Servings is not a whole number between 1 and 1000. Params: `value`. */
   | 'invalid_servings'
+  /** The `summary:` line is longer than RECIPE_SUMMARY_MAX characters. Params: `max`, `length`. */
+  | 'summary_too_long'
   /** `format:` is not a whole number. Params: `value`. */
   | 'invalid_format'
   /** `format:` is newer than this version of the app. Params: `value`, `max`. */

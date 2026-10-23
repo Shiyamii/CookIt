@@ -503,7 +503,21 @@ export const fr: Translations = {
       publicHint:
         'Tout le monde peut la voir, même sans compte, et elle apparaît dans la galerie. Ne publiez pas telle quelle une recette copiée d’un autre site.',
     },
+    notes: {
+      author: 'Le mot de l’auteur',
+      authorEmpty:
+        'Partagez une astuce ou une histoire sur cette recette : tous les lecteurs la voient.',
+      addAuthor: 'Ajouter un mot de l’auteur',
+      mine: 'Ma note',
+      mineEmpty:
+        'Vous seul voyez votre note : ce qu’il faut changer la prochaine fois, ce qui a bien marché…',
+      addMine: 'Ajouter une note',
+      edit: 'Modifier',
+      save: 'Enregistrer',
+      delete: 'Supprimer',
+    },
     fields: {
+      summary: 'Résumé',
       title: 'Titre',
       description: 'Description',
       servings: 'Portions',
@@ -514,13 +528,15 @@ export const fr: Translations = {
       metaValue: 'Valeur',
     },
     hints: {
+      summary: 'Une ligne affichée sur les cartes des listes ({{max}} caractères au plus).',
       source: 'Facultatif : un site, un livre, une personne…',
     },
     invalid: {
+      summary: '{{max}} caractères au plus.',
       title: 'Le titre est obligatoire.',
       servings: 'Un nombre entier de 1 à 1000.',
       extraMeta:
-        'Chaque nom commence par une lettre, sans espace, et n’est pas un mot réservé (portions, source, tags, format).',
+        'Chaque nom commence par une lettre, sans espace, et n’est pas un mot réservé (portions, résumé, source, tags, format).',
     },
     editor: {
       newTitle: 'Nouvelle recette',
@@ -590,6 +606,7 @@ export const fr: Translations = {
     },
   },
   diagnostics: {
+    summary_too_long: 'Le résumé est trop long ({{length}} caractères, {{max}} au plus).',
     document_too_large: 'La recette est trop longue ({{max}} caractères au maximum).',
     missing_separator:
       'Il faut trois parties, séparées par une ligne de tirets (---) précédée et suivie d’une ligne vide : {{found}} trouvée(s).',

@@ -90,3 +90,11 @@ describe('durationText', () => {
     expect(durationText(3600)).toBe('1 h');
   });
 });
+
+describe('displayRecipe summary', () => {
+  test('is the document summary, or empty', () => {
+    expect(displayRecipe(document(), 4, 'fr').summary).toBe('');
+    const withSummary = { ...document(), summary: 'Court.' };
+    expect(displayRecipe(withSummary, 8, 'fr').summary).toBe('Court.');
+  });
+});

@@ -33,30 +33,36 @@ async function withDiagnostics<T>(call: Promise<T>): Promise<T> {
   }
 }
 
-function searchParams(q: string, page: number, tags: readonly string[]): string {
+function searchParams(q: string, page: number, tags: readonly string[], lang?: Locale): string {
   const params = new URLSearchParams();
   if (q.trim()) params.set('q', q.trim());
+  if (lang) params.set('lang', lang);
   if (tags.length) params.set('tags', tags.join(','));
   if (page > 1) params.set('page', String(page));
   const query = params.toString();
   return query ? `?${query}` : '';
 }
 
-/** Recipes matching the words `q` and having all the `tags` (slugs). */
+/**
+ * Recipes matching the words `q` and having all the `tags` (slugs), shown in `lang` when they
+ * have that translation.
+ */
 export function fetchMyRecipes(
   q: string,
   page: number,
   tags: readonly string[],
+  lang?: Locale,
 ): Promise<RecipePage> {
-  return apiGet<RecipePage>(`/recipes${searchParams(q, page, tags)}`);
+  return apiGet<RecipePage>(`/recipes${searchParams(q, page, tags, lang)}`);
 }
 
 export function fetchGallery(
   q: string,
   page: number,
   tags: readonly string[],
+  lang?: Locale,
 ): Promise<RecipePage> {
-  return apiGet<RecipePage>(`/gallery${searchParams(q, page, tags)}`);
+  return apiGet<RecipePage>(`/gallery${searchParams(q, page, tags, lang)}`);
 }
 
 /** A recipe in `lang` if it has that translation, in its base language otherwise (or if omitted). */
@@ -115,6 +121,21 @@ export async function deleteRecipe(id: string): Promise<void> {
 }
 
 /** "Add to my library": the share token is needed when the recipe is unlisted. */
+/** The signed-in reader's private note (`''` removes it); `token` for an unlisted recipe. */
+export function saveMyNote(id: string, text: string, token?: string) {
+  return apiPut<{ myNote: string | null }>(`/recipes/${encodeURIComponent(id)}/note`, {
+    text,
+    ...(token && { token }),
+  });
+}
+
+/** The author's public note (owner only; `''` removes it). */
+export function saveAuthorNote(id: string, text: string) {
+  return apiPut<{ authorNote: string }>(`/recipes/${encodeURIComponent(id)}/author-note`, {
+    text,
+  });
+}
+
 export function copyRecipe(id: string, token?: string): Promise<{ id: string }> {
   return apiPost<{ id: string }>(`/recipes/${encodeURIComponent(id)}/copy`, token ? { token } : {});
 }

@@ -499,7 +499,20 @@ export const hu: Translations = {
       publicHint:
         'Mindenki láthatja, fiók nélkül is, és megjelenik a galériában. Más oldalról átvett receptet ne tegyél közzé változatlanul.',
     },
+    notes: {
+      author: 'A szerző szava',
+      authorEmpty:
+        'Ossz meg egy tippet vagy egy történetet erről a receptről: minden olvasó látja.',
+      addAuthor: 'Szerzői megjegyzés hozzáadása',
+      mine: 'Saját jegyzetem',
+      mineEmpty: 'A jegyzetedet csak te látod: mit változtass legközelebb, mi sikerült jól…',
+      addMine: 'Jegyzet hozzáadása',
+      edit: 'Szerkesztés',
+      save: 'Mentés',
+      delete: 'Törlés',
+    },
     fields: {
+      summary: 'Összefoglaló',
       title: 'Cím',
       description: 'Leírás',
       servings: 'Adagok',
@@ -510,13 +523,15 @@ export const hu: Translations = {
       metaValue: 'Érték',
     },
     hints: {
+      summary: 'Egy sor, amely a listák kártyáin jelenik meg (legfeljebb {{max}} karakter).',
       source: 'Nem kötelező: egy weboldal, egy könyv, egy személy…',
     },
     invalid: {
+      summary: 'Legfeljebb {{max}} karakter.',
       title: 'A cím kötelező.',
       servings: 'Egész szám 1 és 1000 között.',
       extraMeta:
-        'Minden név betűvel kezdődik, nincs benne szóköz, és nem foglalt szó (adag, source, tags, format).',
+        'Minden név betűvel kezdődik, nincs benne szóköz, és nem foglalt szó (adag, összefoglaló, source, tags, format).',
     },
     editor: {
       newTitle: 'Új recept',
@@ -585,6 +600,7 @@ export const hu: Translations = {
     },
   },
   diagnostics: {
+    summary_too_long: 'Az összefoglaló túl hosszú ({{length}} karakter, legfeljebb {{max}}).',
     document_too_large: 'A recept túl hosszú (legfeljebb {{max}} karakter).',
     missing_separator:
       'Három rész kell, amelyeket egy kötőjelekből álló sor (---) választ el, előtte és utána üres sorral: {{found}} található.',

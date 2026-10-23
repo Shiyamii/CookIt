@@ -4,7 +4,10 @@ import { fold } from '../text';
 /** Current version of the recipe format (`format: 1` line). Older versions stay readable. */
 export const CURRENT_FORMAT = 1;
 
-export const META_FIELDS = ['servings', 'source', 'format', 'tags'] as const;
+export const META_FIELDS = ['servings', 'summary', 'source', 'format', 'tags'] as const;
+
+/** A recipe's short summary (`summary:` line, shown on the cards of the lists). */
+export const RECIPE_SUMMARY_MAX = 160;
 export type MetaField = (typeof META_FIELDS)[number];
 
 /**
@@ -17,6 +20,11 @@ export const META_KEYS: Record<MetaField, Record<Locale, readonly string[]>> = {
     fr: ['portions', 'personnes', 'parts'],
     en: ['servings', 'serves', 'yield'],
     hu: ['adag', 'adagok', 'személy', 'fő'],
+  },
+  summary: {
+    fr: ['résumé', 'resume'],
+    en: ['summary'],
+    hu: ['összefoglaló', 'összegzés'],
   },
   source: { fr: ['source'], en: ['source'], hu: ['source', 'forrás'] },
   format: { fr: ['format'], en: ['format'], hu: ['format', 'formátum'] },

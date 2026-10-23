@@ -12,9 +12,11 @@ export function fetchIdea(
   day: string,
   n: number,
   exclude?: string,
+  lang?: Locale,
 ): Promise<{ recipe: RecipeSummary | null }> {
   const params = new URLSearchParams({ day, n: String(n) });
   if (exclude) params.set('exclude', exclude);
+  if (lang) params.set('lang', lang);
   return apiGet(`/recipes/idea?${params.toString()}`);
 }
 

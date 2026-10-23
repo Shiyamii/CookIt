@@ -39,6 +39,7 @@ type FakeImage = NewImage & { recipeId: string };
 
 function fakeRepository() {
   const rows = new Map<string, RecipeRow & { searchText: string }>();
+  const notes = new Map<string, string>();
   const images = new Map<string, FakeImage>();
   const state = { slugTakenOnce: 0, creates: 0, lastList: undefined as ListQuery | undefined };
   const toRow = (r: NewRecipe) => ({
@@ -55,6 +56,7 @@ function fakeRepository() {
     copiedFromId: r.copiedFromId ?? null,
     title: r.title,
     description: r.description,
+    summary: r.summary,
     extraMeta: r.extraMeta,
     bodyMarkdown: r.bodyMarkdown,
     tagIds: r.tagIds,
@@ -64,6 +66,7 @@ function fakeRepository() {
     updatedAt: r.now,
     searchText: r.searchText,
     hasSteps: r.hasSteps,
+    authorNote: '',
   });
   const repository: RecipesRepository = {
     async create(recipe) {
@@ -192,10 +195,21 @@ function fakeRepository() {
         visibility: row.visibility,
       };
     },
+    async setAuthorNote(recipeId, text) {
+      const row = rows.get(recipeId);
+      if (row) row.authorNote = text;
+    },
+    async findNote(userId, recipeId) {
+      return notes.get(`${userId}/${recipeId}`);
+    },
+    async saveNote(userId, recipeId, text) {
+      if (text) notes.set(`${userId}/${recipeId}`, text);
+      else notes.delete(`${userId}/${recipeId}`);
+    },
   };
   const listRows = (found: RecipeRow[]): RecipeListRow[] =>
     found.map((r) => ({ ...r, coverId: r.imageIds[0] ?? null }));
-  return { repository, rows, images, state };
+  return { repository, rows, images, state, notes };
 }
 
 function setup(options: { maxImageBytes?: number } = {}) {
@@ -1070,5 +1084,162 @@ describe('idea of the day', () => {
     expect(await idea(s, OTHER)).toBeNull();
     await s.service.setVisibility(id, OWNER, 'public');
     expect(await idea(s, OTHER)).toBe(id);
+  });
+});
+
+describe('notes', () => {
+  test("a reader's private note: on their own or a public recipe, seen only by them", async () => {
+    const s = setup();
+    const id = await created(s);
+    expect(await s.service.saveNote(id, OWNER, 'moins de sel')).toEqual({ myNote: 'moins de sel' });
+    const mine = await s.service.get(id, OWNER);
+    expect('error' in mine ? undefined : mine.myNote).toBe('moins de sel');
+
+    // Someone else cannot note a private recipe; once public, they can, and see only theirs.
+    expect(await s.service.saveNote(id, OTHER, 'x')).toEqual({ error: 'not_found' });
+    await s.service.setVisibility(id, OWNER, 'public');
+    await s.service.saveNote(id, OTHER, 'à refaire');
+    const theirs = await s.service.get(id, OTHER);
+    expect('error' in theirs ? undefined : theirs.myNote).toBe('à refaire');
+    const anonymous = await s.service.get(id, null);
+    expect('error' in anonymous ? undefined : anonymous.myNote).toBeNull();
+
+    // An empty text removes it.
+    expect(await s.service.saveNote(id, OTHER, '')).toEqual({ myNote: null });
+    const after = await s.service.get(id, OTHER);
+    expect('error' in after ? undefined : after.myNote).toBeNull();
+  });
+
+  test('an unlisted recipe of someone else: only with its share token', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    const token = s.rows.get(id)!.shareToken!;
+    expect(await s.service.saveNote(id, OTHER, 'x')).toEqual({ error: 'not_found' });
+    expect(await s.service.saveNote(id, OTHER, 'x', 'W'.repeat(43))).toEqual({
+      error: 'not_found',
+    });
+    expect(await s.service.saveNote(id, OTHER, 'noté', token)).toEqual({ myNote: 'noté' });
+    const shared = await s.service.getShared(token, OTHER);
+    expect('error' in shared ? undefined : shared.myNote).toBe('noté');
+  });
+
+  test("the author's public note: only the owner sets it, every reader sees it", async () => {
+    const s = setup();
+    const id = await created(s);
+    const before = s.rows.get(id)!.updatedAt;
+    expect(await s.service.setAuthorNote(id, OTHER, 'x')).toEqual({ error: 'not_found' });
+    expect(await s.service.setAuthorNote(id, OWNER, 'Ma recette préférée')).toEqual({
+      authorNote: 'Ma recette préférée',
+    });
+    await s.service.setVisibility(id, OWNER, 'public');
+    const read = await s.service.get(id, null);
+    expect('error' in read ? undefined : read.authorNote).toBe('Ma recette préférée');
+    // Not an edit of the recipe: no conflict for an editor opened before.
+    expect(s.rows.get(id)!.updatedAt).toEqual(before);
+  });
+});
+
+describe('summary', () => {
+  test('saved from the fields, read back, written in the markdown export', async () => {
+    const s = setup();
+    const r = await s.service.create(OWNER, { ...FIELDS, summary: 'Une tarte rapide.' });
+    if ('error' in r) throw new Error('create failed');
+    const detail = await s.service.get(r.id, OWNER);
+    expect('error' in detail ? undefined : detail.summary).toBe('Une tarte rapide.');
+    const [file] = await s.service.exportAll(OWNER);
+    expect(file?.markdown).toContain('résumé: Une tarte rapide.');
+  });
+});
+
+describe('notes and summary edge cases', () => {
+  test('the owner can note their own private recipe', async () => {
+    const s = setup();
+    const id = await created(s);
+    expect(await s.service.saveNote(id, OWNER, 'ma note')).toEqual({ myNote: 'ma note' });
+    expect(s.notes.get(`${OWNER}/${id}`)).toBe('ma note');
+  });
+  test('an empty text removes the note and a note on an unknown id is not_found', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.saveNote(id, OWNER, 'x');
+    expect(await s.service.saveNote(id, OWNER, '')).toEqual({ myNote: null });
+    expect(s.notes.size).toBe(0);
+    const unknown = '00000000-0000-4000-8000-000000000000';
+    expect(await s.service.saveNote(unknown, OWNER, 'x')).toEqual({ error: 'not_found' });
+    expect(s.notes.size).toBe(0);
+  });
+  test('a note on an unlisted recipe is refused once the link is revoked', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    const token = s.rows.get(id)!.shareToken!;
+    await s.service.setVisibility(id, OWNER, 'private');
+    expect(await s.service.saveNote(id, OTHER, 'x', token)).toEqual({ error: 'not_found' });
+  });
+  test('a note on a private recipe is not readable by a token alone', async () => {
+    const s = setup();
+    const id = await created(s);
+    expect(await s.service.saveNote(id, OTHER, 'x', TOKEN)).toEqual({ error: 'not_found' });
+  });
+  test('the author note on an unknown id is not_found; an empty text removes it', async () => {
+    const s = setup();
+    const unknown = '00000000-0000-4000-8000-000000000000';
+    expect(await s.service.setAuthorNote(unknown, OWNER, 'x')).toEqual({ error: 'not_found' });
+    const id = await created(s);
+    await s.service.setAuthorNote(id, OWNER, 'note');
+    expect(await s.service.setAuthorNote(id, OWNER, '')).toEqual({ authorNote: '' });
+    const read = await s.service.get(id, OWNER);
+    expect('error' in read ? undefined : read.authorNote).toBe('');
+  });
+  test("one reader's note is never in another reader's details", async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    await s.service.saveNote(id, OTHER, 'secret');
+    const owner = await s.service.get(id, OWNER);
+    expect('error' in owner ? undefined : owner.myNote).toBeNull();
+  });
+  test('createFromMarkdown stores the summary, searchable and exported', async () => {
+    const s = setup();
+    const doc =
+      '# Tarte\n\nrésumé: Dessert pommé express\nportions: 4\n\n---\n\n- 1 oeuf\n\n---\n\n1. Cuire.\n';
+    const r = await s.service.createFromMarkdown(OWNER, { markdown: doc, lang: 'fr' });
+    if (!('id' in r)) throw new Error('create failed');
+    const row = s.rows.get(r.id)!;
+    expect(row.summary).toBe('Dessert pommé express');
+    expect(row.searchText).toContain('dessert pomme express');
+    const [file] = await s.service.exportAll(OWNER);
+    expect(file?.markdown).toContain('résumé: Dessert pommé express');
+  });
+  test('createFromMarkdown refuses a summary over 160 characters', async () => {
+    const s = setup();
+    const doc = `# T\n\nsummary: ${'a'.repeat(161)}\nservings: 4\n\n---\n\n- 1 egg\n\n---\n\n1. Bake.\n`;
+    const r = await s.service.createFromMarkdown(OWNER, { markdown: doc, lang: 'en' });
+    expect(r).toMatchObject({ error: 'invalid_recipe' });
+    expect(s.rows.size).toBe(0);
+  });
+  test('a translation keeps its own summary, shown with ?lang= and searchable', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    const EN =
+      '# Apple pie\n\nsummary: Quick weeknight pie\nservings: 4\n\n---\n\n### Base\n\n- 200 g flour\n- 2 eggs\n\n---\n\n1. Mix.\n2. Bake [10 min](timer:10m).\n';
+    await s.service.saveTranslation(id, OWNER, 'en', EN);
+    const en = await s.service.get(id, OWNER, 'en');
+    expect('error' in en ? undefined : en.summary).toBe('Quick weeknight pie');
+    const base = await s.service.get(id, OWNER);
+    expect('error' in base ? undefined : base.summary).toBe('');
+    expect(s.rows.get(id)!.translations[0]).toMatchObject({ summary: 'Quick weeknight pie' });
+    expect(s.rows.get(id)!.translations[0]!.searchText).toContain('quick weeknight pie');
+  });
+  test('a summary is saved by update and removed with an empty one', async () => {
+    const s = setup();
+    const id = await created(s);
+    const r = await s.service.update(id, OWNER, { ...FIELDS, summary: 'Court.' });
+    expect('error' in r).toBe(false);
+    expect(s.rows.get(id)!.summary).toBe('Court.');
+    await s.service.update(id, OWNER, { ...FIELDS });
+    expect(s.rows.get(id)!.summary).toBe('');
   });
 });

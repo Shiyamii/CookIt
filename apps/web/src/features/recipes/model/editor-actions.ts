@@ -4,7 +4,7 @@ import { newId, newRow, type EditorGroup, type EditorRecipe } from './editor';
 /** Edits of the visual editor, applied by `editorReducer` (pure: easy to test). */
 
 export type Part = 'ingredients' | 'steps';
-export type PresentationField = 'title' | 'description' | 'servings' | 'source';
+export type PresentationField = 'title' | 'description' | 'summary' | 'servings' | 'source';
 
 export type EditorAction =
   | { type: 'replace'; recipe: EditorRecipe }

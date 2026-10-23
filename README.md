@@ -8,6 +8,7 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 
 - **Invite-only accounts**: admins create one-click invitation links (sent by email when SMTP is configured) and manage users. Optional **2FA (TOTP)** and **passkeys**. **Optional email**: invitations, "forgot your password?", a test email.
 - **Recipe visibility**: private, unlisted (secret link) or public (public gallery, no account needed). Copy any shared recipe into your own library.
+- **Summary and notes**: a one-line summary on the cards, a public word from the author, and a private note of your own on any recipe you can read.
 - **Markdown import/export** with a simple, human-readable format and special syntax for timers and scalable quantities.
 - **Two editors**: a structured visual editor (mobile friendly) and a markdown editor, switchable without losing anything.
 - **Serving scaling** with readable rounding and clean fractions (½, ¼, ⅓).
@@ -16,7 +17,7 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 - **Web Push notifications** when a timer ends, sent by the server even with every page closed, and sent again every 30 s (10 times at most) until stopped.
 - **Alarm**: finished timers ring on every page like an alarm clock until stopped; five synthesized sounds, volume, vibration; settings for the account and, if wanted, per device.
 - **Many ways to add a recipe**: quick create, step-by-step wizard (paste ingredients/steps, automatic duration detection), markdown paste or file/zip upload, URL import (schema.org JSON-LD), or a ready-to-copy prompt for the AI assistant of your choice.
-- **Translations**: each recipe can have a French, an English and a Hungarian version; the UI is in French, English and Hungarian.
+- **Translations**: each recipe can have a French, an English and a Hungarian version, shown in the lists in your language when it exists; the UI is in French, English and Hungarian.
 - **Photos**: a cover and a gallery for each recipe (resized in the browser), a display name and a profile picture for each user.
 - **Tags** organized in categories, managed by the admin.
 - **Home page**: resume the cooking in progress, an idea of the day, your recent recipes.

@@ -1,6 +1,7 @@
-import { SUPPORTED_LOCALES, type Locale } from '@cookit/shared';
+import { RECIPE_SUMMARY_MAX, SUPPORTED_LOCALES, type Locale } from '@cookit/shared';
 import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { PresentationField } from '../model/editor-actions';
 import { FormField } from '@/components/FormField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +23,7 @@ export type EditorVm = ReturnType<typeof useRecipeEditorViewModel>;
 export function VisualEditor({ vm }: { vm: EditorVm }) {
   const { t } = useTranslation();
   const { recipe, dispatch } = vm;
-  const setField = (field: 'title' | 'description' | 'servings' | 'source', value: string) =>
+  const setField = (field: PresentationField, value: string) =>
     dispatch({ type: 'setField', field, value });
 
   return (
@@ -65,6 +66,17 @@ export function VisualEditor({ vm }: { vm: EditorVm }) {
             </div>
           )}
         </div>
+        <FormField
+          label={t('recipes.fields.summary')}
+          hint={t('recipes.hints.summary', { max: RECIPE_SUMMARY_MAX })}
+          value={recipe.summary}
+          onChange={(event) => setField('summary', event.target.value)}
+          error={
+            vm.invalid.includes('summary')
+              ? t('recipes.invalid.summary', { max: RECIPE_SUMMARY_MAX })
+              : undefined
+          }
+        />
         <div className="grid gap-2">
           <Label htmlFor="recipe-description">{t('recipes.fields.description')}</Label>
           <Textarea

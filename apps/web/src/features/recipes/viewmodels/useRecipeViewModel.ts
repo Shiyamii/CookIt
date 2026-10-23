@@ -142,6 +142,17 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
     /** Shown in a translation (not the base language): edited through the translation screen. */
     isTranslation: detail !== undefined && detail.lang !== detail.baseLang,
     ownerName: detail?.ownerName ?? '',
+    /** What the notes block needs. */
+    notes: detail
+      ? {
+          recipeId: detail.id,
+          token: source === 'shared' ? token : undefined,
+          authorNote: detail.authorNote,
+          myNote: detail.myNote,
+          isOwner: detail.isOwner,
+          signedIn: user !== null,
+        }
+      : undefined,
     ownerImage: detail?.ownerImage ?? null,
     /** Photos, the cover first. */
     images: detail?.images ?? [],

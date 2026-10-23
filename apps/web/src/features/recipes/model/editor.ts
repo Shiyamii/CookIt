@@ -14,6 +14,7 @@ import {
   type RecipeFields,
   type StepGroup,
   type Unit,
+  RECIPE_SUMMARY_MAX,
 } from '@cookit/shared';
 
 /**
@@ -39,6 +40,8 @@ export type EditorMeta = { id: string; key: string; value: string };
 export type EditorRecipe = {
   title: string;
   description: string;
+  /** One line for the cards of the lists. */
+  summary: string;
   /** As typed: checked on save. */
   servings: string;
   source: string;
@@ -58,6 +61,7 @@ export function emptyRecipe(): EditorRecipe {
   return {
     title: '',
     description: '',
+    summary: '',
     servings: '4',
     source: '',
     extraMeta: [],
@@ -88,6 +92,7 @@ export function fromDocument(document: RecipeDocument): EditorRecipe {
   return {
     title: document.title,
     description: document.description,
+    summary: document.summary ?? '',
     servings: String(document.servings),
     source: document.source ?? '',
     extraMeta: Object.entries(document.extraMeta).map(([key, value]) => ({
@@ -117,6 +122,7 @@ export function detailMarkdown(recipe: RecipeDetail): string {
     {
       title: recipe.title,
       description: recipe.description,
+      summary: recipe.summary || undefined,
       servings: recipe.servings,
       source: recipe.source ?? undefined,
       extraMeta: recipe.extraMeta,
@@ -173,7 +179,7 @@ export function toBody(recipe: EditorRecipe, locale: Locale): string {
   );
 }
 
-export type InvalidField = 'title' | 'servings' | 'extraMeta';
+export type InvalidField = 'title' | 'summary' | 'servings' | 'extraMeta';
 
 /** Part 1 as the API takes it, or the invalid fields. */
 export function toFields(
@@ -183,6 +189,7 @@ export function toFields(
   const title = recipe.title.trim();
   const servings = Number(recipe.servings.trim());
   if (!title) invalid.push('title');
+  if (Array.from(recipe.summary.trim()).length > RECIPE_SUMMARY_MAX) invalid.push('summary');
   if (!/^\d+$/.test(recipe.servings.trim()) || servings < 1 || servings > 1000) {
     invalid.push('servings');
   }
@@ -197,6 +204,7 @@ export function toFields(
     fields: {
       title,
       description: recipe.description.trim(),
+      summary: recipe.summary.trim() || undefined,
       servings,
       source: recipe.source.trim() || undefined,
       extraMeta,
@@ -214,6 +222,7 @@ export function toMarkdown(recipe: EditorRecipe, locale: Locale): string {
     {
       title: recipe.title.trim(),
       description: recipe.description.trim(),
+      summary: recipe.summary.trim() || undefined,
       servings: Number(recipe.servings) || 0,
       source: recipe.source.trim() || undefined,
       extraMeta,

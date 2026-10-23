@@ -1,3 +1,4 @@
+import { isLocale } from '@cookit/shared';
 import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -47,14 +48,16 @@ export function useHomeViewModel() {
     })),
   });
   const time = new Intl.DateTimeFormat(i18n.resolvedLanguage, { timeStyle: 'short' });
+  // Recipes in the interface language when they have that translation.
+  const lang = isLocale(i18n.resolvedLanguage) ? i18n.resolvedLanguage : undefined;
 
   // The shopping list: a reminder of what is left to buy.
   const shopping = useShoppingSync();
   const toBuy = remainingCount(shopping.snapshot?.state ?? null);
 
   const recent = useQuery({
-    queryKey: [...RECIPES_QUERY_KEY, 'home', 'recent'],
-    queryFn: () => fetchMyRecipes('', 1, []),
+    queryKey: [...RECIPES_QUERY_KEY, 'home', 'recent', lang],
+    queryFn: () => fetchMyRecipes('', 1, [], lang),
     enabled: user !== null,
   });
 
@@ -62,8 +65,8 @@ export function useHomeViewModel() {
   const day = localDay(new Date(now));
   const [another, setAnother] = useState({ n: 0, exclude: undefined as string | undefined });
   const idea = useQuery({
-    queryKey: [...RECIPES_QUERY_KEY, 'idea', day, another.n, another.exclude],
-    queryFn: () => fetchIdea(day, another.n, another.exclude),
+    queryKey: [...RECIPES_QUERY_KEY, 'idea', day, another.n, another.exclude, lang],
+    queryFn: () => fetchIdea(day, another.n, another.exclude, lang),
     enabled: user !== null,
     placeholderData: keepPreviousData,
   });

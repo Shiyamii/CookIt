@@ -84,13 +84,15 @@ export function searchQuery(q: string | undefined): string | undefined {
   return terms.length ? terms.join(' & ') : undefined;
 }
 
-/** What the search reads: title, description and ingredients, without accents. */
+/** What the search reads: title, summary, description and ingredients, without accents. */
 function searchText(document: RecipeDocument): string {
   const ingredients = document.ingredientGroups.flatMap((group) => [
     group.name ?? '',
     ...group.items.map((item) => item.raw),
   ]);
-  return fold([document.title, document.description, ...ingredients].join('\n'));
+  return fold(
+    [document.title, document.summary ?? '', document.description, ...ingredients].join('\n'),
+  );
 }
 
 /**
@@ -124,7 +126,12 @@ export function createRecipesService(deps: {
   const shareUrl = (token: string) => `${deps.origin}/shared#token=${token}`;
 
   /** The recipe in `lang` when it has that translation, in its base language otherwise. */
-  const toDetail = (row: RecipeRow, viewerId: string | null, lang?: Locale): RecipeDetail => {
+  const toDetail = (
+    row: RecipeRow,
+    viewerId: string | null,
+    lang?: Locale,
+    myNote: string | null = null,
+  ): RecipeDetail => {
     const isOwner = row.ownerId === viewerId;
     const shown = row.translations.find((translation) => translation.lang === lang) ?? row;
     return {
@@ -134,6 +141,7 @@ export function createRecipesService(deps: {
       languages: [row.lang, ...row.translations.map((translation) => translation.lang)],
       title: shown.title,
       description: shown.description,
+      summary: shown.summary,
       servings: row.servings,
       source: row.sourceUrl,
       extraMeta: shown.extraMeta,
@@ -150,6 +158,8 @@ export function createRecipesService(deps: {
       copiedFromId: row.copiedFromId,
       tagIds: row.tagIds,
       incomplete: !row.hasSteps,
+      authorNote: row.authorNote,
+      myNote,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -171,6 +181,7 @@ export function createRecipesService(deps: {
   const translationContent = (document: RecipeDocument, lang: Locale): TranslationContent => ({
     title: document.title,
     description: document.description,
+    summary: document.summary ?? '',
     // The parser builds it without prototype (no `__proto__` key can matter); Drizzle needs a
     // plain object.
     extraMeta: { ...document.extraMeta },
@@ -239,10 +250,15 @@ export function createRecipesService(deps: {
   const baseFields = (row: RecipeRow): RecipeFields => ({
     title: row.title,
     description: row.description,
+    summary: row.summary || undefined,
     servings: row.servings,
     source: row.sourceUrl ?? undefined,
     extraMeta: row.extraMeta,
   });
+
+  /** The signed-in reader's private note (null when signed out or none). */
+  const noteOf = async (viewerId: string | null, recipeId: string) =>
+    viewerId ? ((await repository.findNote(viewerId, recipeId)) ?? null) : null;
 
   /** The recipe if `userId` owns it (others get not_found, never forbidden). */
   const owned = async (id: string, userId: string) => {
@@ -292,6 +308,7 @@ export function createRecipesService(deps: {
     return {
       tsquery: searchQuery(search.q),
       tagIds,
+      lang: search.lang,
       limit: RECIPES_PAGE_SIZE + 1,
       offset: (search.page - 1) * RECIPES_PAGE_SIZE,
     };
@@ -330,7 +347,7 @@ export function createRecipesService(deps: {
       const row = await repository.findById(id);
       if (!row) return NOT_FOUND;
       if (row.ownerId !== viewerId && row.visibility !== 'public') return NOT_FOUND;
-      return toDetail(row, viewerId, lang);
+      return toDetail(row, viewerId, lang, await noteOf(viewerId, row.id));
     },
 
     /** A recipe from its share link: only while it is unlisted (the link is revoked otherwise). */
@@ -341,7 +358,40 @@ export function createRecipesService(deps: {
     ): Promise<RecipeDetail | NotFound> {
       const row = await repository.findByShareToken(token);
       if (!row || row.visibility !== 'unlisted') return NOT_FOUND;
-      return toDetail(row, viewerId, lang);
+      return toDetail(row, viewerId, lang, await noteOf(viewerId, row.id));
+    },
+
+    /**
+     * The reader's private note: on a recipe they may read (their own, a public one, or an
+     * unlisted one with its share token). An empty text removes it.
+     */
+    async saveNote(
+      id: string,
+      userId: string,
+      text: string,
+      token?: string,
+    ): Promise<{ myNote: string | null } | NotFound> {
+      const row = await repository.findById(id);
+      const readable =
+        row &&
+        (row.ownerId === userId ||
+          row.visibility === 'public' ||
+          (row.visibility === 'unlisted' && token !== undefined && token === row.shareToken));
+      if (!readable) return NOT_FOUND;
+      await repository.saveNote(userId, id, text, now());
+      return { myNote: text || null };
+    },
+
+    /** The author's public note: only the owner. */
+    async setAuthorNote(
+      id: string,
+      userId: string,
+      text: string,
+    ): Promise<{ authorNote: string } | NotFound> {
+      const row = await owned(id, userId);
+      if (!row) return NOT_FOUND;
+      await repository.setAuthorNote(id, text);
+      return { authorNote: text };
     },
 
     /**
@@ -479,6 +529,7 @@ export function createRecipesService(deps: {
           {
             title: row.title,
             description: row.description,
+            summary: row.summary || undefined,
             servings: row.servings,
             source: row.sourceUrl ?? undefined,
             extraMeta: row.extraMeta,
@@ -570,8 +621,8 @@ export function createRecipesService(deps: {
     async idea(userId: string, query: RecipeIdeaQuery): Promise<{ recipe: RecipeSummary | null }> {
       const seed = `${userId}:${query.day}:${query.n}`;
       const row =
-        (await repository.pick(userId, seed, query.exclude)) ??
-        (query.exclude ? await repository.pick(userId, seed) : undefined);
+        (await repository.pick(userId, seed, query.exclude, query.lang)) ??
+        (query.exclude ? await repository.pick(userId, seed, undefined, query.lang) : undefined);
       return { recipe: row ? summary(row) : null };
     },
 

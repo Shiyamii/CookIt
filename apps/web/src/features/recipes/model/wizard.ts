@@ -95,6 +95,7 @@ export function wizardRecipe(state: WizardState): EditorRecipe {
   return {
     title: state.title,
     description: state.description,
+    summary: '',
     servings: state.servings,
     source: state.source,
     extraMeta: [],

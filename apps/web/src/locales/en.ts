@@ -493,7 +493,19 @@ export const en = {
       publicHint:
         'Everyone can see it, even without an account, and it is listed in the gallery. Do not publish a recipe copied from another site as is.',
     },
+    notes: {
+      author: 'A word from the author',
+      authorEmpty: 'Share a tip or a story about this recipe: every reader sees it.',
+      addAuthor: 'Add a word from the author',
+      mine: 'My note',
+      mineEmpty: 'Only you see your note: what to change next time, what went well…',
+      addMine: 'Add a note',
+      edit: 'Edit',
+      save: 'Save',
+      delete: 'Delete',
+    },
     fields: {
+      summary: 'Summary',
       title: 'Title',
       description: 'Description',
       servings: 'Servings',
@@ -504,13 +516,15 @@ export const en = {
       metaValue: 'Value',
     },
     hints: {
+      summary: 'One line shown on the cards of the lists ({{max}} characters at most).',
       source: 'Optional: a website, a book, a person…',
     },
     invalid: {
+      summary: 'At most {{max}} characters.',
       title: 'A title is required.',
       servings: 'A whole number from 1 to 1000.',
       extraMeta:
-        'Each name starts with a letter, has no spaces, and is not a reserved word (servings, source, tags, format).',
+        'Each name starts with a letter, has no spaces, and is not a reserved word (servings, summary, source, tags, format).',
     },
     editor: {
       newTitle: 'New recipe',
@@ -579,6 +593,7 @@ export const en = {
     },
   },
   diagnostics: {
+    summary_too_long: 'The summary is too long ({{length}} characters, {{max}} at most).',
     document_too_large: 'The recipe is too long (at most {{max}} characters).',
     missing_separator:
       'Three parts are needed, separated by a line of dashes (---) with a blank line before and after: {{found}} found.',

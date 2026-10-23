@@ -2,7 +2,7 @@ import type { Locale } from '../locale';
 
 /**
  * The complete example recipe of the prompts, per language. It uses every construct of the
- * format (description, source, groups, ranges, timers with and without a name, a `q:` quantity).
+ * format (description, summary, source, groups, ranges, timers with and without a name, a `q:` quantity).
  * The prompts include its canonical form (`promptExample`), and a test checks that it parses
  * without any diagnostic.
  */
@@ -11,6 +11,7 @@ export const EXAMPLE_RECIPES: Record<Locale, string> = {
 
 > Une pâte simple, meilleure après un temps de repos.
 
+résumé: Des crêpes fines au beurre salé, à préparer une heure à l'avance.
 portions: 4
 source: https://example.com/crepes
 
@@ -45,6 +46,7 @@ source: https://example.com/crepes
 
 > A simple batter, better after a rest.
 
+summary: Thin crêpes with salted butter, best made an hour ahead.
 servings: 4
 source: https://example.com/crepes
 
@@ -79,6 +81,7 @@ source: https://example.com/crepes
 
 > Egyszerű tészta, pihentetés után még jobb.
 
+összefoglaló: Vékony palacsinta sós vajjal, egy órával előre elkészítve a legjobb.
 adag: 4
 source: https://example.com/crepes
 

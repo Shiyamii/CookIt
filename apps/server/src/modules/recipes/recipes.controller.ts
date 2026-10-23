@@ -1,4 +1,6 @@
 import {
+  authorNoteInputSchema,
+  recipeNoteInputSchema,
   recipeCopyInputSchema,
   recipeCreateInputSchema,
   recipeImageOrderInputSchema,
@@ -168,6 +170,33 @@ export function createRecipesController(deps: {
       await deps.recipes.setVisibility(paramId(c), userId(c), input.data.visibility),
     );
   });
+
+  // The reader's private note (unlisted recipe of someone else: with its share token).
+  app.put(
+    '/api/v1/recipes/:id/note',
+    recipeId,
+    rateLimit(deps.rateLimits, RATE_LIMITS.settingsSavePerAccount, (c) => c.var.user?.id),
+    async (c) => {
+      const input = await parseJson(c, recipeNoteInputSchema);
+      if (!input.ok) return input.response;
+      return respond(
+        c,
+        await deps.recipes.saveNote(paramId(c), userId(c), input.data.text, input.data.token),
+      );
+    },
+  );
+
+  // The author's public note (owner only).
+  app.put(
+    '/api/v1/recipes/:id/author-note',
+    recipeId,
+    rateLimit(deps.rateLimits, RATE_LIMITS.settingsSavePerAccount, (c) => c.var.user?.id),
+    async (c) => {
+      const input = await parseJson(c, authorNoteInputSchema);
+      if (!input.ok) return input.response;
+      return respond(c, await deps.recipes.setAuthorNote(paramId(c), userId(c), input.data.text));
+    },
+  );
 
   app.delete('/api/v1/recipes/:id', recipeId, async (c) =>
     respond(c, await deps.recipes.delete(paramId(c), userId(c))),

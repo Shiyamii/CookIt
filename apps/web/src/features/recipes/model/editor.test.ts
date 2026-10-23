@@ -1,7 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { parseRecipe, serializeRecipe, type RecipeDocument } from '@cookit/shared';
 import {
+  parseRecipe,
+  serializeRecipe,
+  type RecipeDetail,
+  type RecipeDocument,
+} from '@cookit/shared';
+import {
+  detailMarkdown,
   emptyRecipe,
   fromMarkdown,
   ingredientParts,
@@ -155,5 +161,50 @@ describe('editor: empty parts', () => {
     const reparsed = parseRecipe(toMarkdown(recipe, 'fr'));
     if (!reparsed.ok) throw new Error(JSON.stringify(reparsed.diagnostics));
     expect(reparsed.document.ingredientGroups.flatMap((g) => g.items)).toEqual([]);
+  });
+});
+
+describe('summary', () => {
+  const MD =
+    '# Tarte\n\nrésumé: Une tarte rapide.\nportions: 4\nformat: 1\n\n---\n\n- 1 oeuf\n\n---\n\n1. Cuire.\n';
+
+  test('is read from the document, written back, and survives the round trip', () => {
+    const recipe = editorOf(MD);
+    expect(recipe.summary).toBe('Une tarte rapide.');
+    expect(toMarkdown(recipe, 'fr')).toBe(MD);
+    expect(toMarkdown(recipe, 'en')).toContain('summary: Une tarte rapide.');
+  });
+
+  test('an empty or blank summary writes no line', () => {
+    expect(emptyRecipe().summary).toBe('');
+    const recipe = { ...editorOf(MD), summary: '   ' };
+    expect(toMarkdown(recipe, 'fr')).not.toContain('résumé');
+    const fields = toFields(recipe);
+    expect(fields.ok && fields.fields.summary).toBeUndefined();
+  });
+
+  test('toFields trims it and refuses more than 160 code points (an emoji counts one)', () => {
+    const base = { ...emptyRecipe(), title: 'T' };
+    const ok = toFields({ ...base, summary: ` ${'a'.repeat(159)}🍰 ` });
+    expect(ok.ok && ok.fields.summary).toBe(`${'a'.repeat(159)}🍰`);
+    expect(toFields({ ...base, summary: `${'a'.repeat(160)}🍰` })).toEqual({
+      ok: false,
+      invalid: ['summary'],
+    });
+  });
+
+  test('the markdown editor opens a stored recipe with its summary', () => {
+    const detail = {
+      lang: 'en',
+      title: 'Pie',
+      description: '',
+      summary: 'Quick pie.',
+      servings: 2,
+      source: null,
+      extraMeta: {},
+      body: '- 1 egg\n\n---\n\n1. Bake.',
+    } as unknown as RecipeDetail;
+    expect(detailMarkdown(detail)).toContain('summary: Quick pie.');
+    expect(detailMarkdown({ ...detail, summary: '' })).not.toContain('summary');
   });
 });

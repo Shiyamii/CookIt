@@ -293,3 +293,34 @@ test('a recipe with very many backtick runs still gets a prompt', () => {
   const prompt = translationPrompt({ locale: 'en', from: 'en', to: 'fr', markdown });
   expect(prompt).toContain('``markdown\n# T');
 });
+
+describe('summary in the prompts', () => {
+  const KEYS = { fr: 'résumé', en: 'summary', hu: 'összefoglaló' } as const;
+  for (const locale of SUPPORTED_LOCALES) {
+    for (const lang of SUPPORTED_LOCALES) {
+      test(`the import prompt (${locale}) names the summary key of the output language ${lang}`, () => {
+        const prompt = importPrompt({ locale, lang, tagCategories: [] });
+        expect(prompt).toContain(`\`${KEYS[lang]}: …\``);
+        expect(prompt).toContain('160');
+      });
+    }
+    test(`the translation prompt (${locale}) asks to translate the summary`, () => {
+      const prompt = translationPrompt({
+        locale,
+        from: 'fr',
+        to: 'en',
+        markdown: promptExample('fr'),
+      });
+      const rules = prompt
+        .split('\n')
+        .filter((l) => l.startsWith('- ') && l.includes(KEYS[locale]));
+      expect(rules).toHaveLength(2);
+    });
+  }
+  test('every example has a summary', () => {
+    for (const lang of SUPPORTED_LOCALES) {
+      const result = parse(EXAMPLE_RECIPES[lang]);
+      expect(result.ok && result.document.summary).toBeTruthy();
+    }
+  });
+});

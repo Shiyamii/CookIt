@@ -66,6 +66,8 @@ export type Presentation = {
   /** Markdown text, quote markers (`> `) removed. */
   description: string;
   servings: number;
+  /** One line shown on the cards of the lists (`summary:` / `résumé:`). */
+  summary?: string;
   source?: string;
   format?: number;
   /** Neutral tag ids, only in exchanges (export / import), never in the markdown editor. */

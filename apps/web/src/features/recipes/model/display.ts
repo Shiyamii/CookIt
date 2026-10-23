@@ -24,6 +24,8 @@ export type DisplayStep =
 export type DisplayRecipe = {
   title: string;
   description: string;
+  /** One line (`''`: none). */
+  summary: string;
   servings: number;
   source: string | null;
   extraMeta: [string, string][];
@@ -77,6 +79,7 @@ export function displayRecipe(
   return {
     title: document.title,
     description: document.description,
+    summary: document.summary ?? '',
     servings,
     source: document.source ?? null,
     extraMeta: Object.entries(document.extraMeta),

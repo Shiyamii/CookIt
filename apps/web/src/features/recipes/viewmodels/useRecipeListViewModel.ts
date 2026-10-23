@@ -1,6 +1,8 @@
+import { isLocale } from '@cookit/shared';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTagCatalog } from '@/features/catalog/viewmodels/useCatalogs';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { EXPORT_ALL_URL } from '../model/importing';
 import { fetchGallery, fetchMyRecipes, RECIPES_QUERY_KEY } from '../model/recipes';
@@ -33,10 +35,13 @@ export function useRecipeListViewModel(kind: 'mine' | 'gallery') {
     return () => clearTimeout(timer);
   }, [search, urlQuery, setParams]);
 
+  // Titles in the interface language when the recipe has that translation.
+  const { i18n } = useTranslation();
+  const lang = isLocale(i18n.resolvedLanguage) ? i18n.resolvedLanguage : undefined;
   const fetchPage = kind === 'mine' ? fetchMyRecipes : fetchGallery;
   const query = useInfiniteQuery({
-    queryKey: [...RECIPES_QUERY_KEY, kind, urlQuery, urlTags],
-    queryFn: ({ pageParam }) => fetchPage(urlQuery, pageParam, tags),
+    queryKey: [...RECIPES_QUERY_KEY, kind, urlQuery, urlTags, lang],
+    queryFn: ({ pageParam }) => fetchPage(urlQuery, pageParam, tags, lang),
     initialPageParam: 1,
     getNextPageParam: (last, pages) => (last.hasMore ? pages.length + 1 : undefined),
   });

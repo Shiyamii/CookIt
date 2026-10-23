@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RECIPE_SUMMARY_MAX } from './recipe/meta-keys';
 import type { RecipeImage } from './images';
 import { labelString } from './labels';
 import { SUPPORTED_LOCALES, type Locale } from './locale';
@@ -60,6 +61,16 @@ export const extraMetaSchema = z
 export const recipeFieldsSchema = z.object({
   title: labelString(RECIPE_TITLE_MAX),
   description: multiLine(RECIPE_DESCRIPTION_MAX).transform((value) => value.trim()),
+  /** One line for the cards of the lists. */
+  summary: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    // Counted in characters like the parser (an emoji is one), not in UTF-16 units.
+    labelString(RECIPE_SUMMARY_MAX * 2)
+      .refine((value) => Array.from(value).length <= RECIPE_SUMMARY_MAX, {
+        message: 'Too long',
+      })
+      .optional(),
+  ),
   servings: z.number().int().min(1).max(MAX_SERVINGS),
   source: z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
@@ -118,6 +129,22 @@ export const recipeVisibilityInputSchema = z
 /** An unlisted recipe's share token: 32 random bytes in base64url (as link tokens). */
 export const shareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 
+/** A note on a recipe: a reader's private one, or the author's public one. Plain text. */
+export const RECIPE_NOTE_MAX = 2000;
+
+/** The signed-in reader's private note (`''` removes it); `token` for an unlisted recipe. */
+export const recipeNoteInputSchema = z
+  .object({
+    text: multiLine(RECIPE_NOTE_MAX).transform((value) => value.trim()),
+    token: shareTokenSchema.optional(),
+  })
+  .strict();
+
+/** The author's public note, shown to every reader (`''` removes it). */
+export const authorNoteInputSchema = z
+  .object({ text: multiLine(RECIPE_NOTE_MAX).transform((value) => value.trim()) })
+  .strict();
+
 export const sharedRecipeInputSchema = z
   .object({ token: shareTokenSchema, lang: z.enum(SUPPORTED_LOCALES).optional() })
   .strict();
@@ -150,6 +177,8 @@ export const IMPORT_ERRORS = [
 
 export const recipeSearchSchema = z.object({
   q: z.string().trim().max(RECIPE_SEARCH_MAX).optional(),
+  /** Titles, descriptions and summaries in this language when the recipe has it. */
+  lang: z.enum(SUPPORTED_LOCALES).optional(),
   /** Tag slugs, comma-separated: recipes having all of them. */
   tags: z
     .string()
@@ -174,15 +203,19 @@ export const recipeIdeaQuerySchema = z.object({
   day: z.iso.date(),
   n: z.coerce.number().int().min(0).max(1000).default(0),
   exclude: z.uuid().optional(),
+  lang: z.enum(SUPPORTED_LOCALES).optional(),
 });
 export type RecipeIdeaQuery = z.infer<typeof recipeIdeaQuerySchema>;
 
 /** A recipe in a list (my recipes, gallery). */
 export type RecipeSummary = {
   id: string;
+  /** Language of the title, description and summary: the one asked for if the recipe has it. */
   lang: Locale;
   title: string;
   description: string;
+  /** One line for the card (`''`: none, the description is shown instead). */
+  summary: string;
   servings: number;
   visibility: RecipeVisibility;
   ownerName: string;
@@ -212,6 +245,8 @@ export type RecipeDetail = {
   languages: Locale[];
   title: string;
   description: string;
+  /** One line for the cards (`''`: none). */
+  summary: string;
   servings: number;
   source: string | null;
   extraMeta: Record<string, string>;
@@ -231,6 +266,10 @@ export type RecipeDetail = {
   tagIds: string[];
   /** No step yet ("to complete"). */
   incomplete: boolean;
+  /** The author's public note (`''`: none). Not translated, not part of the markdown. */
+  authorNote: string;
+  /** The signed-in reader's private note (null when signed out). */
+  myNote: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -251,7 +290,10 @@ export const RECIPE_ERRORS = [
  * markdown editor (no `tags:` line) and exports.
  */
 export function composeRecipeMarkdown(
-  fields: Pick<Presentation, 'title' | 'description' | 'servings' | 'source' | 'extraMeta'> & {
+  fields: Pick<
+    Presentation,
+    'title' | 'description' | 'summary' | 'servings' | 'source' | 'extraMeta'
+  > & {
     tags?: string[];
   },
   body: string,

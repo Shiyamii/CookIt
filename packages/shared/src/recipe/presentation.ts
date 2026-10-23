@@ -1,6 +1,6 @@
 import { createDiagnostics, type Diagnostic } from './diagnostics';
 import { BLANK_LINE, headingText, scanFences } from './lines';
-import { CURRENT_FORMAT, metaFieldOf } from './meta-keys';
+import { CURRENT_FORMAT, metaFieldOf, RECIPE_SUMMARY_MAX } from './meta-keys';
 import type { Presentation } from './model';
 import type { DocumentPart } from './split';
 
@@ -106,6 +106,17 @@ export function parsePresentation(part: DocumentPart): {
         } else {
           presentation.format = format;
         }
+        break;
+      }
+      case 'summary': {
+        const length = Array.from(value).length;
+        if (length > RECIPE_SUMMARY_MAX) {
+          diagnostics.error({
+            code: 'summary_too_long',
+            line,
+            params: { max: RECIPE_SUMMARY_MAX, length },
+          });
+        } else if (value) presentation.summary = value;
         break;
       }
       case 'source':

@@ -40,6 +40,7 @@ import { AddToShoppingList } from '@/features/shopping/views/AddToShoppingList';
 import { NotFoundPage } from '@/features/system/views/NotFoundPage';
 import { useRecipeViewModel } from '../viewmodels/useRecipeViewModel';
 import { RecipeContent } from './RecipeContent';
+import { RecipeNotes } from './RecipeNotes';
 import { RecipePhotos } from './RecipePhotos';
 import { RecipePhotosManager } from './RecipePhotosManager';
 
@@ -60,6 +61,7 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
       <header className="grid gap-3">
         <RecipePhotos images={vm.images} title={recipe.title} />
         <h1 className="text-3xl font-semibold wrap-anywhere">{recipe.title}</h1>
+        {recipe.summary && <p className="text-lg wrap-anywhere">{recipe.summary}</p>}
         <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           {!vm.isOwner && (
             <UserAvatar image={vm.ownerImage} name={vm.ownerName} className="size-6 text-xs" />
@@ -217,6 +219,8 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
       )}
 
       <RecipeContent recipe={recipe} durationText={vm.durationText} />
+
+      {vm.notes && <RecipeNotes {...vm.notes} />}
 
       {vm.isOwner && (
         <section className="grid gap-4 rounded-lg border p-4" aria-labelledby="manage-title">

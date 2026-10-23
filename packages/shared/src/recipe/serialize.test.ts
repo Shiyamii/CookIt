@@ -307,3 +307,60 @@ describe('parse → serialize → parse on generated documents', () => {
     expect(checked).toBeGreaterThan(200);
   });
 });
+
+describe('summary', () => {
+  const withSummary = (summary: string): Presentation => ({
+    title: 'T',
+    description: '',
+    summary,
+    servings: 2,
+    tags: [],
+    extraMeta: {},
+  });
+
+  test.each([
+    ['fr', 'résumé: Rapide.'],
+    ['en', 'summary: Rapide.'],
+    ['hu', 'összefoglaló: Rapide.'],
+  ] as const)(
+    'the canonical key follows the language (%s), right before the servings',
+    (locale, line) => {
+      const lines = serializePresentation(withSummary('Rapide.'), { locale }).split('\n');
+      expect(lines).toContain(line);
+      expect(lines.indexOf(line) + 1).toBe(
+        lines.findIndex((l) => /^(portions|servings|adag):/.test(l)),
+      );
+    },
+  );
+
+  test('no summary, no line', () => {
+    expect(serializePresentation(withSummary(''), { locale: 'en' })).not.toContain('summary');
+  });
+
+  test('a line break in the summary cannot add a line', () => {
+    const out = serializePresentation(withSummary('one\ntwo\r\nthree'), { locale: 'en' });
+    expect(out.split('\n').filter((l) => l.startsWith('summary:'))).toHaveLength(1);
+    expect(out.split('\n')).toHaveLength(
+      serializePresentation(withSummary('x'), { locale: 'en' }).split('\n').length,
+    );
+    expect(out).not.toContain('\r');
+  });
+
+  test.each(['fr', 'en', 'hu'] as const)(
+    'parse → serialize → parse is stable with a summary (%s)',
+    (locale) => {
+      const first = parseOk(
+        '# T\n\n> Une description.\n\nsummary: Une tarte: simple, à refaire 🍰\nservings: 2\nformat: 1\n\n---\n\n- 1 oeuf\n\n---\n\n1. Cuire.\n',
+      );
+      expect(first.summary).toBe('Une tarte: simple, à refaire 🍰');
+      const text = serializeRecipe(first, { locale });
+      const second = parseOk(text);
+      expect(withoutLines(second)).toEqual(withoutLines(first));
+      expect(serializeRecipe(second, { locale })).toBe(text);
+    },
+  );
+
+  test('a summary never lands in extraMeta', () => {
+    expect(parseOk('# T\n\nsummary: x\nportions: 1\n\n---\n\n---\n').extraMeta).toEqual({});
+  });
+});
