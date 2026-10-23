@@ -1,6 +1,6 @@
 import { KeyRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { FormField } from '@/components/FormField';
+import { FormField, HiddenUsername } from '@/components/FormField';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -56,6 +56,8 @@ export function PasskeysSection() {
                 <form className="grid gap-2" onSubmit={vm.submitRename} noValidate>
                   <FormField
                     label={t('account.passkeys.name')}
+                    name="passkey-name"
+                    notCredential
                     autoFocus
                     value={vm.editing.name}
                     onChange={(event) => vm.setEditingName(event.target.value)}
@@ -110,8 +112,11 @@ export function PasskeysSection() {
 
         {vm.supported ? (
           <form className="grid gap-2" onSubmit={vm.submitAdd} noValidate>
+            <HiddenUsername username={vm.username} />
             <FormField
               label={t('account.passkeys.newName')}
+              name="passkey-name"
+              notCredential
               hint={t('account.passkeys.newNameHint')}
               value={vm.name}
               onChange={(event) => vm.setName(event.target.value)}
@@ -121,6 +126,7 @@ export function PasskeysSection() {
               label={t('auth.fields.password')}
               hint={t('account.passkeys.passwordHint')}
               type="password"
+              name="current-password"
               autoComplete="current-password"
               required
               value={vm.password}
@@ -141,6 +147,7 @@ export function PasskeysSection() {
       >
         <AlertDialogContent>
           <form className="grid gap-4" onSubmit={vm.confirmDelete} noValidate>
+            <HiddenUsername username={vm.username} />
             <AlertDialogHeader>
               <AlertDialogTitle>
                 {t('account.passkeys.deleteTitle', {
@@ -152,6 +159,7 @@ export function PasskeysSection() {
             <FormField
               label={t('auth.fields.password')}
               type="password"
+              name="current-password"
               autoComplete="current-password"
               autoFocus
               required

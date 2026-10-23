@@ -1,6 +1,6 @@
 import { PASSWORD_MIN_LENGTH } from '@cookit/shared';
 import { useTranslation } from 'react-i18next';
-import { FormField } from '@/components/FormField';
+import { FormField, HiddenUsername } from '@/components/FormField';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,7 @@ export function ChangePasswordSection() {
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={vm.submit} noValidate>
+          <HiddenUsername username={vm.username} />
           {vm.error && (
             <Alert variant="destructive" role="alert">
               <AlertDescription>{t(`errors.${vm.error}`, t('errors.unknown'))}</AlertDescription>
@@ -32,6 +33,7 @@ export function ChangePasswordSection() {
           <FormField
             label={t('account.password.current')}
             type="password"
+            name="current-password"
             autoComplete="current-password"
             required
             value={vm.current}
@@ -44,6 +46,7 @@ export function ChangePasswordSection() {
             label={t('auth.fields.newPassword')}
             hint={t('auth.hints.password', { min: PASSWORD_MIN_LENGTH })}
             type="password"
+            name="new-password"
             autoComplete="new-password"
             required
             value={vm.password}
@@ -53,6 +56,7 @@ export function ChangePasswordSection() {
           <FormField
             label={t('auth.fields.confirmation')}
             type="password"
+            name="confirm-password"
             autoComplete="new-password"
             required
             value={vm.confirmation}

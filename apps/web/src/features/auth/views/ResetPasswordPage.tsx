@@ -45,6 +45,7 @@ export function ResetPasswordPage() {
               label={t('auth.fields.newPassword')}
               hint={t('auth.hints.password', { min: PASSWORD_MIN_LENGTH })}
               type="password"
+              name="new-password"
               autoComplete="new-password"
               required
               value={vm.password}
@@ -54,6 +55,7 @@ export function ResetPasswordPage() {
             <FormField
               label={t('auth.fields.confirmation')}
               type="password"
+              name="confirm-password"
               autoComplete="new-password"
               required
               value={vm.confirmation}

@@ -36,6 +36,7 @@ export function ForgotPasswordPage() {
             )}
             <FormField
               label={t('auth.fields.identifier')}
+              name="username"
               autoComplete="username"
               autoCapitalize="none"
               required

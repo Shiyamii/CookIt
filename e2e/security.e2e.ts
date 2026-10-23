@@ -640,3 +640,27 @@ test('the security page never scrolls sideways, even with a long passkey name', 
   await expect(page.getByRole('img', { name: 'QR code for the authenticator app' })).toBeVisible();
   expect(await overflow(), '2FA setup').toBeLessThanOrEqual(0);
 });
+
+test('forms tell password managers what each field is', async ({ browser, page: admin }) => {
+  const visitor = await newVisitor(browser);
+  await visitor.goto('/login');
+  await expect(visitor.getByLabel('Username or email')).toHaveAttribute('name', 'username');
+  await expect(visitor.getByLabel('Password')).toHaveAttribute('autocomplete', 'current-password');
+  await visitor.context().close();
+
+  const { page, username } = await newMember(browser, admin, 'pwmanager');
+  await page.goto('/account/security');
+  // The passkey's name is not a username: password managers leave it alone.
+  const name = passkeysCard(page).getByLabel('Name of the new passkey', { exact: false });
+  await expect(name).toHaveAttribute('autocomplete', 'off');
+  await expect(name).toHaveAttribute('data-1p-ignore', 'true');
+  // The account the passwords of this page belong to.
+  await expect(passkeysCard(page).locator('input[autocomplete="username"]')).toHaveValue(
+    username.toLowerCase(),
+  );
+  await page.getByRole('button', { name: 'Turn on' }).click();
+  await expect(twoFactorCard(page).getByLabel('Password', { exact: true })).toHaveAttribute(
+    'name',
+    'current-password',
+  );
+});

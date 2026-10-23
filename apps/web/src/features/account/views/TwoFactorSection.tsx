@@ -1,6 +1,6 @@
 import { Check, Copy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { FormField } from '@/components/FormField';
+import { FormField, HiddenUsername } from '@/components/FormField';
 import { QrCode } from '@/components/QrCode';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -53,12 +53,14 @@ export function TwoFactorSection() {
 
         {mode.kind === 'password' && (
           <form className="grid gap-4" onSubmit={vm.submitPassword} noValidate>
+            <HiddenUsername username={vm.username} />
             <p className="text-sm">{t(`account.twoFactor.confirm.${mode.action}`)}</p>
             <FormField
               label={t('auth.fields.password')}
               type="password"
+              name="current-password"
               autoComplete="current-password"
-              autoFocus
+              focusAfterMs={150}
               required
               value={vm.password}
               onChange={(event) => vm.setPassword(event.target.value)}
@@ -80,6 +82,7 @@ export function TwoFactorSection() {
 
         {mode.kind === 'setup' && (
           <form className="grid gap-4" onSubmit={vm.submitCode} noValidate>
+            <HiddenUsername username={vm.username} />
             <ol className="grid list-decimal gap-1 pl-5 text-sm">
               <li>{t('account.twoFactor.setup.scan')}</li>
               <li>{t('account.twoFactor.setup.enterCode')}</li>
@@ -98,7 +101,10 @@ export function TwoFactorSection() {
             </div>
             <FormField
               label={t('auth.twoFactor.code')}
+              name="totp"
               autoComplete="one-time-code"
+              maxLength={6}
+              pattern="[0-9]*"
               inputMode="numeric"
               required
               value={vm.code}

@@ -36,10 +36,19 @@ export function LoginPage() {
             <FormField
               key={vm.codeKind}
               label={backup ? t('auth.twoFactor.backupCode') : t('auth.twoFactor.code')}
-              autoComplete="one-time-code"
+              // A backup code is not what a password manager generates: only the app's code is
+              // offered to it.
+              {...(backup
+                ? { name: 'backup-code', autoComplete: 'off' }
+                : {
+                    name: 'totp',
+                    autoComplete: 'one-time-code',
+                    maxLength: 6,
+                    pattern: '[0-9]*',
+                  })}
               inputMode={backup ? 'text' : 'numeric'}
               autoCapitalize="none"
-              autoFocus
+              focusAfterMs={150}
               required
               value={vm.code}
               onChange={(event) => vm.setCode(event.target.value)}
@@ -78,6 +87,7 @@ export function LoginPage() {
           <FormField
             label={t('auth.fields.identifier')}
             // `webauthn`: the browser may suggest saved passkeys in this field.
+            name="username"
             autoComplete="username webauthn"
             autoCapitalize="none"
             required
@@ -87,6 +97,7 @@ export function LoginPage() {
           <FormField
             label={t('auth.fields.password')}
             type="password"
+            name="password"
             autoComplete="current-password"
             required
             value={vm.password}

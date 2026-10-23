@@ -41,6 +41,7 @@ export function RegisterPage() {
           <FormField
             label={t('auth.fields.username')}
             hint={t('auth.hints.username')}
+            name="username"
             autoComplete="username"
             autoCapitalize="none"
             required
@@ -49,6 +50,7 @@ export function RegisterPage() {
           <FormField
             label={t('auth.fields.email')}
             type="email"
+            name="email"
             autoComplete="email"
             required
             {...field('email')}
@@ -56,6 +58,7 @@ export function RegisterPage() {
           <FormField
             label={t('auth.fields.name')}
             hint={t('auth.hints.name')}
+            name="name"
             autoComplete="name"
             {...field('name')}
           />
@@ -63,6 +66,7 @@ export function RegisterPage() {
             label={t('auth.fields.password')}
             hint={t('auth.hints.password', { min: PASSWORD_MIN_LENGTH })}
             type="password"
+            name="new-password"
             autoComplete="new-password"
             required
             {...field('password')}
@@ -70,6 +74,7 @@ export function RegisterPage() {
           <FormField
             label={t('auth.fields.confirmation')}
             type="password"
+            name="confirm-password"
             autoComplete="new-password"
             required
             {...field('confirmation')}

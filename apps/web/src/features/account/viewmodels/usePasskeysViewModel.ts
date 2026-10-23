@@ -2,6 +2,7 @@ import type { PasskeySummary } from '@cookit/shared';
 import { passkeyNameSchema } from '@cookit/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { useSession } from '@/features/auth/viewmodels/useSession';
 import { errorCode } from '@/lib/api';
 import { passkeysSupported } from '@/features/auth/model/auth';
 import {
@@ -13,6 +14,7 @@ import {
 } from '../model/security';
 
 export function usePasskeysViewModel() {
+  const { user } = useSession();
   const queryClient = useQueryClient();
   const security = useQuery({ queryKey: SECURITY_QUERY_KEY, queryFn: fetchSecurity });
   const [name, setName] = useState('');
@@ -67,6 +69,8 @@ export function usePasskeysViewModel() {
   });
 
   return {
+    /** For password managers: the account these passwords belong to. */
+    username: user?.username ?? '',
     supported: passkeysSupported(),
     loading: security.isPending,
     loadError: security.isError,

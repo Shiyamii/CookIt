@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { useSession } from '@/features/auth/viewmodels/useSession';
 import { errorCode } from '@/lib/api';
 import {
   confirmTwoFactor,
@@ -22,6 +23,7 @@ type Mode =
   | { kind: 'codes'; codes: string[] };
 
 export function useTwoFactorViewModel() {
+  const { user } = useSession();
   const queryClient = useQueryClient();
   const security = useQuery({ queryKey: SECURITY_QUERY_KEY, queryFn: fetchSecurity });
   const [mode, setMode] = useState<Mode>({ kind: 'idle' });
@@ -73,6 +75,8 @@ export function useTwoFactorViewModel() {
   });
 
   return {
+    /** For password managers: the account these passwords belong to. */
+    username: user?.username ?? '',
     loading: security.isPending,
     loadError: security.isError,
     enabled: security.data?.twoFactorEnabled ?? false,

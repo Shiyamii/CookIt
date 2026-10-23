@@ -1,12 +1,14 @@
 import { passwordSchema } from '@cookit/shared';
 import { useMutation } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { useSession } from '@/features/auth/viewmodels/useSession';
 import { errorCode } from '@/lib/api';
 import { changePassword } from '../model/security';
 
 type Field = 'current' | 'password' | 'confirmation';
 
 export function useChangePasswordViewModel() {
+  const { user } = useSession();
   const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -22,6 +24,8 @@ export function useChangePasswordViewModel() {
   });
 
   return {
+    /** For password managers: the account these passwords belong to. */
+    username: user?.username ?? '',
     current,
     password,
     confirmation,

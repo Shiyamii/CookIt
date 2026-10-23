@@ -59,7 +59,8 @@ export function InvitesPage() {
                   label={t('admin.invites.email')}
                   hint={t('admin.invites.emailHint')}
                   type="email"
-                  autoComplete="off"
+                  name="invite-email"
+                  notCredential
                   value={vm.email}
                   onChange={(event) => vm.setEmail(event.target.value)}
                   error={vm.invalidEmail ? t('auth.invalid.email') : undefined}
