@@ -11,7 +11,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  // In CI, also a JUnit file for Codecov Test Analytics (flaky and slow tests).
+  reporter: process.env.CI
+    ? [['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'reports/junit-e2e.xml' }]]
+    : 'list',
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
     locale: 'en-US',

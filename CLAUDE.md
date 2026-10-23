@@ -330,7 +330,7 @@ End-to-end tests live in `e2e/` and are named `*.e2e.ts` (so `bun test` ignores 
 
 The global setup (`e2e/global-setup.ts`) gets the test admin `e2e_admin` in through the rescue CLI run in the app container (`docker exec $E2E_CONTAINER node dist/cli.js …`, default container `cookit-app-1`, `cookit` in CI) and saves its session to `e2e/.auth/admin.json` (`test.use({ storageState: ADMIN_STATE })`). Tests must be rerunnable on the same database: unique usernames (`uniqueName`), never sign out, disable or delete `e2e_admin`. The dev compose and CI set `RATE_LIMIT_FACTOR=50` so that the suite (one IP) does not hit the rate limits; never set it in production.
 
-CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests with coverage (sent to Codecov when `CODECOV_TOKEN` is set, informational only, `codecov.yml`; `bun test --coverage` crashes on Windows with Bun 1.3.10) and build, then builds the Docker image, starts it against Postgres, checks migrations were applied and runs the Playwright suite against it.
+CI (`.github/workflows/ci.yml`) runs format check, lint, typecheck, unit tests with coverage (sent to Codecov when `CODECOV_TOKEN` is set, informational only, `codecov.yml`; JUnit results of the unit and end-to-end tests go to Codecov Test Analytics, files in `reports/`; `bun test --coverage` crashes on Windows with Bun 1.3.10) and build, then builds the Docker image, starts it against Postgres, checks migrations were applied and runs the Playwright suite against it.
 
 ## Releases
 

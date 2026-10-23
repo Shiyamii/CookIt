@@ -270,4 +270,5 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 ## Test coverage
 
 - **Codecov (free Developer plan) for the badge**: the CI sends the unit tests' `lcov` report (`bun test --coverage`); the check is informational and comments are off, so coverage never blocks a merge or a release. Only unit tests are counted (the server and the pages are covered by Playwright, which measures no coverage of the image). Skipped when there is no token (release workflow, forks). `bun test --coverage` crashes on Windows with Bun 1.3.10 (assertion failure while writing the report): run it in CI or under Linux.
+- **Codecov Test Analytics** (not Bundle Analysis): unit (`bun test --reporter=junit`) and end-to-end (Playwright `junit` reporter, CI only) results are sent as JUnit files, flagged `unit` / `e2e`, even when tests fail, to spot flaky and slow tests. Bundle Analysis would need a Vite plugin and a token at build time; Vite's own chunk sizes are enough for now.
 - **The Playwright report is uploaded on every run**, not only on failure (7 days).
