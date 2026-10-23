@@ -1,4 +1,9 @@
-import { avatarUrl } from '@cookit/shared';
+import {
+  alarmSettingsSchema,
+  avatarUrl,
+  DEFAULT_ALARM_SETTINGS,
+  type AlarmSettings,
+} from '@cookit/shared';
 import { checkImage } from '../../lib/images';
 import type { ProfileRepository } from './profile.repository';
 
@@ -9,8 +14,10 @@ import type { ProfileRepository } from './profile.repository';
 export function createProfileService(deps: {
   repository: ProfileRepository;
   newId?: () => string;
+  now?: () => Date;
 }) {
   const newId = deps.newId ?? (() => crypto.randomUUID());
+  const now = deps.now ?? (() => new Date());
 
   return {
     /** A WebP or JPEG of at most 256 px and 100 kB, already resized by the browser. */
@@ -32,6 +39,17 @@ export function createProfileService(deps: {
     async removeAvatar(userId: string): Promise<{ ok: true }> {
       await deps.repository.removeAvatar(userId);
       return { ok: true };
+    },
+
+    /** The account's alarm settings (the defaults until saved, or if what is stored is unreadable). */
+    async alarm(userId: string): Promise<AlarmSettings> {
+      const stored = alarmSettingsSchema.safeParse(await deps.repository.findAlarm(userId));
+      return stored.success ? stored.data : DEFAULT_ALARM_SETTINGS;
+    },
+
+    async saveAlarm(userId: string, settings: AlarmSettings): Promise<AlarmSettings> {
+      await deps.repository.saveAlarm(userId, settings, now());
+      return settings;
     },
 
     async readAvatar(

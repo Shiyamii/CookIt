@@ -34,6 +34,8 @@ export const RATE_LIMITS = {
     limit: 6,
     windowSeconds: 24 * 60 * 60,
   },
+  // Settings saved from a form.
+  settingsSavePerAccount: { name: 'settings-save:account', limit: 60, windowSeconds: 10 * 60 },
   // Every item checked in the shop is a save.
   shoppingSavePerAccount: { name: 'shopping-save:account', limit: 600, windowSeconds: 10 * 60 },
 } satisfies Record<string, RateLimitRule>;

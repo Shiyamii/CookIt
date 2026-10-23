@@ -1,8 +1,8 @@
-import { avatarUrl } from '@cookit/shared';
+import { avatarUrl, type AlarmSettings } from '@cookit/shared';
 import { eq } from 'drizzle-orm';
 import type { Database } from '../../db';
 import { user } from '../auth/auth.schema';
-import { avatars } from './profile.schema';
+import { alarmSettings, avatars } from './profile.schema';
 
 export type NewAvatar = { id: string; contentType: string; data: Buffer };
 
@@ -11,6 +11,8 @@ export type ProfileRepository = {
   replaceAvatar(userId: string, avatar: NewAvatar): Promise<void>;
   removeAvatar(userId: string): Promise<void>;
   findAvatar(id: string): Promise<{ contentType: string; data: Buffer } | undefined>;
+  findAlarm(userId: string): Promise<unknown>;
+  saveAlarm(userId: string, settings: AlarmSettings, now: Date): Promise<void>;
 };
 
 export function createProfileRepository(db: Database): ProfileRepository {
@@ -39,6 +41,21 @@ export function createProfileRepository(db: Database): ProfileRepository {
         .from(avatars)
         .where(eq(avatars.id, id));
       return row;
+    },
+
+    async findAlarm(userId) {
+      const [row] = await db
+        .select({ settings: alarmSettings.settings })
+        .from(alarmSettings)
+        .where(eq(alarmSettings.userId, userId));
+      return row?.settings;
+    },
+
+    async saveAlarm(userId, settings, now) {
+      await db
+        .insert(alarmSettings)
+        .values({ userId, settings, updatedAt: now })
+        .onConflictDoUpdate({ target: alarmSettings.userId, set: { settings, updatedAt: now } });
     },
   };
 }

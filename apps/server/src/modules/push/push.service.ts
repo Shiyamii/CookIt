@@ -1,4 +1,9 @@
-import type { PushDevice, PushPayload, PushSubscriptionInput } from '@cookit/shared';
+import {
+  MAX_TIMER_REMINDERS,
+  type PushDevice,
+  type PushPayload,
+  type PushSubscriptionInput,
+} from '@cookit/shared';
 import type { PushResult, PushSender } from '../../lib/web-push';
 import type { DueTimer, PushRepository, StoredSubscription } from './push.repository';
 
@@ -19,6 +24,7 @@ const FINISHED: Record<string, string> = {
   en: 'Timer finished',
   hu: 'Lejárt az időzítő',
 };
+const STOP: Record<string, string> = { fr: 'Arrêter', en: 'Stop', hu: 'Leállítás' };
 const TEST: Record<string, { title: string; body: string }> = {
   fr: { title: 'CookIt', body: 'Les notifications fonctionnent sur cet appareil.' },
   en: { title: 'CookIt', body: 'Notifications work on this device.' },
@@ -32,7 +38,18 @@ export function timerPayload(timer: DueTimer): PushPayload {
     body: timer.label || (FINISHED[timer.locale] ?? FINISHED.en!),
     url: timer.recipeId ? `/cook?show=${encodeURIComponent(timer.recipeId)}` : '/cook',
     tag: `timer-${timer.id}`,
+    // A "Stop" button where the system shows notification actions (Android, desktop).
+    timerId: timer.id,
+    stopLabel: STOP[timer.locale] ?? STOP.en!,
   };
+}
+
+/**
+ * Whether this send is the last one: no reminders wanted, or the last reminder. A timer that is
+ * skipped (see `notifyDue`) is final too.
+ */
+export function isFinalSend(timer: DueTimer): boolean {
+  return !timer.repeat || timer.sends >= MAX_TIMER_REMINDERS;
 }
 
 /**
@@ -127,8 +144,9 @@ export function createPushService(deps: {
     },
 
     /**
-     * One scheduler run: notifies the timers whose end has come, to every device of their user.
-     * Not sent (only marked done): timers of disabled users, and timers that had already ended
+     * One scheduler run: notifies the timers whose end has come, to every device of their user,
+     * then reminds every 30 s (at most 10 times) until the timer is stopped, if the account wants
+     * it. Not sent (only marked done): timers of disabled users, and timers that had already ended
      * when the server learnt of them (started offline; the device rang itself). Sends happen
      * outside any transaction, all timers of the run at once.
      */
@@ -146,18 +164,28 @@ export function createPushService(deps: {
           handled.push(timer);
         }
       }
-      await Promise.all(
+      const sent = await Promise.all(
         handled.map(async (timer) => {
-          if (timer.userDisabled || timer.endsAt <= timer.createdAt) return;
+          // Not sent, and done at once: push is off, the user is disabled, the timer had ended
+          // before the server knew it, or reminders were turned off since the first send.
+          if (
+            !deps.sender ||
+            timer.userDisabled ||
+            timer.endsAt <= timer.createdAt ||
+            (timer.sends > 0 && !timer.repeat)
+          ) {
+            return { timer, final: true };
+          }
           let subscriptions = lists.get(timer.userId);
           if (!subscriptions) {
             subscriptions = deps.repository.list(timer.userId);
             lists.set(timer.userId, subscriptions);
           }
           await sendAll(await subscriptions, timerPayload(timer));
+          return { timer, final: isFinalSend(timer) };
         }),
       );
-      await deps.repository.markNotified(handled);
+      await deps.repository.markNotified(sent);
       if (later.length) await deps.repository.release(later);
       return due.length;
     },

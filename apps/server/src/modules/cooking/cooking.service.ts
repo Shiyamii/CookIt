@@ -60,6 +60,24 @@ export function createCookingService(deps: {
       return { version, serverNow: at.toISOString() };
     },
 
+    /**
+     * "Stop" from a notification: the finished timer leaves the session (like dismissing it in
+     * the app), so its reminders stop. Nothing for a timer still running or already gone.
+     */
+    async stopTimer(userId: string, timerId: string): Promise<{ ok: true; serverNow: string }> {
+      const at = now();
+      await deps.repository.change(
+        userId,
+        (state) => {
+          const timer = state.timers.find((item) => item.id === timerId);
+          if (!timer || Date.parse(timer.endsAt) > at.getTime()) return undefined;
+          return { items: state.items, timers: state.timers.filter((item) => item.id !== timerId) };
+        },
+        at,
+      );
+      return { ok: true, serverNow: at.toISOString() };
+    },
+
     async end(userId: string): Promise<{ ok: true; serverNow: string }> {
       const at = now();
       await deps.repository.end(userId, at);

@@ -3,6 +3,7 @@ import { createBrowserRouter } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 import { ProfilePage } from '@/features/account/views/ProfilePage';
 import { SecurityPage } from '@/features/account/views/SecurityPage';
+import { AlarmPage } from '@/features/alarm/views/AlarmPage';
 import { NotificationsPage } from '@/features/push/views/NotificationsPage';
 import { InvitesPage } from '@/features/admin/views/InvitesPage';
 import { TagsAdminPage } from '@/features/catalog/views/TagsAdminPage';
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
           { path: 'profile', element: <ProfilePage /> },
           { path: 'security', element: <SecurityPage /> },
           { path: 'notifications', element: <NotificationsPage /> },
+          { path: 'alarm', element: <AlarmPage /> },
         ],
       },
       {

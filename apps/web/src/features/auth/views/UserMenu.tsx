@@ -1,4 +1,14 @@
-import { Bell, CircleUser, LogOut, Mail, Ruler, ShieldCheck, Tags, Users } from 'lucide-react';
+import {
+  AlarmClock,
+  Bell,
+  CircleUser,
+  LogOut,
+  Mail,
+  Ruler,
+  ShieldCheck,
+  Tags,
+  Users,
+} from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
@@ -49,6 +59,11 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link to="/account/notifications">
             <Bell /> {t('push.title')}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/account/alarm">
+            <AlarmClock /> {t('alarm.title')}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

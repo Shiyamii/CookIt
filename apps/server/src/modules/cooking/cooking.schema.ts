@@ -58,7 +58,10 @@ export const timers = pgTable(
     status: text('status', { enum: ['running', 'done', 'cancelled'] })
       .notNull()
       .default('running'),
+    // The last notification, and how many were sent: the first, then reminders until the
+    // timer is stopped (removed from the session) or the account does not want them.
     notifiedAt: timestamp('notified_at', { withTimezone: true }),
+    sends: integer('sends').notNull().default(0),
     // Taken by a scheduler run that is sending it; retried by a later run once the lease expires.
     claimedAt: timestamp('claimed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -67,7 +70,7 @@ export const timers = pgTable(
     primaryKey({ columns: [table.cookSessionId, table.id] }),
     index('timers_due_idx')
       .on(table.endsAt)
-      .where(sql`${table.status} = 'running' and ${table.notifiedAt} is null`),
+      .where(sql`${table.status} = 'running'`),
     check('timers_status_check', sql`${table.status} in ('running', 'done', 'cancelled')`),
   ],
 );

@@ -1,8 +1,13 @@
 import { describe, expect, test } from 'bun:test';
-import type { PushSubscriptionInput } from '@cookit/shared';
+import { MAX_TIMER_REMINDERS, type PushSubscriptionInput } from '@cookit/shared';
 import { isPushEndpoint, type PushResult, type PushSender } from '../../lib/web-push';
 import type { DueTimer, PushRepository, StoredSubscription } from './push.repository';
-import { createPushService, MAX_SUBSCRIPTIONS_PER_USER, timerPayload } from './push.service';
+import {
+  createPushService,
+  isFinalSend,
+  MAX_SUBSCRIPTIONS_PER_USER,
+  timerPayload,
+} from './push.service';
 
 const T0 = new Date('2026-10-21T18:00:00.000Z');
 const KEYS = { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) };
@@ -22,6 +27,7 @@ function setup(
   const rows: (StoredSubscription & { userId: string })[] = [];
   let due: DueTimer[] = [];
   const marked: string[] = [];
+  const finals: string[] = [];
   const released: string[] = [];
   const listed: string[] = [];
   const deletedIds: string[] = [];
@@ -64,8 +70,9 @@ function setup(
       due = due.slice(limit);
       return batch;
     },
-    async markNotified(timers) {
-      marked.push(...timers.map((timer) => timer.id));
+    async markNotified(sent) {
+      marked.push(...sent.map(({ timer }) => timer.id));
+      finals.push(...sent.filter(({ final }) => final).map(({ timer }) => timer.id));
     },
     async release(timers) {
       released.push(...timers.map((timer) => timer.id));
@@ -92,6 +99,7 @@ function setup(
     rows,
     sent,
     marked,
+    finals,
     released,
     logs,
     listed,
@@ -111,6 +119,8 @@ const timer = (id: string, overrides: Partial<DueTimer> = {}): DueTimer => ({
   createdAt: new Date('2026-10-21T17:00:00.000Z'),
   locale: 'fr',
   userDisabled: false,
+  sends: 0,
+  repeat: true,
   ...overrides,
 });
 
@@ -198,6 +208,8 @@ describe('scheduler run', () => {
       body: 'repos de la pâte',
       url: '/cook?show=11111111-1111-4111-8111-111111111111',
       tag: 'timer-t1',
+      timerId: 't1',
+      stopLabel: 'Arrêter',
     });
     expect(marked).toEqual(['t1']);
   });
@@ -208,6 +220,8 @@ describe('scheduler run', () => {
       body: 'Minuteur terminé',
       url: '/cook',
       tag: 'timer-t',
+      timerId: 't',
+      stopLabel: 'Arrêter',
     });
     expect(timerPayload(timer('t', { label: '', locale: 'en' })).body).toBe('Timer finished');
   });
@@ -422,5 +436,77 @@ describe('scheduler run, more cases', () => {
     await service.subscribe('u1', input(1), '🍳'.repeat(400));
     expect(Array.from(rows[0]!.userAgent)).toHaveLength(300);
     expect(rows[0]!.userAgent).not.toContain('�');
+  });
+});
+
+describe('reminders until the timer is stopped', () => {
+  test('a reminder is sent like the first notification, with a Stop button', async () => {
+    const { service, sent, setDue, finals } = setup();
+    await service.subscribe('u1', input(1), 'ua');
+    setDue([timer('t1'), timer('t2', { sends: 3 })]);
+    await service.notifyDue();
+    expect(sent).toHaveLength(2);
+    expect(sent[1]?.payload).toMatchObject({
+      tag: 'timer-t2',
+      timerId: 't2',
+      stopLabel: 'Arrêter',
+    });
+    expect(finals).toEqual([]);
+  });
+
+  test('the tenth reminder is the last one', async () => {
+    const { service, setDue, finals } = setup();
+    setDue([
+      timer('t1', { sends: MAX_TIMER_REMINDERS - 1 }),
+      timer('t2', { sends: MAX_TIMER_REMINDERS }),
+    ]);
+    await service.notifyDue();
+    expect(finals).toEqual(['t2']);
+  });
+
+  test('without reminders wanted, the first notification is the last', async () => {
+    const { service, setDue, finals } = setup();
+    setDue([timer('t1', { repeat: false })]);
+    await service.notifyDue();
+    expect(finals).toEqual(['t1']);
+  });
+
+  test('skipped timers are final at once', async () => {
+    const { service, setDue, finals, sent } = setup();
+    setDue([
+      timer('t1', { userDisabled: true }),
+      timer('t2', { createdAt: new Date('2026-10-21T18:00:00.000Z') }),
+    ]);
+    await service.notifyDue();
+    expect(sent).toHaveLength(0);
+    expect(finals).toEqual(['t1', 't2']);
+  });
+
+  test('the Stop label follows the locale, English for an unknown one', () => {
+    expect(timerPayload(timer('t', { locale: 'en' })).stopLabel).toBe('Stop');
+    expect(timerPayload(timer('t', { locale: 'hu' })).stopLabel).toBe('Leállítás');
+    expect(timerPayload(timer('t', { locale: 'de' })).stopLabel).toBe('Stop');
+  });
+
+  test('isFinalSend', () => {
+    expect(isFinalSend(timer('t', { sends: 0 }))).toBe(false);
+    expect(isFinalSend(timer('t', { sends: MAX_TIMER_REMINDERS }))).toBe(true);
+    expect(isFinalSend(timer('t', { repeat: false }))).toBe(true);
+  });
+
+  test('reminders turned off since the first send: the next one is not sent', async () => {
+    const { service, setDue, finals, sent } = setup();
+    await service.subscribe('u1', input(1), 'ua');
+    setDue([timer('t1', { sends: 2, repeat: false })]);
+    await service.notifyDue();
+    expect(sent).toHaveLength(0);
+    expect(finals).toEqual(['t1']);
+  });
+
+  test('without push keys, a timer is done at once (no reminders to wait for)', async () => {
+    const { service, setDue, finals } = setup({ sender: false });
+    setDue([timer('t1')]);
+    await service.notifyDue();
+    expect(finals).toEqual(['t1']);
   });
 });

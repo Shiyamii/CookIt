@@ -251,4 +251,11 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **"Forgot your password?" never tells** whether an account exists: same answer, sent before the work is done, a per-account limit (on the account id, 3 an hour and 6 a day) that silently drops extra requests.
 - **Reset links only go to verified addresses**: an address is verified when the account was created from an invite emailed to it (the person received it). An address typed at sign-up was never proven and could be someone else's (a typo, a placeholder): emailing it a reset link would hand the account over. Accounts created before email, or from a link handed over by hand, keep asking an admin.
 - **The invite email is in a language the admin picks** (the admin's by default): the invitee has no account language yet; the sign-up page opens in it.
-- **Mailpit for development and end-to-end tests** (dev compose and CI only, never in the production files): a real SMTP server to test against, and a web UI to look at the emails.
+- **Mailpit for development and end-to-end tests** (a CI service; in development, the one already running on the host, not started by the dev compose; never in the production files): a real SMTP server to test against, and a web UI to look at the emails.
+
+## Alarm (before phase 10)
+
+- **Synthesized sounds** (Web Audio tones, no sound file): nothing to download or license, works offline; five presets cover loud and gentle.
+- **Account settings on the server, device settings in the browser**: a kitchen tablet and a phone want different sounds, but most people set it once; the account's apply wherever a device has none.
+- **The alarm lives in the layout**, not the cooking page: a timer finishing while browsing recipes rings too. It loops for 5 min, then every 30 s until 15 min, then gives up (nobody is there; the banner stays).
+- **Push reminders instead of a continuous sound** with the app closed (a web page cannot ring in the background): every 30 s, 10 times at most, only when the account's "ring until stopped" is on; stopping is dismissing the timer (app, banner, or the notification's Stop action where the system has actions). The notification sound is the system's: the web cannot choose it. A real alarm clock (loud, locked screen, silent mode) stays for the native app (phase 11).

@@ -29,9 +29,10 @@ services:
       VAPID_SUBJECT: mailto:dev@example.com
       # End-to-end tests: the push sink run by Playwright on the host (never in production).
       PUSH_TEST_ENDPOINT_ORIGIN: http://host.docker.internal:4567
-      # Emails go to Mailpit (a local catcher, never in production): read them at
-      # http://localhost:8025. No TLS on the local network only.
-      SMTP_HOST: mailpit
+      # Emails go to a Mailpit running on this machine (not started here: ports 1025 and 8025,
+      # e.g. `docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit`); read them at
+      # http://localhost:8025. No TLS: local only.
+      SMTP_HOST: host.docker.internal
       SMTP_PORT: '1025'
       SMTP_SECURITY: none
       SMTP_FROM: CookIt <cookit@localhost>
@@ -42,14 +43,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      mailpit:
-        condition: service_started
-
-  # Development and end-to-end tests only: catches every email (web UI and API on :8025).
-  mailpit:
-    image: axllent/mailpit:v1.27.0
-    ports:
-      - '8025:8025'
 
 volumes:
   db-data:

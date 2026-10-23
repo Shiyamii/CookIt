@@ -13,6 +13,7 @@ export const CLEAR_OFFLINE_DATA = 'cookit:clear-offline-data';
 
 const OFFLINE_API = [
   /^\/api\/v1\/me$/,
+  /^\/api\/v1\/me\/alarm$/,
   /^\/api\/v1\/meta$/,
   /^\/api\/v1\/units$/,
   /^\/api\/v1\/tags$/,

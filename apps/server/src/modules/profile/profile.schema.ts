@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
-import { check, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import type { AlarmSettings } from '@cookit/shared';
+import { check, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { bytea } from '../../db/types';
 import { user } from '../auth/auth.schema';
 
@@ -23,3 +24,12 @@ export const avatars = pgTable(
     check('avatars_type_check', sql`${table.contentType} in ('image/webp', 'image/jpeg')`),
   ],
 );
+
+/** The alarm of finished timers, for the account (a device can override it locally). */
+export const alarmSettings = pgTable('alarm_settings', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  settings: jsonb('settings').$type<AlarmSettings>().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

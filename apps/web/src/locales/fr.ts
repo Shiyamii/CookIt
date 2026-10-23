@@ -219,6 +219,45 @@ export const fr: Translations = {
       unsupported: 'Ce navigateur ne prend pas en charge les passkeys.',
     },
   },
+  alarm: {
+    title: 'Alarme',
+    subtitle: 'Comment sonne un minuteur terminé.',
+    account: {
+      title: 'Pour votre compte',
+      hint: 'Sur tous vos appareils, sauf ceux qui ont leurs propres réglages.',
+    },
+    device: {
+      title: 'Sur cet appareil',
+      hint: 'Une tablette de cuisine qui sonne fort, un téléphone qui vibre seulement : réglages gardés dans ce navigateur.',
+      own: 'Utiliser des réglages propres à cet appareil',
+    },
+    sound: 'Son',
+    sounds: {
+      classic: 'Bips classiques',
+      chime: 'Carillon',
+      bell: 'Cloche',
+      rising: 'Montée',
+      soft: 'Doux',
+    },
+    listen: 'Écouter',
+    volume: 'Volume',
+    vibrate: 'Vibrer (téléphones)',
+    repeat: 'Sonner jusqu’à l’arrêt',
+    repeatHintAccount:
+      'Comme un réveil : encore et encore, puis toutes les 30 secondes, pendant 15 minutes. Appli fermée, la notification revient toutes les 30 secondes (10 fois au plus).',
+    repeatHintDevice: 'Comme un réveil, tant que l’appli est ouverte sur cet appareil.',
+    save: 'Enregistrer',
+    saved: 'Enregistré.',
+    limits:
+      'Appli fermée, le téléphone joue son propre son de notification : il se change dans les réglages de notifications du système ou du navigateur. En mode silencieux, un iPhone reste muet.',
+    banner: {
+      title_one: 'Minuteur terminé',
+      title_other: '{{count}} minuteurs terminés',
+      timer: 'Minuteur',
+      addMinute: 'Ajouter 1 min à {{name}}',
+      stop: 'Arrêter l’alarme',
+    },
+  },
   shopping: {
     title: 'Liste de courses',
     empty: 'Ta liste de courses est vide.',

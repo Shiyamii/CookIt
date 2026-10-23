@@ -13,7 +13,8 @@ A self-hosted recipe app built for actually cooking: step-by-step cooking mode, 
 - **Serving scaling** with readable rounding and clean fractions (½, ¼, ⅓).
 - **Cooking mode**: one step at a time, large buttons, ingredient checklist, screen kept awake, one-tap timers, several recipes at once.
 - **Multi-recipe sessions**: cook several dishes in parallel, with a shared timer bar where each timer is labeled with its dish.
-- **Web Push notifications** when a timer ends, sent by the server even with every page closed.
+- **Web Push notifications** when a timer ends, sent by the server even with every page closed, and sent again every 30 s (10 times at most) until stopped.
+- **Alarm**: finished timers ring on every page like an alarm clock until stopped; five synthesized sounds, volume, vibration; settings for the account and, if wanted, per device.
 - **Many ways to add a recipe**: quick create, step-by-step wizard (paste ingredients/steps, automatic duration detection), markdown paste or file/zip upload, URL import (schema.org JSON-LD), or a ready-to-copy prompt for the AI assistant of your choice.
 - **Translations**: each recipe can have a French, an English and a Hungarian version; the UI is in French, English and Hungarian.
 - **Photos**: a cover and a gallery for each recipe (resized in the browser), a display name and a profile picture for each user.
@@ -200,7 +201,7 @@ docker run --rm --entrypoint node shiyamii/cookit:latest -e "console.log(require
 
 In a running container, `node dist/cli.js push:vapid-keys` prints a new pair too.
 
-With SMTP set, check it from **Invitations → Send me a test email**. Locally, `docker-compose.dev.yml` sends every email to Mailpit: read them at http://localhost:8025. The email templates are MJML (`apps/server/src/modules/mail/templates/`), compiled with the web theme's colors by `bun run emails`.
+With SMTP set, check it from **Invitations → Send me a test email**. Locally, `docker-compose.dev.yml` sends every email to a Mailpit running on your machine (ports 1025 and 8025, not started by the compose: `docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit`); read them at http://localhost:8025. The email templates are MJML (`apps/server/src/modules/mail/templates/`), compiled with the web theme's colors by `bun run emails`.
 
 ## Releases
 

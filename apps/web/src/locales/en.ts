@@ -215,6 +215,45 @@ export const en = {
       unsupported: 'This browser does not support passkeys.',
     },
   },
+  alarm: {
+    title: 'Alarm',
+    subtitle: 'How a finished timer rings.',
+    account: {
+      title: 'For your account',
+      hint: 'On every device, unless a device has its own settings.',
+    },
+    device: {
+      title: 'On this device',
+      hint: 'A loud kitchen tablet, a phone that only vibrates: settings kept in this browser.',
+      own: 'Use settings of its own on this device',
+    },
+    sound: 'Sound',
+    sounds: {
+      classic: 'Classic beeps',
+      chime: 'Chime',
+      bell: 'Bell',
+      rising: 'Rising',
+      soft: 'Soft',
+    },
+    listen: 'Listen',
+    volume: 'Volume',
+    vibrate: 'Vibrate (phones)',
+    repeat: 'Ring until stopped',
+    repeatHintAccount:
+      'Like an alarm clock: again and again, then every 30 seconds, for 15 minutes. With the app closed, the notification comes back every 30 seconds (10 times at most).',
+    repeatHintDevice: 'Like an alarm clock, while the app is open on this device.',
+    save: 'Save',
+    saved: 'Saved.',
+    limits:
+      'With the app closed, the phone plays its own notification sound: change it in the notification settings of the system or the browser. In silent mode an iPhone stays silent.',
+    banner: {
+      title_one: 'Timer finished',
+      title_other: '{{count}} timers finished',
+      timer: 'Timer',
+      addMinute: 'Add 1 min to {{name}}',
+      stop: 'Stop the alarm',
+    },
+  },
   shopping: {
     title: 'Shopping list',
     empty: 'Your shopping list is empty.',

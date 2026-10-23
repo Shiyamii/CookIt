@@ -1,7 +1,9 @@
 import { and, asc, eq, isNull, lt, lte, notInArray, or, sql } from 'drizzle-orm';
 import type { Database } from '../../db';
 import { user } from '../auth/auth.schema';
+import { MAX_TIMER_REMINDERS, TIMER_REMINDER_SECONDS } from '@cookit/shared';
 import { cookSessions, timers } from '../cooking/cooking.schema';
+import { alarmSettings } from '../profile/profile.schema';
 import { pushSubscriptions } from './push.schema';
 
 export type StoredSubscription = {
@@ -25,6 +27,10 @@ export type DueTimer = {
   createdAt: Date;
   locale: string;
   userDisabled: boolean;
+  /** Notifications already sent for this end time (0: the first is due). */
+  sends: number;
+  /** The account wants reminders until the timer is stopped. */
+  repeat: boolean;
 };
 
 export type PushRepository = {
@@ -50,8 +56,11 @@ export type PushRepository = {
    * sending). A claim never confirmed (crash) expires and the timer is sent by a later run.
    */
   claimDue(limit: number, leaseSeconds: number): Promise<DueTimer[]>;
-  /** Sent: `done`, unless its end time changed meanwhile (+1 min: a new notification). */
-  markNotified(timers: DueTimer[]): Promise<void>;
+  /**
+   * Sent (or skipped): one more send counted; `final` ones become `done`, the others wait for
+   * their next reminder. Unless the end time changed meanwhile (+1 min: a new notification).
+   */
+  markNotified(sent: { timer: DueTimer; final: boolean }[]): Promise<void>;
   /** Not sent this run: claimable again at once. */
   release(timers: DueTimer[]): Promise<void>;
 };
@@ -136,15 +145,29 @@ export function createPushRepository(db: Database): PushRepository {
             createdAt: timers.createdAt,
             locale: user.locale,
             disabledAt: user.disabledAt,
+            sends: timers.sends,
+            // No settings saved: the defaults (reminders on).
+            repeat: sql<boolean>`coalesce((${alarmSettings.settings}->>'repeat')::boolean, true)`,
           })
           .from(timers)
           .innerJoin(cookSessions, eq(cookSessions.id, timers.cookSessionId))
           .innerJoin(user, eq(user.id, cookSessions.userId))
+          .leftJoin(alarmSettings, eq(alarmSettings.userId, cookSessions.userId))
           .where(
             and(
               eq(timers.status, 'running'),
-              isNull(timers.notifiedAt),
               lte(timers.endsAt, sql`now()`),
+              // The first notification, or a reminder whose time has come.
+              or(
+                isNull(timers.notifiedAt),
+                and(
+                  lte(timers.sends, MAX_TIMER_REMINDERS),
+                  lte(
+                    timers.notifiedAt,
+                    sql`now() - make_interval(secs => ${TIMER_REMINDER_SECONDS})`,
+                  ),
+                ),
+              ),
               or(
                 isNull(timers.claimedAt),
                 lt(timers.claimedAt, sql`now() - make_interval(secs => ${leaseSeconds})`),
@@ -167,11 +190,16 @@ export function createPushRepository(db: Database): PushRepository {
       });
     },
 
-    async markNotified(due) {
-      for (const timer of due) {
+    async markNotified(sent) {
+      for (const { timer, final } of sent) {
         await db
           .update(timers)
-          .set({ status: 'done', notifiedAt: sql`now()`, claimedAt: null })
+          .set({
+            ...(final && { status: 'done' as const }),
+            notifiedAt: sql`now()`,
+            sends: sql`${timers.sends} + 1`,
+            claimedAt: null,
+          })
           .where(
             and(
               eq(timers.cookSessionId, timer.cookSessionId),

@@ -219,6 +219,45 @@ export const hu: Translations = {
       unsupported: 'Ez a böngésző nem támogatja a jelkulcsokat.',
     },
   },
+  alarm: {
+    title: 'Riasztás',
+    subtitle: 'Hogyan szól a lejárt időzítő.',
+    account: {
+      title: 'A fiókodhoz',
+      hint: 'Minden eszközödön, kivéve azokat, amelyeknek saját beállításuk van.',
+    },
+    device: {
+      title: 'Ezen az eszközön',
+      hint: 'Hangos konyhai tablet, csak rezgő telefon: a beállítások ebben a böngészőben maradnak.',
+      own: 'Saját beállítások ezen az eszközön',
+    },
+    sound: 'Hang',
+    sounds: {
+      classic: 'Klasszikus sípolás',
+      chime: 'Csengő',
+      bell: 'Harang',
+      rising: 'Emelkedő',
+      soft: 'Lágy',
+    },
+    listen: 'Meghallgatás',
+    volume: 'Hangerő',
+    vibrate: 'Rezgés (telefonok)',
+    repeat: 'Szóljon, amíg le nem állítom',
+    repeatHintAccount:
+      'Mint egy ébresztőóra: újra és újra, aztán 30 másodpercenként, 15 percig. Bezárt alkalmazásnál az értesítés 30 másodpercenként visszatér (legfeljebb 10-szer).',
+    repeatHintDevice: 'Mint egy ébresztőóra, amíg az alkalmazás nyitva van ezen az eszközön.',
+    save: 'Mentés',
+    saved: 'Elmentve.',
+    limits:
+      'Bezárt alkalmazásnál a telefon a saját értesítési hangját játssza le: ezt a rendszer vagy a böngésző értesítési beállításaiban lehet módosítani. Néma módban az iPhone néma marad.',
+    banner: {
+      title_one: 'Lejárt az időzítő',
+      title_other: '{{count}} időzítő lejárt',
+      timer: 'Időzítő',
+      addMinute: '1 perc hozzáadása: {{name}}',
+      stop: 'Riasztás leállítása',
+    },
+  },
   shopping: {
     title: 'Bevásárlólista',
     empty: 'A bevásárlólistád üres.',

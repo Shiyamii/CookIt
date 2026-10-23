@@ -1,6 +1,7 @@
 import { APP_NAME } from '@cookit/shared';
 import { ChefHat } from 'lucide-react';
 import { Link, Outlet } from 'react-router';
+import { AlarmBanner } from '@/features/alarm/views/AlarmBanner';
 import { UserMenu } from '@/features/auth/views/UserMenu';
 import { MainNav } from '@/features/recipes/views/MainNav';
 import { OfflineBanner } from '@/features/pwa/views/OfflineBanner';
@@ -27,6 +28,7 @@ export function AppLayout() {
         </div>
         <OfflineBanner />
       </header>
+      <AlarmBanner />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <Outlet />
       </main>

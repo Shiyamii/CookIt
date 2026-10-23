@@ -21,6 +21,13 @@ function setup() {
     async end(userId) {
       return sessions.delete(userId);
     },
+    async change(userId, change, now) {
+      const row = sessions.get(userId);
+      const next = row && change(row.state);
+      if (!row || !next) return false;
+      sessions.set(userId, { version: row.version + 1, updatedAt: now, state: next });
+      return true;
+    },
   };
   const service = createCookingService({ repository, now: () => T0, newId: () => 'session' });
   return { service, sessions };
@@ -167,5 +174,29 @@ describe('cooking sessions', () => {
     await service.save('u1', state('2026-10-21T19:00:00.000Z'));
     expect(await service.end('u1')).toEqual({ ok: true, serverNow: T0.toISOString() });
     expect((await service.get('u1')).session).toBeNull();
+  });
+});
+
+describe('stopping a timer from its notification', () => {
+  const ended = new Date(T0.getTime() - 60_000).toISOString();
+  const running = new Date(T0.getTime() + 600_000).toISOString();
+
+  test('a finished timer leaves the session (its reminders stop)', async () => {
+    const { service, sessions } = setup();
+    await service.save('u1', state(ended));
+    await service.stopTimer('u1', TIMER);
+    expect(sessions.get('u1')?.state.timers).toEqual([]);
+    expect(sessions.get('u1')?.state.items).toHaveLength(1);
+    expect(sessions.get('u1')?.version).toBe(2);
+  });
+
+  test('a running timer, an unknown one or no session: nothing changes', async () => {
+    const { service, sessions } = setup();
+    expect(await service.stopTimer('u1', TIMER)).toMatchObject({ ok: true });
+    await service.save('u1', state(running));
+    await service.stopTimer('u1', TIMER);
+    await service.stopTimer('u1', '33333333-3333-4333-8333-333333333333');
+    expect(sessions.get('u1')?.state.timers).toHaveLength(1);
+    expect(sessions.get('u1')?.version).toBe(1);
   });
 });

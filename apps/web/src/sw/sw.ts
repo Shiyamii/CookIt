@@ -122,7 +122,14 @@ registerRoute(
 );
 
 self.addEventListener('push', (event) => {
-  let data: { title?: unknown; body?: unknown; tag?: unknown; url?: unknown } = {};
+  let data: {
+    title?: unknown;
+    body?: unknown;
+    tag?: unknown;
+    url?: unknown;
+    timerId?: unknown;
+    stopLabel?: unknown;
+  } = {};
   try {
     data = (event.data?.json() as typeof data | undefined) ?? {};
   } catch {
@@ -135,17 +142,40 @@ self.addEventListener('push', (event) => {
       tag: typeof data.tag === 'string' ? data.tag : undefined,
       icon: '/pwa-192x192.png',
       badge: '/badge-96x96.png',
-      data: { url: typeof data.url === 'string' ? data.url : '/cook' },
-      // `renotify` is not in the TypeScript DOM types yet.
-      ...{ renotify: typeof data.tag === 'string' },
+      data: {
+        url: typeof data.url === 'string' ? data.url : '/cook',
+        timerId: typeof data.timerId === 'string' ? data.timerId : undefined,
+      },
+      // Not in the TypeScript DOM types yet. `renotify`: each reminder rings again; `actions`: a
+      // "Stop" button where the system shows them (Android, desktop; not iOS).
+      ...{
+        renotify: typeof data.tag === 'string',
+        actions:
+          typeof data.timerId === 'string' && typeof data.stopLabel === 'string'
+            ? [{ action: 'stop', title: data.stopLabel }]
+            : [],
+      },
     }),
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const data = event.notification.data as { url?: unknown; timerId?: unknown } | null;
+  // "Stop": the timer leaves the cooking session (no more reminders), without opening the app.
+  const timerId = typeof data?.timerId === 'string' ? data.timerId : '';
+  if (event.action === 'stop' && /^[0-9a-f-]{36}$/.test(timerId)) {
+    event.waitUntil(
+      fetch(`/api/v1/cook/timers/${timerId}/stop`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      }).catch(() => undefined),
+    );
+    return;
+  }
   // Only a path of this site, whatever the message says.
-  const data = event.notification.data as { url?: unknown } | null;
   const target = new URL(typeof data?.url === 'string' ? data.url : '/cook', self.location.origin);
   const url = target.origin === self.location.origin ? target.href : `${self.location.origin}/cook`;
   event.waitUntil(

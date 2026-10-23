@@ -1,3 +1,4 @@
+import { DEFAULT_ALARM_SETTINGS } from '@cookit/shared';
 import { describe, expect, test } from 'bun:test';
 import type { NewAvatar, ProfileRepository } from './profile.repository';
 import { createProfileService } from './profile.service';
@@ -17,6 +18,7 @@ function webp(side: number, size = 30): Uint8Array {
 function setup() {
   const avatars = new Map<string, NewAvatar & { userId: string }>();
   const images = new Map<string, string | null>();
+  const alarms = new Map<string, unknown>();
   const repository: ProfileRepository = {
     async replaceAvatar(userId, avatar) {
       for (const [id, row] of avatars) if (row.userId === userId) avatars.delete(id);
@@ -30,10 +32,16 @@ function setup() {
     async findAvatar(id) {
       return avatars.get(id);
     },
+    async findAlarm(userId) {
+      return alarms.get(userId);
+    },
+    async saveAlarm(userId, settings) {
+      alarms.set(userId, settings);
+    },
   };
   let n = 0;
   const service = createProfileService({ repository, newId: () => `id-${++n}` });
-  return { service, avatars, images };
+  return { service, avatars, images, alarms };
 }
 
 describe('profile picture', () => {
@@ -70,5 +78,22 @@ describe('profile picture', () => {
     expect(await s.service.removeAvatar('u1')).toEqual({ ok: true });
     expect(s.images.get('u1')).toBeNull();
     expect([...s.avatars.values()].map((row) => row.userId)).toEqual(['u2']);
+  });
+});
+
+describe('alarm settings of the account', () => {
+  test('the defaults until saved, then what was saved', async () => {
+    const { service } = setup();
+    expect(await service.alarm('u1')).toEqual(DEFAULT_ALARM_SETTINGS);
+    const settings = { sound: 'bell' as const, volume: 40, vibrate: false, repeat: false };
+    expect(await service.saveAlarm('u1', settings)).toEqual(settings);
+    expect(await service.alarm('u1')).toEqual(settings);
+    expect(await service.alarm('u2')).toEqual(DEFAULT_ALARM_SETTINGS);
+  });
+
+  test('something unreadable stored gives the defaults', async () => {
+    const { service, alarms } = setup();
+    alarms.set('u1', { sound: 'siren', volume: 400 });
+    expect(await service.alarm('u1')).toEqual(DEFAULT_ALARM_SETTINGS);
   });
 });

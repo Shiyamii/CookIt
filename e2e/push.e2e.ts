@@ -78,6 +78,8 @@ test('a finished timer is sent to every device of its user, with the page closed
     body: 'repos de la pâte',
     url: `/cook?show=${recipeId}`,
     tag: `timer-${timer.id}`,
+    timerId: timer.id,
+    stopLabel: 'Stop',
   });
   expect(message?.headers).toMatchObject({ ttl: '600', urgency: 'high', encoding: 'aes128gcm' });
   expect(message?.headers.authorization).toMatch(/^vapid t=.+, k=.+/);

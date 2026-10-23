@@ -1,5 +1,6 @@
 import { cookSessionInputSchema } from '@cookit/shared';
 import { Hono, type Context } from 'hono';
+import { z } from 'zod';
 import type { AppEnv } from '../../http/app-env';
 import { parseJson } from '../../http/validate';
 import { requireUser } from '../auth/auth.middleware';
@@ -33,6 +34,17 @@ export function createCookingController(deps: {
   );
 
   app.delete('/api/v1/cook/session', async (c) => c.json(await deps.cooking.end(userId(c))));
+
+  // "Stop" on a timer's notification (sent by the service worker).
+  app.post(
+    '/api/v1/cook/timers/:id/stop',
+    rateLimit(deps.rateLimits, RATE_LIMITS.cookSavePerAccount, (c) => c.var.user?.id),
+    async (c) => {
+      const id = z.uuid().safeParse(c.req.param('id'));
+      if (!id.success) return c.json({ error: 'invalid_input' }, 400);
+      return c.json(await deps.cooking.stopTimer(userId(c), id.data));
+    },
+  );
 
   return app;
 }

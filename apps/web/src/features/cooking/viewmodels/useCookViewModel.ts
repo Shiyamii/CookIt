@@ -8,13 +8,13 @@ import {
   type RecipeDetail,
 } from '@cookit/shared';
 import { useQueries, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useSession } from '@/features/auth/viewmodels/useSession';
 import { useUnitCatalog } from '@/features/catalog/viewmodels/useCatalogs';
 import { displayRecipe, durationText, parseDetail } from '@/features/recipes/model/display';
 import { fetchRecipe, RECIPES_QUERY_KEY } from '@/features/recipes/model/recipes';
-import { playAlarm, unlockAlarm } from '../model/alarm';
+import { unlockAlarm } from '@/features/alarm/model/player';
 import { formatCountdown, remainingSeconds } from '../model/clock';
 import {
   canAddRecipe,
@@ -186,22 +186,7 @@ export function useCookViewModel() {
     };
   });
 
-  // A timer that finishes while the page is open rings once.
-  const rung = useRef(new Set<string>());
-  const finishedIds = timers
-    .filter((timer) => timer.finished)
-    .map((timer) => timer.id)
-    .join(',');
-  useEffect(() => {
-    let ring = false;
-    for (const id of finishedIds ? finishedIds.split(',') : []) {
-      if (!rung.current.has(id)) {
-        rung.current.add(id);
-        ring = true;
-      }
-    }
-    if (ring && document.visibilityState === 'visible') playAlarm();
-  }, [finishedIds]);
+  // Finished timers ring through the alarm of the layout (`features/alarm`), on every page.
 
   const recipeId = item?.recipeId ?? '';
   const update = sync.update;
@@ -211,12 +196,10 @@ export function useCookViewModel() {
     setConfirm(undefined);
     setError(undefined);
     if (items.length <= 1) {
-      rung.current.clear();
       sync.end();
       void navigate(recipeId ? `/recipes/${recipeId}` : '/recipes');
       return;
     }
-    for (const timer of timers) if (timer.recipeId === recipeId) rung.current.delete(timer.id);
     update((state) => removeRecipe(state, recipeId));
     const next = items.find((entry) => entry.recipeId !== recipeId);
     if (next) select(next.recipeId);
@@ -305,7 +288,6 @@ export function useCookViewModel() {
       update((state) => extendTimer(state, id, 60, Date.now() + snapshot.offset));
     },
     removeTimer: (id: string) => {
-      rung.current.delete(id);
       update((state) => removeTimer(state, id));
     },
     /**
@@ -346,7 +328,6 @@ export function useCookViewModel() {
     leaveRecipe,
     endSession: () => {
       setConfirm(undefined);
-      rung.current.clear();
       sync.end();
       void navigate(recipeId ? `/recipes/${recipeId}` : '/recipes');
     },

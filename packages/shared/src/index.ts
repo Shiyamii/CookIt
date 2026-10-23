@@ -30,3 +30,4 @@ export * from './import';
 export * from './prompts';
 export * from './push';
 export * from './shopping';
+export * from './alarm';

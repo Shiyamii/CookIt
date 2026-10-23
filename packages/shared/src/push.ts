@@ -44,6 +44,9 @@ export type PushPayload = {
   url: string;
   /** One notification per timer (a new one replaces it). */
   tag: string;
+  /** A finished timer: the notification offers to stop it. */
+  timerId?: string;
+  stopLabel?: string;
 };
 
 export const PUSH_ERRORS = ['unsupported_push_service', 'push_not_configured'] as const;
