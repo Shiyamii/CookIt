@@ -246,7 +246,7 @@ Back up the PostgreSQL database, for example with Coolify's built-in backups. Us
 
 - Passkeys are bound to the domain of `ORIGIN`: moving CookIt to another domain makes existing passkeys unusable (users sign in with their password and add new ones).
 - iOS only delivers Web Push notifications when the app is installed on the home screen (iOS 16.4+).
-- Notifications use the system default sound; there is no repeating alarm.
+- With the app closed, notifications use the system's sound (a web app cannot choose it); they come back every 30 s, 10 times at most, until the timer is stopped. With the app open, the alarm rings with the sound chosen in **Alarm**.
 
 ## License
 
