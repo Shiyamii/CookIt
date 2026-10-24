@@ -38,12 +38,15 @@ export function useProfileViewModel() {
 
   const LISTED_KEY = [...MEMBERS_QUERY_KEY, 'me', 'listed'];
   const listed = useQuery({ queryKey: LISTED_KEY, queryFn: fetchListed });
+  // The choice shows at once, while it is saved (back to the saved one if it fails).
+  const [chosenListed, setChosenListed] = useState<boolean>();
   const listing = useMutation({
     mutationFn: saveListed,
     onSuccess: async (saved) => {
       queryClient.setQueryData(LISTED_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: MEMBERS_QUERY_KEY });
     },
+    onSettled: () => setChosenListed(undefined),
   });
   const removal = useMutation({ mutationFn: removeAvatar, onSuccess: refresh });
 
@@ -75,10 +78,13 @@ export function useProfileViewModel() {
       nameMutation.mutate();
     },
     /** Appears in the members list (null while loading). */
-    listed: listing.isPending ? listing.variables : (listed.data?.listed ?? null),
+    listed: chosenListed ?? listed.data?.listed ?? null,
     listedSaving: listing.isPending,
     listedError: listing.isError ? errorCode(listing.error) : undefined,
-    setListed: (value: boolean) => listing.mutate(value),
+    setListed: (value: boolean) => {
+      setChosenListed(value);
+      listing.mutate(value);
+    },
     pictureBusy: upload.isPending || removal.isPending,
     pictureError,
     choosePicture: (file: File | undefined) => {
