@@ -29,6 +29,17 @@ export const hu: Translations = {
     dark: 'Sötét',
     system: 'Rendszer',
   },
+  demo: {
+    label: 'Bemutató',
+    notice: 'Bemutató: a módosításaid ebben a böngészőben maradnak.',
+    as: 'Bejelentkezve mint',
+    member: 'Tag · Alex',
+    admin: 'Admin · Camille',
+    reset: 'Újrakezdés',
+    resetTitle: 'Újrakezded a bemutatót?',
+    resetText: 'A bemutató receptjei, listái és beállításai törlődnek ebből a böngészőből.',
+    unavailable: 'A bemutatóban nem érhető el.',
+  },
   about: {
     link: 'A CookItről',
     title: 'CookIt',

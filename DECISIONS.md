@@ -284,3 +284,9 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 - **The gallery is for members by default**, opened to visitors by an admin (a setting in the database, not an environment variable: it changes without a redeploy, from the app). Instances are private by nature (invite-only); "public" means shared with every member. Share links keep working without an account: they are an explicit share of one recipe.
 - **The members list is opt-in** (`user.listed`, false by default) and shows only a name, username, picture and public recipe count. A member's page opens when they are listed or have a public recipe (reached from their recipes, whose author is already shown); otherwise it is a 404 for others, so trying usernames reveals nothing about someone who did not opt in. Usernames are never given to visitors without an account: they are sign-in names.
 - **One settings row cached in the process**: read on every anonymous recipe request; one process (no worker), so replacing it on save is enough.
+
+## Demo (GitHub Pages)
+
+- **The demo runs the server's own controllers and services in the page** (Hono works in a browser), on in-memory repositories saved in IndexedDB: the same validation, access rules and parser as production, instead of a hand-written fake API that would drift. Two Node-only modules are swapped by a Vite plugin in demo mode, the server code is not changed.
+- **Demo code lives in `main`, behind a build mode**, not on a long-lived branch: a separate branch would fall behind every feature. The normal build leaves it out.
+- **No service worker in the demo**: nothing to cache from or notify with, and a cache on a shared `github.io` origin could outlive the demo.

@@ -11,6 +11,8 @@
     "dev": "bun run --filter '@cookit/server' --filter '@cookit/web' dev",
     "build": "bun run --filter '@cookit/web' build && bun run --filter '@cookit/server' build",
     "start": "bun run --filter '@cookit/server' start",
+    "build:demo": "bun run --filter '@cookit/web' build:demo",
+    "dev:demo": "bun run --filter '@cookit/web' dev:demo",
     "test": "bun test",
     "test:e2e": "playwright test",
     "parse": "bun packages/shared/scripts/parse-recipe.ts",

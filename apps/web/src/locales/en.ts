@@ -27,6 +27,17 @@ export const en = {
     dark: 'Dark',
     system: 'System',
   },
+  demo: {
+    label: 'Demo',
+    notice: 'Demo: your changes stay in this browser.',
+    as: 'Signed in as',
+    member: 'Member · Alex',
+    admin: 'Admin · Camille',
+    reset: 'Start again',
+    resetTitle: 'Start the demo again?',
+    resetText: 'The recipes, lists and settings of this demo are deleted from this browser.',
+    unavailable: 'Not available in the demo.',
+  },
   about: {
     link: 'About CookIt',
     title: 'CookIt',

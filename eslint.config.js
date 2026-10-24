@@ -10,6 +10,7 @@ export default defineConfig([
   globalIgnores([
     '**/node_modules/',
     '**/dist/',
+    '**/dist-demo/',
     'apps/server/public/',
     'coverage/',
     'playwright-report/',

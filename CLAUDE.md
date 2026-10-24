@@ -163,6 +163,13 @@ When recipes are stored (phase 4): Zod schemas for the columns must refuse line 
 - Web: `features/members` (`/members` with a search on the loaded list, `/members/:username`), `features/admin/views/SiteSettingsPage.tsx`. E2E: the global setup opens the gallery (most tests read public recipes as visitors); `e2e/members-only.e2e.ts` runs in its own Playwright project after the others (closes it, checks, opens it again), before `restart`.
 - Drizzle drops the table name of columns inside a `sql` field of a **one-table** query: in a correlated subquery there, spell the columns out (`qualified()` in `members.repository.ts`).
 
+## Demo (GitHub Pages)
+
+- A **build mode of the web app** (`vite build --mode demo`, `VITE_DEMO` = `'1'`): the API runs **in the page**. `src/lib/api.ts` sends `/api/v1/…` to `demoFetch` (`src/demo/server.ts`), a Hono app with the **server's own controllers and services** on in-memory repositories (`src/demo/repositories/`), saved in IndexedDB after every change (`src/demo/state.ts`). The normal build and the image contain none of it (the import sits behind `import.meta.env.VITE_DEMO`).
+- Two server modules cannot load in a browser and are replaced in demo mode by the `cookit-demo-stubs` Vite plugin: `apps/server/src/env.ts` (reads `process.env` when loaded) → `src/demo/stubs/env.ts`, `@hono/node-server/conninfo` → `src/demo/stubs/conninfo.ts`. Keep server services free of Node-only APIs at load time.
+- Demo mode: router `basename` from `BASE_URL` (`DEMO_BASE`, `/CookIt/` on Pages; `MSYS_NO_PATHCONV=1` in Git Bash, which rewrites `/CookIt/` into a Windows path), `404.html` = `index.html` (deep links on Pages), no service worker and no PWA plugin. `features/demo/views/DemoBanner.tsx`: who the visitor is (the member Alex or the admin Camille, `src/demo/session.ts`, page reloaded) and "Start again" (IndexedDB and local storage cleared).
+- Starting data (`src/demo/seed.ts`, `src/demo/recipes.ts`): four fictional accounts, the default units and tags, recipes created through the recipes service (parsed like an import), a translated recipe, a link, a copy, notes; the gallery is public. Not mounted (answer 404 `not_available_in_demo`): accounts, email, push, URL import, photos.
+
 ## Notes and summary
 
 - **Summary**: the `summary:` line of part 1 (see "Markdown recipe format"), column `recipe_translations.summary` (translated with the recipe), `summary` in `recipeFieldsSchema`, `RecipeSummary` and `RecipeDetail`; a field of the visual editor; shown under the title of the recipe page and on the cards (the description when there is none); asked for by the AI import prompt, in the search text.
@@ -320,6 +327,8 @@ bun run lint                                       # ESLint
 bun run format                                     # Prettier (write); format:check to verify
 bun run build                                      # build web, then bundle server for Node
 bun run start                                      # run the built server under Node
+bun run build:demo                                 # the demo (GitHub Pages) into apps/web/dist-demo (DEMO_BASE=/CookIt/ for its sub-path)
+bun run dev:demo                                   # the demo with Vite's dev server
 bun run parse <file.md> [--servings N] [--lang fr|en|hu] [--json | --canonical]  # what the recipe parser reads
 bun run emails                                     # compile the MJML email templates (after changing one, or the theme)
 node apps/server/dist/cli.js admin:reset-link <username>  # rescue CLI (in the container: node dist/cli.js …; also setup-link, rate-limits:clear, push:vapid-keys)

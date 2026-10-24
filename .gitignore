@@ -14,3 +14,4 @@ reports/
 test-results/
 # Playwright sessions created by the global setup
 e2e/.auth/
+dist-demo/

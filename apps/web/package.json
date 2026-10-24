@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:demo": "vite build --mode demo --outDir dist-demo",
+    "dev:demo": "vite --mode demo",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.sw.json"
   },
@@ -29,6 +31,7 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.0",
     "fflate": "0.8.3",
+    "hono": "^4.13.13",
     "i18next": "^26.5.3",
     "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^1.59.0",

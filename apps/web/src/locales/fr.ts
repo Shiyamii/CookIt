@@ -29,6 +29,17 @@ export const fr: Translations = {
     dark: 'Sombre',
     system: 'Système',
   },
+  demo: {
+    label: 'Démo',
+    notice: 'Démo : vos changements restent dans ce navigateur.',
+    as: 'Connecté en tant que',
+    member: 'Membre · Alex',
+    admin: 'Admin · Camille',
+    reset: 'Recommencer',
+    resetTitle: 'Recommencer la démo ?',
+    resetText: 'Les recettes, listes et réglages de cette démo sont effacés de ce navigateur.',
+    unavailable: 'Pas disponible dans la démo.',
+  },
   about: {
     link: 'À propos de CookIt',
     title: 'CookIt',

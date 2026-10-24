@@ -11,8 +11,9 @@ import { registerServiceWorker } from './features/pwa/model/offline';
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
 
-// Offline use and timer notifications (plan §5.4, §5.5).
-registerServiceWorker();
+// Offline use and timer notifications (plan §5.4, §5.5). Not in the demo: it has no server to
+// cache from or to send notifications, and a cache left on a shared host would outlive it.
+if (import.meta.env.VITE_DEMO !== '1') registerServiceWorker();
 
 // A new version was deployed while this page was open: its lazily loaded pages are gone from
 // the server. Reload once to get the new version instead of failing.

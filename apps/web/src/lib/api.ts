@@ -10,10 +10,22 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Sends an API request: to the server, or, in the demo build, to the API running in the page
+ * (`src/demo/`, left out of the normal build).
+ */
+async function send(url: string, init: RequestInit): Promise<Response> {
+  if (import.meta.env.VITE_DEMO === '1') {
+    const { demoFetch } = await import('@/demo/server');
+    return demoFetch(url, init);
+  }
+  return fetch(url, init);
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   // A form (file upload) sets its own multipart content type.
   const form = body instanceof FormData;
-  const res = await fetch(`/api/v1${path}`, {
+  const res = await send(`/api/v1${path}`, {
     method,
     headers: {
       Accept: 'application/json',
