@@ -10,6 +10,7 @@ import {
   recipeMarkdownCreateInputSchema,
   recipeMarkdownInputSchema,
   recipeSaveInputSchema,
+  recipeSaveLinkInputSchema,
   recipeSearchSchema,
   recipeTranslationInputSchema,
   recipeVisibilityInputSchema,
@@ -39,9 +40,16 @@ type ServiceError =
   | { error: 'too_many_images' }
   | { error: 'storage_full' }
   | { error: 'invalid_order' }
+  | { error: 'own_recipe' }
   | { error: 'invalid_recipe'; diagnostics: unknown[] };
 
-const BAD_REQUEST = new Set(['invalid_tags', 'base_language', 'invalid_image', 'invalid_order']);
+const BAD_REQUEST = new Set([
+  'invalid_tags',
+  'base_language',
+  'invalid_image',
+  'invalid_order',
+  'own_recipe',
+]);
 
 /** Service errors to HTTP; anything else is the success body. */
 function respond<T extends object>(c: Context<AppEnv>, result: T | ServiceError, status = 200) {
@@ -89,7 +97,7 @@ export function createRecipesController(deps: {
   app.get('/api/v1/gallery', async (c) => {
     const query = search(c);
     if (!query.success) return c.json({ error: 'invalid_input' }, 400);
-    return c.json(await deps.recipes.gallery(query.data));
+    return c.json(await deps.recipes.gallery(query.data, c.var.user?.id ?? null));
   });
 
   // Unlisted recipe from its share link (token in the body, never in a URL).
@@ -122,7 +130,8 @@ export function createRecipesController(deps: {
     return c.json(await deps.recipes.idea(userId(c), query.data));
   });
 
-  // A recipe from its id: its owner, or anyone for a public recipe. `?lang=` picks a translation.
+  // A recipe from its id: its owner, anyone for a public recipe, a reader who added an unlisted
+  // one with its link. `?lang=` picks a translation.
   app.get('/api/v1/recipes/:id', recipeId, async (c) => {
     const query = recipeLangQuerySchema.safeParse(c.req.query());
     if (!query.success) return c.json({ error: 'invalid_input' }, 400);
@@ -250,7 +259,23 @@ export function createRecipesController(deps: {
     return respond(c, await deps.recipes.deleteImage(paramId(c), userId(c), imageId.data));
   });
 
-  // "Add to my library".
+  // "Add to my recipes": a link, not a copy (unlisted recipe of someone else: with its token).
+  app.put(
+    '/api/v1/recipes/:id/saved',
+    recipeId,
+    rateLimit(deps.rateLimits, RATE_LIMITS.settingsSavePerAccount, (c) => c.var.user?.id),
+    async (c) => {
+      const input = await parseJson(c, recipeSaveLinkInputSchema);
+      if (!input.ok) return input.response;
+      return respond(c, await deps.recipes.saveLink(paramId(c), userId(c), input.data.token));
+    },
+  );
+
+  app.delete('/api/v1/recipes/:id/saved', recipeId, async (c) =>
+    c.json(await deps.recipes.removeLink(paramId(c), userId(c))),
+  );
+
+  // "Make a copy in my recipes".
   // Each copy stores the recipe's photos again: limited per account.
   app.post(
     '/api/v1/recipes/:id/copy',

@@ -157,8 +157,18 @@ export const recipeTranslationInputSchema = z
   .object({ markdown: z.string().min(1).max(MAX_RECIPE_MARKDOWN_LENGTH) })
   .strict();
 
-/** "Add to my library": the share token is needed for an unlisted recipe. */
+/** "Make a copy in my recipes": the share token is needed for an unlisted recipe not saved. */
 export const recipeCopyInputSchema = z.object({ token: shareTokenSchema.optional() }).strict();
+
+/**
+ * "Add to my recipes": a link to someone else's recipe (no copy), always its author's current
+ * version. The share token is needed for an unlisted recipe; it keeps working while the link does.
+ */
+export const recipeSaveLinkInputSchema = z.object({ token: shareTokenSchema.optional() }).strict();
+
+/** Which recipes "My recipes" shows: all, the user's own, or the ones added by link. */
+export const RECIPE_SCOPES = ['all', 'mine', 'saved'] as const;
+export type RecipeScope = (typeof RECIPE_SCOPES)[number];
 
 /** Import by URL: a web page with a schema.org Recipe. */
 export const importUrlInputSchema = z
@@ -192,6 +202,8 @@ export const recipeSearchSchema = z.object({
         .slice(0, 20),
     ),
   page: z.coerce.number().int().min(1).max(1000).default(1),
+  /** My recipes only: all of them, the user's own, or the ones added by link. */
+  scope: z.enum(RECIPE_SCOPES).default('all'),
 });
 export type RecipeSearch = z.infer<typeof recipeSearchSchema>;
 
@@ -225,6 +237,8 @@ export type RecipeSummary = {
   cover: string | null;
   /** No step yet ("to complete"): cannot be cooked. */
   incomplete: boolean;
+  /** The reader's own recipe (false: someone else's, e.g. added to their recipes by link). */
+  mine: boolean;
   updatedAt: string;
 };
 
@@ -261,8 +275,18 @@ export type RecipeDetail = {
   isOwner: boolean;
   /** Only for the owner of an unlisted recipe. */
   shareUrl: string | null;
-  /** Set when this recipe was copied from another one ("add to my library"). */
+  /**
+   * Set when this recipe was copied from another one ("make a copy in my recipes"), for the copy's
+   * owner or a reader who may open the original (null otherwise).
+   */
   copiedFromId: string | null;
+  /**
+   * Where a copy comes from (same readers as `copiedFromId`): the original's author (null when their
+   * account is gone) and the original itself when the reader may open it.
+   */
+  copiedFrom: { recipeId: string | null; ownerName: string | null } | null;
+  /** The signed-in reader added it to their recipes (a link, not a copy). */
+  saved: boolean;
   tagIds: string[];
   /** No step yet ("to complete"). */
   incomplete: boolean;
@@ -283,6 +307,7 @@ export const RECIPE_ERRORS = [
   'invalid_image',
   'too_many_images',
   'storage_full',
+  'own_recipe',
 ] as const;
 
 /**

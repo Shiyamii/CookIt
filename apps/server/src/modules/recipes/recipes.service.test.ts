@@ -32,6 +32,7 @@ const DOC = '# Tarte\n\nportions: 4\n\n---\n\n- 1 oeuf\n\n---\n\n1. Cuire.\n';
 const search = (partial: Partial<RecipeSearch> = {}): RecipeSearch => ({
   page: 1,
   tags: [],
+  scope: 'all',
   ...partial,
 });
 
@@ -40,6 +41,8 @@ type FakeImage = NewImage & { recipeId: string };
 function fakeRepository() {
   const rows = new Map<string, RecipeRow & { searchText: string }>();
   const notes = new Map<string, string>();
+  /** Recipes added by link: `user/recipe` → the share token they were added with. */
+  const links = new Map<string, string | null>();
   const images = new Map<string, FakeImage>();
   const state = { slugTakenOnce: 0, creates: 0, lastList: undefined as ListQuery | undefined };
   const toRow = (r: NewRecipe) => ({
@@ -54,6 +57,9 @@ function fakeRepository() {
     shareToken: null as string | null,
     sourceUrl: r.sourceUrl,
     copiedFromId: r.copiedFromId ?? null,
+    copiedFromOwnerId: r.copiedFromOwnerId ?? null,
+    copiedFromOwnerName: r.copiedFromOwnerId ? `name-${r.copiedFromOwnerId}` : null,
+    copiedFromVisibility: null as RecipeRow['copiedFromVisibility'],
     title: r.title,
     description: r.description,
     summary: r.summary,
@@ -85,7 +91,10 @@ function fakeRepository() {
       return 'ok';
     },
     async findById(id) {
-      return rows.get(id);
+      const row = rows.get(id);
+      // As the repository's join: the original's visibility, null once it is deleted.
+      if (row) row.copiedFromVisibility = rows.get(row.copiedFromId ?? '')?.visibility ?? null;
+      return row;
     },
     async findByShareToken(token) {
       return [...rows.values()].find((r) => r.shareToken === token);
@@ -120,13 +129,38 @@ function fakeRepository() {
     async delete(id) {
       rows.delete(id);
     },
-    async listByOwner(ownerId, query) {
+    async listLibrary(userId, scope, query) {
       state.lastList = query;
-      return listRows([...rows.values()].filter((r) => r.ownerId === ownerId));
+      const savedBy = (r: RecipeRow) => {
+        const key = `${userId}/${r.id}`;
+        return (
+          r.ownerId !== userId &&
+          links.has(key) &&
+          (r.visibility === 'public' ||
+            (r.visibility === 'unlisted' && links.get(key) === r.shareToken))
+        );
+      };
+      const mine = (r: RecipeRow) => r.ownerId === userId;
+      const shown = (r: RecipeRow) =>
+        scope === 'mine' ? mine(r) : scope === 'saved' ? savedBy(r) : mine(r) || savedBy(r);
+      return listRows([...rows.values()].filter(shown), userId);
     },
     async listPublic(query) {
       state.lastList = query;
-      return listRows([...rows.values()].filter((r) => r.visibility === 'public'));
+      return listRows(
+        [...rows.values()].filter((r) => r.visibility === 'public'),
+        query.viewerId,
+      );
+    },
+    async findSaved(userId, recipeId) {
+      const key = `${userId}/${recipeId}`;
+      return links.has(key) ? { shareToken: links.get(key) ?? null } : undefined;
+    },
+    async saveLink(userId, recipeId, shareToken) {
+      links.set(`${userId}/${recipeId}`, shareToken);
+    },
+    async removeLink(userId, recipeId) {
+      links.delete(`${userId}/${recipeId}`);
     },
     async listAllByOwner(ownerId) {
       return [...rows.values()].filter((r) => r.ownerId === ownerId);
@@ -172,7 +206,7 @@ function fakeRepository() {
         .filter((r) => r.hasSteps && (r.ownerId === ownerId || r.visibility === 'public'))
         .filter((r) => r.id !== exclude)
         .sort((a, b) => rank(a.id).localeCompare(rank(b.id)));
-      return found.length ? listRows(found.slice(0, 1))[0] : undefined;
+      return found.length ? listRows(found.slice(0, 1), ownerId)[0] : undefined;
     },
     async imageBytesOfOwner(ownerId) {
       return [...images.values()]
@@ -207,9 +241,9 @@ function fakeRepository() {
       else notes.delete(`${userId}/${recipeId}`);
     },
   };
-  const listRows = (found: RecipeRow[]): RecipeListRow[] =>
-    found.map((r) => ({ ...r, coverId: r.imageIds[0] ?? null }));
-  return { repository, rows, images, state, notes };
+  const listRows = (found: RecipeRow[], viewerId?: string): RecipeListRow[] =>
+    found.map((r) => ({ ...r, coverId: r.imageIds[0] ?? null, mine: r.ownerId === viewerId }));
+  return { repository, rows, images, state, notes, links };
 }
 
 function setup(options: { maxImageBytes?: number } = {}) {
@@ -568,7 +602,7 @@ describe('copy', () => {
     const s = setup();
     const id = await created(s);
     await s.service.setVisibility(id, OWNER, 'public');
-    expect(await s.service.copy(id, OWNER, undefined)).toEqual({ error: 'not_found' });
+    expect(await s.service.copy(id, OWNER, undefined)).toEqual({ error: 'own_recipe' });
   });
   test('an unknown recipe is not_found', async () => {
     expect(await setup().service.copy('nope', OTHER, undefined)).toEqual({ error: 'not_found' });
@@ -599,11 +633,11 @@ describe('lists', () => {
     const a = await created(s);
     await created(s);
     await s.service.setVisibility(a, OWNER, 'public');
-    expect((await s.service.gallery(search())).recipes.map((r) => r.id)).toEqual([a]);
+    expect((await s.service.gallery(search(), null)).recipes.map((r) => r.id)).toEqual([a]);
   });
   test('asks one more row than a page and computes the offset and the tsquery', async () => {
     const s = setup();
-    await s.service.gallery(search({ page: 3, q: 'Crème' }));
+    await s.service.gallery(search({ page: 3, q: 'Crème' }), null);
     expect(s.state.lastList).toEqual({
       tsquery: 'creme:*',
       tagIds: [],
@@ -1241,5 +1275,336 @@ describe('notes and summary edge cases', () => {
     expect(s.rows.get(id)!.summary).toBe('Court.');
     await s.service.update(id, OWNER, { ...FIELDS });
     expect(s.rows.get(id)!.summary).toBe('');
+  });
+});
+
+describe('added by link ("add to my recipes")', () => {
+  const ids = (page: { recipes: { id: string }[] }) => page.recipes.map((r) => r.id);
+
+  test('a public recipe of someone else is listed in "my recipes", not copied', async () => {
+    const s = setup();
+    const id = await created(s);
+    const own = await created(s, OTHER);
+    await s.service.setVisibility(id, OWNER, 'public');
+    expect(await s.service.saveLink(id, OTHER, undefined)).toEqual({ saved: true });
+    expect(s.rows.size).toBe(2);
+
+    const all = await s.service.listMine(OTHER, search());
+    expect(ids(all).sort()).toEqual([id, own].sort());
+    expect(all.recipes.find((r) => r.id === id)?.mine).toBe(false);
+    expect(all.recipes.find((r) => r.id === own)?.mine).toBe(true);
+    expect(ids(await s.service.listMine(OTHER, search({ scope: 'mine' })))).toEqual([own]);
+    expect(ids(await s.service.listMine(OTHER, search({ scope: 'saved' })))).toEqual([id]);
+
+    const detail = await s.service.get(id, OTHER);
+    expect('error' in detail ? undefined : detail.saved).toBe(true);
+    // The author's changes show at once: it is the same recipe.
+    await s.service.update(id, OWNER, { ...FIELDS, title: 'Nouvelle version' });
+    const changed = await s.service.get(id, OTHER);
+    expect('error' in changed ? undefined : changed.title).toBe('Nouvelle version');
+
+    expect(await s.service.removeLink(id, OTHER)).toEqual({ saved: false });
+    expect(ids(await s.service.listMine(OTHER, search()))).toEqual([own]);
+  });
+
+  test('a private recipe cannot be added, and one turned private leaves the list', async () => {
+    const s = setup();
+    const id = await created(s);
+    expect(await s.service.saveLink(id, OTHER, undefined)).toEqual({ error: 'not_found' });
+    expect(s.links.size).toBe(0);
+    await s.service.setVisibility(id, OWNER, 'public');
+    await s.service.saveLink(id, OTHER, undefined);
+    await s.service.setVisibility(id, OWNER, 'private');
+    expect(ids(await s.service.listMine(OTHER, search()))).toEqual([]);
+    expect(await s.service.get(id, OTHER)).toEqual({ error: 'not_found' });
+  });
+
+  test('the owner does not add their own recipe', async () => {
+    const s = setup();
+    const id = await created(s);
+    expect(await s.service.saveLink(id, OWNER, undefined)).toEqual({ error: 'own_recipe' });
+  });
+
+  test('an unlisted recipe needs its link, then opens from its id while the link lasts', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(await s.service.saveLink(id, OTHER, undefined)).toEqual({ error: 'not_found' });
+    expect(await s.service.saveLink(id, OTHER, 'X'.repeat(43))).toEqual({ error: 'not_found' });
+    expect(await s.service.saveLink(id, OTHER, TOKEN)).toEqual({ saved: true });
+
+    const detail = await s.service.get(id, OTHER);
+    expect(detail).toMatchObject({ id, saved: true, shareUrl: null });
+    expect(await s.service.saveNote(id, OTHER, 'Bon')).toEqual({ myNote: 'Bon' });
+    expect(ids(await s.service.listMine(OTHER, search()))).toEqual([id]);
+    // Someone else without the link still gets nothing from the id.
+    expect(await s.service.get(id, 'third')).toEqual({ error: 'not_found' });
+
+    // A new link (private, then unlisted again) cuts the added one off.
+    await s.service.setVisibility(id, OWNER, 'private');
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(await s.service.get(id, OTHER)).toEqual({ error: 'not_found' });
+    expect(ids(await s.service.listMine(OTHER, search()))).toEqual([]);
+  });
+
+  test('a copy replaces the link and says where it comes from', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    await s.service.saveLink(id, OTHER, undefined);
+    const copy = await s.service.copy(id, OTHER, undefined);
+    if (!('id' in copy)) throw new Error('copy failed');
+    expect(s.links.size).toBe(0);
+
+    const detail = await s.service.get(copy.id, OTHER);
+    expect(detail).toMatchObject({
+      copiedFromId: id,
+      copiedFrom: { recipeId: id, ownerName: `name-${OWNER}` },
+      saved: false,
+    });
+    // The original turned private: its author is still named, without a link to it.
+    await s.service.setVisibility(id, OWNER, 'private');
+    expect(await s.service.get(copy.id, OTHER)).toMatchObject({
+      copiedFrom: { recipeId: null, ownerName: `name-${OWNER}` },
+    });
+    // Deleted: the same.
+    await s.service.delete(id, OWNER);
+    expect(await s.service.get(copy.id, OTHER)).toMatchObject({
+      copiedFrom: { recipeId: null, ownerName: `name-${OWNER}` },
+    });
+  });
+
+  test('an unlisted recipe added by link can be copied without giving the token again', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    await s.service.saveLink(id, OTHER, TOKEN);
+    expect(await s.service.copy(id, OTHER, undefined)).toHaveProperty('id');
+  });
+
+  test('a recipe not copied has no origin', async () => {
+    const s = setup();
+    const id = await created(s);
+    expect(await s.service.get(id, OWNER)).toMatchObject({ copiedFrom: null, saved: false });
+  });
+});
+
+describe('added by link: more cases', () => {
+  const ids = (page: { recipes: { id: string }[] }) => page.recipes.map((r) => r.id);
+  const detailOf = (r: unknown) => r as { saved?: boolean; copiedFrom?: unknown; error?: string };
+
+  test('an unknown recipe is not_found', async () => {
+    expect(await setup().service.saveLink('nope', OTHER, undefined)).toEqual({
+      error: 'not_found',
+    });
+  });
+
+  test('adding twice keeps one link', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    await s.service.saveLink(id, OTHER, undefined);
+    await s.service.saveLink(id, OTHER, undefined);
+    expect(s.links.size).toBe(1);
+    expect(ids(await s.service.listMine(OTHER, search({ scope: 'saved' })))).toEqual([id]);
+  });
+
+  test('removing a link that was never added changes nothing', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    expect(await s.service.removeLink(id, OTHER)).toEqual({ saved: false });
+    expect(s.rows.size).toBe(1);
+  });
+
+  test('a link to a public recipe stores no token and does not follow it to unlisted', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    await s.service.saveLink(id, OTHER, undefined);
+    expect(s.links.get(`${OTHER}/${id}`)).toBeNull();
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(await s.service.get(id, OTHER)).toEqual({ error: 'not_found' });
+    expect(ids(await s.service.listMine(OTHER, search()))).toEqual([]);
+  });
+
+  test('a link to an unlisted recipe stores the current token', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    await s.service.saveLink(id, OTHER, TOKEN);
+    expect(s.links.get(`${OTHER}/${id}`)).toBe(TOKEN);
+  });
+
+  test('a stale link cannot be used to copy or to write a note', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    await s.service.saveLink(id, OTHER, TOKEN);
+    await s.service.setVisibility(id, OWNER, 'private');
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(await s.service.copy(id, OTHER, undefined)).toEqual({ error: 'not_found' });
+    expect(await s.service.saveNote(id, OTHER, 'x')).toEqual({ error: 'not_found' });
+    expect(s.notes.size).toBe(0);
+  });
+
+  test('another user does not inherit the link of someone else', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    await s.service.saveLink(id, OTHER, TOKEN);
+    expect(await s.service.saveLink(id, 'third', undefined)).toEqual({ error: 'not_found' });
+    expect(ids(await s.service.listMine('third', search()))).toEqual([]);
+  });
+
+  test('the owner copying their own private recipe gets own_recipe', async () => {
+    const s = setup();
+    const id = await created(s);
+    expect(await s.service.copy(id, OWNER, undefined)).toEqual({ error: 'own_recipe' });
+    expect(s.rows.size).toBe(1);
+  });
+
+  test('copying a private recipe of someone else is not_found and leaves no copy', async () => {
+    const s = setup();
+    const id = await created(s);
+    expect(await s.service.copy(id, OTHER, undefined)).toEqual({ error: 'not_found' });
+    expect(s.rows.size).toBe(1);
+  });
+
+  test('copying one recipe leaves the links to other recipes alone', async () => {
+    const s = setup();
+    const a = await created(s);
+    const b = await created(s);
+    await s.service.setVisibility(a, OWNER, 'public');
+    await s.service.setVisibility(b, OWNER, 'public');
+    await s.service.saveLink(b, OTHER, undefined);
+    expect(await s.service.copy(a, OTHER, undefined)).toHaveProperty('id');
+    expect([...s.links.keys()]).toEqual([`${OTHER}/${b}`]);
+  });
+
+  test('saved is false for the owner, anonymous readers and readers without a link', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    expect(detailOf(await s.service.get(id, OWNER)).saved).toBe(false);
+    expect(detailOf(await s.service.get(id, null)).saved).toBe(false);
+    expect(detailOf(await s.service.get(id, OTHER)).saved).toBe(false);
+  });
+
+  test('the shared link shows saved for a reader who also added it', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(detailOf(await s.service.getShared(TOKEN, OTHER)).saved).toBe(false);
+    await s.service.saveLink(id, OTHER, TOKEN);
+    expect(detailOf(await s.service.getShared(TOKEN, OTHER)).saved).toBe(true);
+  });
+
+  test('saved is not reported once the link no longer gives access', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    await s.service.saveLink(id, OTHER, TOKEN);
+    await s.service.setVisibility(id, OWNER, 'private');
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(detailOf(await s.service.getShared('U'.repeat(43), OTHER)).saved).toBe(false);
+  });
+
+  test('a copy of an unlisted original links to it only for the original owner', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    const copy = await s.service.copy(id, OTHER, TOKEN);
+    if (!('id' in copy)) throw new Error('copy failed');
+    expect(detailOf(await s.service.get(copy.id, OTHER)).copiedFrom).toEqual({
+      recipeId: null,
+      ownerName: `name-${OWNER}`,
+    });
+    await s.service.setVisibility(copy.id, OTHER, 'public');
+    expect(detailOf(await s.service.get(copy.id, OWNER)).copiedFrom).toEqual({
+      recipeId: id,
+      ownerName: `name-${OWNER}`,
+    });
+  });
+
+  test('a copy of a now private original links to it for the original owner only', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    const copy = await s.service.copy(id, OTHER, undefined);
+    if (!('id' in copy)) throw new Error('copy failed');
+    await s.service.setVisibility(id, OWNER, 'private');
+    await s.service.setVisibility(copy.id, OTHER, 'public');
+    expect(detailOf(await s.service.get(copy.id, OWNER)).copiedFrom).toMatchObject({
+      recipeId: id,
+    });
+    // A visitor who may not open the original learns nothing of it.
+    expect(detailOf(await s.service.get(copy.id, null)).copiedFrom).toBeNull();
+  });
+
+  test('scopes "mine" and "saved" exclude each other and "all" has no duplicate', async () => {
+    const s = setup();
+    const a = await created(s);
+    const own = await created(s, OTHER);
+    await s.service.setVisibility(a, OWNER, 'public');
+    await s.service.saveLink(a, OTHER, undefined);
+    const all = ids(await s.service.listMine(OTHER, search()));
+    expect(all.length).toBe(new Set(all).size);
+    expect(ids(await s.service.listMine(OTHER, search({ scope: 'mine' })))).toEqual([own]);
+    expect(ids(await s.service.listMine(OTHER, search({ scope: 'saved' })))).toEqual([a]);
+    expect(ids(await s.service.listMine(OWNER, search({ scope: 'saved' })))).toEqual([]);
+  });
+
+  test('a deleted recipe leaves the list of the people who linked it', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    await s.service.saveLink(id, OTHER, undefined);
+    await s.service.delete(id, OWNER);
+    expect(ids(await s.service.listMine(OTHER, search()))).toEqual([]);
+  });
+
+  test('the gallery flags the own recipes of the viewer and passes the viewer on', async () => {
+    const s = setup();
+    const a = await created(s);
+    const b = await created(s, OTHER);
+    await s.service.setVisibility(a, OWNER, 'public');
+    await s.service.setVisibility(b, OTHER, 'public');
+    const seen = await s.service.gallery(search(), OTHER);
+    expect(Object.fromEntries(seen.recipes.map((r) => [r.id, r.mine]))).toEqual({
+      [a]: false,
+      [b]: true,
+    });
+    expect(s.state.lastList).toMatchObject({ viewerId: OTHER });
+    const anonymous = await s.service.gallery(search(), null);
+    expect(s.state.lastList?.viewerId).toBeUndefined();
+    expect(anonymous.recipes.every((r) => !r.mine)).toBe(true);
+  });
+});
+
+describe('where a copy comes from, for other readers', () => {
+  test('a public copy of a recipe readers may not open names nothing of it', async () => {
+    const s = setup();
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    const copy = await s.service.copy(id, OTHER, TOKEN);
+    if (!('id' in copy)) throw new Error('copy failed');
+    await s.service.setVisibility(copy.id, OTHER, 'public');
+
+    expect(await s.service.get(copy.id, 'third')).toMatchObject({
+      copiedFromId: null,
+      copiedFrom: null,
+    });
+    expect(await s.service.get(copy.id, null)).toMatchObject({ copiedFrom: null });
+    // The copy's owner still knows where it came from.
+    expect(await s.service.get(copy.id, OTHER)).toMatchObject({
+      copiedFromId: id,
+      copiedFrom: { recipeId: null, ownerName: `name-${OWNER}` },
+    });
+    // Once the original is public, everyone may see it.
+    await s.service.setVisibility(id, OWNER, 'public');
+    expect(await s.service.get(copy.id, 'third')).toMatchObject({
+      copiedFrom: { recipeId: id, ownerName: `name-${OWNER}` },
+    });
   });
 });

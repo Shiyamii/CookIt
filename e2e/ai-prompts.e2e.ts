@@ -168,7 +168,7 @@ test('translations API: base language refused, owner only, readable with the rec
   expect(fallback).toMatchObject({ lang: 'fr', title: 'Crêpes au beurre salé' });
   expect((await visitor.request.get(`/api/v1/recipes/${id}?lang=xx`)).status()).toBe(400);
 
-  // "Add to my library" keeps the translation.
+  // "Make a copy in my recipes" keeps the translation.
   const copy = await other.request.post(`/api/v1/recipes/${id}/copy`, {
     headers: ORIGIN_HEADER,
     data: {},

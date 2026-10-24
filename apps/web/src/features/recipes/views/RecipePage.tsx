@@ -1,8 +1,11 @@
 import type { RecipeVisibility } from '@cookit/shared';
 import {
+  BookmarkCheck,
+  BookmarkPlus,
   Check,
   ChefHat,
   Copy,
+  CopyPlus,
   Download,
   Languages,
   Minus,
@@ -69,6 +72,24 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
           {vm.isOwner ? t('recipes.yours') : t('recipes.by', { name: vm.ownerName })}
           {vm.incomplete && <Badge variant="secondary">{t('recipes.incomplete')}</Badge>}
         </p>
+        {vm.copiedFrom && (
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <Badge variant="secondary">
+              <CopyPlus aria-hidden />
+              {t('recipes.library.copyOf', {
+                name: vm.copiedFrom.ownerName ?? t('recipes.library.formerMember'),
+              })}
+            </Badge>
+            {vm.copiedFrom.recipeId && (
+              <Link
+                to={`/recipes/${vm.copiedFrom.recipeId}`}
+                className="underline decoration-primary decoration-2 underline-offset-2"
+              >
+                {t('recipes.library.seeOriginal')}
+              </Link>
+            )}
+          </p>
+        )}
         {vm.languages.length > 1 && (
           <div
             role="group"
@@ -208,6 +229,31 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
       {vm.signedIn && !vm.canCook && vm.canCopy && (
         <p className="text-sm text-muted-foreground">{t('recipes.cookShared')}</p>
       )}
+      {vm.canCopy && (
+        <section className="grid gap-3 rounded-lg border p-4" aria-labelledby="library-title">
+          <h2 id="library-title" className="flex items-center gap-2 font-semibold">
+            {vm.saved && <BookmarkCheck className="size-5" aria-hidden />}
+            {vm.saved ? t('recipes.library.savedTitle') : t('recipes.library.title')}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {vm.saved ? t('recipes.library.savedText') : t('recipes.library.text')}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {vm.saved ? (
+              <Button variant="outline" onClick={vm.removeFromMyRecipes} disabled={vm.busy}>
+                {t('recipes.library.remove')}
+              </Button>
+            ) : (
+              <Button onClick={vm.addToMyRecipes} disabled={vm.busy}>
+                <BookmarkPlus /> {t('recipes.library.add')}
+              </Button>
+            )}
+            <Button variant="outline" onClick={vm.askCopy} disabled={vm.busy}>
+              <CopyPlus /> {t('recipes.library.copy')}
+            </Button>
+          </div>
+        </section>
+      )}
       {vm.signedIn && vm.document && vm.lang && (
         <AddToShoppingList
           recipeId={vm.id}
@@ -301,17 +347,24 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
         <Download /> {t('recipes.exportOne')}
       </Button>
 
-      {vm.canCopy && (
-        <Button
-          size="lg"
-          className="justify-self-start"
-          onClick={vm.addToLibrary}
-          disabled={vm.busy}
-        >
-          <Plus /> {t('recipes.addToLibrary')}
-        </Button>
-      )}
       {!vm.signedIn && <p className="text-sm text-muted-foreground">{t('recipes.signInToCopy')}</p>}
+
+      <AlertDialog open={vm.confirmCopy} onOpenChange={(open) => !open && vm.cancelCopy()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('recipes.library.copyTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('recipes.library.copyText', { name: vm.ownerName })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={vm.makeCopy}>
+              {t('recipes.library.copyConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={vm.confirmDelete} onOpenChange={(open) => !open && vm.cancelDelete()}>
         <AlertDialogContent>

@@ -9,7 +9,9 @@ import {
   recipeFieldsSchema,
   recipeIdeaQuerySchema,
   recipeMarkdownInputSchema,
+  RECIPE_SCOPES,
   recipeSaveInputSchema,
+  recipeSaveLinkInputSchema,
   recipeSearchSchema,
   shareTokenSchema,
 } from './recipes';
@@ -105,11 +107,12 @@ describe('input schemas', () => {
     expect(recipeCopyInputSchema.safeParse({ token: 'short' }).success).toBe(false);
   });
   test('search coerces and bounds the page', () => {
-    expect(recipeSearchSchema.parse({})).toEqual({ page: 1, tags: [] });
+    expect(recipeSearchSchema.parse({})).toEqual({ page: 1, tags: [], scope: 'all' });
     expect(recipeSearchSchema.parse({ page: '3', q: '  tarte ' })).toEqual({
       page: 3,
       q: 'tarte',
       tags: [],
+      scope: 'all',
     });
     expect(recipeSearchSchema.parse({ tags: 'dessert, ,vegetarien' }).tags).toEqual([
       'dessert',
@@ -231,5 +234,19 @@ describe('summary', () => {
     expect(md).toContain('summary: Court.');
     const result = parseRecipe(md);
     expect(result.ok && result.document.summary).toBe('Court.');
+  });
+});
+
+describe('added by link schemas', () => {
+  test('the save-link body takes an optional well-formed token and nothing else', () => {
+    expect(recipeSaveLinkInputSchema.safeParse({}).success).toBe(true);
+    expect(recipeSaveLinkInputSchema.safeParse({ token: 'A'.repeat(43) }).success).toBe(true);
+    expect(recipeSaveLinkInputSchema.safeParse({ token: 'short' }).success).toBe(false);
+    expect(recipeSaveLinkInputSchema.safeParse({ extra: 1 }).success).toBe(false);
+  });
+  test('search scope is limited to all, mine and saved and defaults to all', () => {
+    expect([...RECIPE_SCOPES]).toEqual(['all', 'mine', 'saved']);
+    expect(recipeSearchSchema.parse({ scope: 'saved' }).scope).toBe('saved');
+    expect(recipeSearchSchema.safeParse({ scope: 'other' }).success).toBe(false);
   });
 });

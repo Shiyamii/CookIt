@@ -1,15 +1,19 @@
 import type { RecipeSummary } from '@cookit/shared';
-import { Globe, Link2, Lock } from 'lucide-react';
+import { BookmarkCheck, Globe, Link2, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 
 const VISIBILITY_ICON = { private: Lock, unlisted: Link2, public: Globe };
 
-/** A recipe in a list: cover thumbnail, title, description, servings, author or visibility. */
+/**
+ * A recipe in a list: cover thumbnail, title, description, servings, author or visibility. In the
+ * user's recipes, one of someone else (added by link) shows its author and a bookmark.
+ */
 export function RecipeCard({ recipe, showOwner }: { recipe: RecipeSummary; showOwner: boolean }) {
   const { t } = useTranslation();
-  const Icon = VISIBILITY_ICON[recipe.visibility];
+  const added = !showOwner && !recipe.mine;
+  const Icon = added ? BookmarkCheck : VISIBILITY_ICON[recipe.visibility];
   return (
     <Link
       to={`/recipes/${recipe.id}`}
@@ -29,7 +33,9 @@ export function RecipeCard({ recipe, showOwner }: { recipe: RecipeSummary; showO
           {!showOwner && (
             <Icon
               className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-              aria-label={t(`recipes.visibility.${recipe.visibility}`)}
+              aria-label={
+                added ? t('recipes.library.added') : t(`recipes.visibility.${recipe.visibility}`)
+              }
             />
           )}
         </span>
@@ -45,7 +51,7 @@ export function RecipeCard({ recipe, showOwner }: { recipe: RecipeSummary; showO
         )}
         <span className="text-xs text-muted-foreground">
           {t('recipes.servingsCount', { count: recipe.servings })}
-          {showOwner && ` · ${t('recipes.by', { name: recipe.ownerName })}`}
+          {(showOwner || added) && ` · ${t('recipes.by', { name: recipe.ownerName })}`}
         </span>
       </span>
     </Link>

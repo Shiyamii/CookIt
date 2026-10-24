@@ -66,6 +66,7 @@ async function expectNoAccess(request: APIRequestContext, id: string) {
     }),
     await request.delete(`/api/v1/recipes/${id}`, { headers }),
     await request.post(`/api/v1/recipes/${id}/copy`, { data: {}, headers }),
+    await request.put(`/api/v1/recipes/${id}/saved`, { data: {}, headers }),
   ];
   // Anonymous callers are stopped earlier (401) on the routes that need an account.
   for (const answer of answers) expect([401, 404]).toContain(answer.status());
@@ -119,7 +120,7 @@ test.describe('authorization', () => {
     // …but with the link, even without an account.
     await visitor.goto(shareUrl ?? '');
     await expect(visitor.getByRole('heading', { name: 'Recette partagée' })).toBeVisible();
-    await expect(visitor.getByText('Sign in to add this recipe to your library.')).toBeVisible();
+    await expect(visitor.getByText('Sign in to add this recipe to your recipes.')).toBeVisible();
     // A reload keeps working: the token stays in the address.
     await visitor.reload();
     await expect(visitor.getByRole('heading', { name: 'Recette partagée' })).toBeVisible();
@@ -140,7 +141,77 @@ test.describe('authorization', () => {
     expect((await post(tokenOf(renewed))).status()).toBe(200);
   });
 
-  test('"add to my library" makes an independent private copy', async ({
+  test('"add to my recipes" keeps a link to the author\'s version, without a copy', async ({
+    browser,
+    page: adminPage,
+  }) => {
+    const owner = await newMember(browser, adminPage, 'linked');
+    const reader = await newMember(browser, adminPage, 'follower');
+    const id = await createRecipe(owner.page.request, 'Recette suivie');
+    await setVisibility(owner.page.request, id, 'public');
+
+    await reader.page.goto(`/recipes/${id}`);
+    await reader.page.getByRole('button', { name: 'Add to my recipes' }).click();
+    await expect(reader.page.getByRole('heading', { name: 'In my recipes' })).toBeVisible();
+    await expect(reader.page).toHaveURL(new RegExp(id));
+
+    // Listed in "my recipes" with its author, under "All" and "Added", not under "Mine".
+    await reader.page.goto('/recipes');
+    const card = reader.page.getByTestId('recipe-card').filter({ hasText: 'Recette suivie' });
+    await expect(card).toContainText(`By ${owner.username}`);
+    await expect(card.getByLabel('Added to my recipes')).toBeVisible();
+    await reader.page.getByRole('button', { name: 'Mine', exact: true }).click();
+    await expect(reader.page).toHaveURL(/scope=mine/);
+    await expect(reader.page.getByText('No recipe yet. Create your first one!')).toBeVisible();
+    await reader.page.getByRole('button', { name: 'Added', exact: true }).click();
+    await expect(card).toBeVisible();
+
+    // The author's changes show at once: it is the same recipe.
+    await owner.page.request.put(`/api/v1/recipes/${id}/markdown`, {
+      data: { markdown: recipeMarkdown('Recette suivie v2') },
+      headers: ORIGIN_HEADER,
+    });
+    await reader.page.reload();
+    await expect(
+      reader.page.getByTestId('recipe-card').filter({ hasText: 'Recette suivie v2' }),
+    ).toBeVisible();
+
+    // Shared by link only: it leaves the reader's recipes; adding it again needs the link.
+    const { shareUrl } = await setVisibility(owner.page.request, id, 'unlisted');
+    const list = async () =>
+      (await (await reader.page.request.get('/api/v1/recipes')).json()).recipes as { id: string }[];
+    expect((await list()).map((r) => r.id)).not.toContain(id);
+    const without = await reader.page.request.put(`/api/v1/recipes/${id}/saved`, {
+      data: {},
+      headers: ORIGIN_HEADER,
+    });
+    expect(without.status()).toBe(404);
+
+    // From the share link: added again, then readable from its id (cooking needs that).
+    await reader.page.goto(shareUrl ?? '');
+    await expect(reader.page.getByText('Add it to your recipes to cook it.')).toBeVisible();
+    await reader.page.getByRole('button', { name: 'Add to my recipes' }).click();
+    await expect(reader.page.getByRole('heading', { name: 'In my recipes' })).toBeVisible();
+    await expect(reader.page.getByRole('link', { name: 'Cook', exact: true })).toBeVisible();
+    expect((await reader.page.request.get(`/api/v1/recipes/${id}`)).status()).toBe(200);
+    expect((await list()).map((r) => r.id)).toContain(id);
+
+    // A new share link cuts it off.
+    await setVisibility(owner.page.request, id, 'private');
+    await setVisibility(owner.page.request, id, 'unlisted');
+    expect((await reader.page.request.get(`/api/v1/recipes/${id}`)).status()).toBe(404);
+    expect((await list()).map((r) => r.id)).not.toContain(id);
+
+    // Public again: everyone may read it, so it is back in the reader's recipes. Removing it.
+    await setVisibility(owner.page.request, id, 'public');
+    expect((await list()).map((r) => r.id)).toContain(id);
+    await reader.page.goto(`/recipes/${id}`);
+    await reader.page.getByRole('button', { name: 'Remove from my recipes' }).click();
+    await expect(reader.page.getByRole('button', { name: 'Add to my recipes' })).toBeVisible();
+    expect((await list()).map((r) => r.id)).not.toContain(id);
+  });
+
+  test('"make a copy in my recipes" makes an independent private copy that says where it comes from', async ({
     browser,
     page: adminPage,
   }) => {
@@ -151,13 +222,26 @@ test.describe('authorization', () => {
 
     await reader.page.goto(`/recipes/${id}`);
     await expect(reader.page.getByText(`By ${owner.username}`)).toBeVisible();
-    await reader.page.getByRole('button', { name: 'Add to my library' }).click();
+    await reader.page.getByRole('button', { name: 'Make a copy in my recipes' }).click();
+    // The copy is explained before it is made: it no longer follows the author.
+    const dialog = reader.page.getByRole('alertdialog');
+    await expect(dialog).toContainText('will not reach it');
+    await dialog.getByRole('button', { name: 'Make the copy' }).click();
     await expect(reader.page).not.toHaveURL(new RegExp(id));
     await expect(reader.page.getByText('Your recipe')).toBeVisible();
+    await expect(reader.page.getByText(`Copied from a recipe by ${owner.username}`)).toBeVisible();
+    await reader.page.getByRole('link', { name: 'See the original recipe' }).click();
+    await expect(reader.page).toHaveURL(new RegExp(id));
+    await reader.page.goBack();
     const copyId = reader.page.url().split('/').pop() ?? '';
 
     const copy = await (await reader.page.request.get(`/api/v1/recipes/${copyId}`)).json();
-    expect(copy).toMatchObject({ visibility: 'private', copiedFromId: id, isOwner: true });
+    expect(copy).toMatchObject({
+      visibility: 'private',
+      copiedFromId: id,
+      copiedFrom: { recipeId: id, ownerName: owner.username },
+      isOwner: true,
+    });
 
     // The original changes; the copy does not.
     await owner.page.request.put(`/api/v1/recipes/${id}/markdown`, {
@@ -174,6 +258,14 @@ test.describe('authorization', () => {
       headers: ORIGIN_HEADER,
     });
     expect(refused.status()).toBe(404);
+    // The original is gone from view: its author is still named, without a link to it.
+    const after2 = await (await reader.page.request.get(`/api/v1/recipes/${copyId}`)).json();
+    expect(after2.copiedFrom).toEqual({ recipeId: null, ownerName: owner.username });
+    const own = await owner.page.request.post(`/api/v1/recipes/${id}/copy`, {
+      data: {},
+      headers: ORIGIN_HEADER,
+    });
+    expect(own.status()).toBe(400);
   });
 });
 

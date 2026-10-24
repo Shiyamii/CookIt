@@ -1,4 +1,4 @@
-import { isLocale } from '@cookit/shared';
+import { isLocale, RECIPE_SCOPES, type RecipeScope } from '@cookit/shared';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTagCatalog } from '@/features/catalog/viewmodels/useCatalogs';
@@ -9,10 +9,18 @@ import { fetchGallery, fetchMyRecipes, RECIPES_QUERY_KEY } from '../model/recipe
 
 const SEARCH_DELAY_MS = 300;
 
-/** My recipes or the public gallery, with search (kept in the URL: `?q=`) and "load more". */
+/**
+ * My recipes or the public gallery, with search (kept in the URL: `?q=`) and "load more". My
+ * recipes shows the user's own and the ones added by link (`?scope=mine|saved` narrows it).
+ */
 export function useRecipeListViewModel(kind: 'mine' | 'gallery') {
   const [params, setParams] = useSearchParams();
   const urlQuery = params.get('q') ?? '';
+  const urlScope = params.get('scope');
+  const scope: RecipeScope =
+    kind === 'mine' && RECIPE_SCOPES.includes(urlScope as RecipeScope)
+      ? (urlScope as RecipeScope)
+      : 'all';
   const urlTags = params.get('tags') ?? '';
   const tags = useMemo(() => urlTags.split(',').filter(Boolean), [urlTags]);
   const [search, setSearch] = useState(urlQuery);
@@ -38,10 +46,12 @@ export function useRecipeListViewModel(kind: 'mine' | 'gallery') {
   // Titles in the interface language when the recipe has that translation.
   const { i18n } = useTranslation();
   const lang = isLocale(i18n.resolvedLanguage) ? i18n.resolvedLanguage : undefined;
-  const fetchPage = kind === 'mine' ? fetchMyRecipes : fetchGallery;
   const query = useInfiniteQuery({
-    queryKey: [...RECIPES_QUERY_KEY, kind, urlQuery, urlTags, lang],
-    queryFn: ({ pageParam }) => fetchPage(urlQuery, pageParam, tags, lang),
+    queryKey: [...RECIPES_QUERY_KEY, kind, urlQuery, urlTags, lang, scope],
+    queryFn: ({ pageParam }) =>
+      kind === 'mine'
+        ? fetchMyRecipes(urlQuery, pageParam, tags, lang, scope)
+        : fetchGallery(urlQuery, pageParam, tags, lang),
     initialPageParam: 1,
     getNextPageParam: (last, pages) => (last.hasMore ? pages.length + 1 : undefined),
   });
@@ -63,6 +73,19 @@ export function useRecipeListViewModel(kind: 'mine' | 'gallery') {
         })),
       })),
     selectedTagCount: tags.length,
+    /** My recipes: all, the user's own, or the ones added by link. */
+    scopes: RECIPE_SCOPES,
+    scope,
+    chooseScope: (value: RecipeScope) =>
+      setParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          if (value === 'all') next.delete('scope');
+          else next.set('scope', value);
+          return next;
+        },
+        { replace: true },
+      ),
     toggleTag: (slug: string) =>
       setParams(
         (current) => {

@@ -48,10 +48,13 @@ export type TooManyImages = { error: 'too_many_images' };
 export type StorageFull = { error: 'storage_full' };
 /** A new photo order that is not exactly the recipe's photos. */
 export type InvalidOrder = { error: 'invalid_order' };
+/** The user's own recipe is already in their recipes: it is not added by link nor copied. */
+export type OwnRecipe = { error: 'own_recipe' };
 
 const NOT_FOUND: NotFound = { error: 'not_found' };
 const INVALID_TAGS: InvalidTags = { error: 'invalid_tags' };
 const BASE_LANGUAGE: BaseLanguage = { error: 'base_language' };
+const OWN_RECIPE: OwnRecipe = { error: 'own_recipe' };
 const INVALID_IMAGE: InvalidImage = { error: 'invalid_image' };
 const SLUG_MAX = 80;
 const MAX_SEARCH_WORDS = 10;
@@ -96,10 +99,11 @@ function searchText(document: RecipeDocument): string {
 }
 
 /**
- * Recipes: CRUD, visibility, sharing, copies, lists and search. Access rules (plan §5.2, phase 4
- * criterion): a private recipe is only ever seen by its owner (admins included: no exception); a
- * public one by anyone, signed in or not; an unlisted one by its owner and by whoever has its
- * share link. Only the owner changes a recipe. Whatever is not visible answers `not_found`.
+ * Recipes: CRUD, visibility, sharing, links, copies, lists and search. Access rules (plan §5.2,
+ * phase 4 criterion): a private recipe is only ever seen by its owner (admins included: no
+ * exception); a public one by anyone, signed in or not; an unlisted one by its owner and by whoever
+ * has its share link, or added it to their recipes with the link that is still the recipe's. Only
+ * the owner changes a recipe. Whatever is not visible answers `not_found`.
  */
 export function createRecipesService(deps: {
   repository: RecipesRepository;
@@ -129,10 +133,14 @@ export function createRecipesService(deps: {
   const toDetail = (
     row: RecipeRow,
     viewerId: string | null,
-    lang?: Locale,
-    myNote: string | null = null,
+    lang: Locale | undefined,
+    reader: { myNote: string | null; saved: boolean },
   ): RecipeDetail => {
     const isOwner = row.ownerId === viewerId;
+    // A copy links to its original only when the reader may open it from its id.
+    const originalReadable =
+      row.copiedFromVisibility === 'public' ||
+      (row.copiedFromVisibility !== null && row.copiedFromOwnerId === viewerId);
     const shown = row.translations.find((translation) => translation.lang === lang) ?? row;
     return {
       id: row.id,
@@ -155,11 +163,21 @@ export function createRecipesService(deps: {
         isOwner && row.visibility === 'unlisted' && row.shareToken
           ? shareUrl(row.shareToken)
           : null,
-      copiedFromId: row.copiedFromId,
+      // Where a copy comes from: told to the copy's owner (who made it), and to other readers only
+      // when they may open the original (a copy made public must not reveal a private one).
+      copiedFromId: isOwner || originalReadable ? row.copiedFromId : null,
+      copiedFrom:
+        row.copiedFromId && (isOwner || originalReadable)
+          ? {
+              recipeId: originalReadable ? row.copiedFromId : null,
+              ownerName: row.copiedFromOwnerName,
+            }
+          : null,
+      saved: reader.saved,
       tagIds: row.tagIds,
       incomplete: !row.hasSteps,
       authorNote: row.authorNote,
-      myNote,
+      myNote: reader.myNote,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -221,6 +239,7 @@ export function createRecipesService(deps: {
     lang: Locale,
     options: {
       copiedFromId?: string | null;
+      copiedFromOwnerId?: string | null;
       tagIds?: string[];
       translations?: (TranslationContent & { lang: Locale })[];
       copyImagesFrom?: string;
@@ -236,6 +255,7 @@ export function createRecipesService(deps: {
         ownerId,
         lang,
         copiedFromId: options.copiedFromId ?? null,
+        copiedFromOwnerId: options.copiedFromOwnerId ?? null,
         tagIds: options.tagIds ?? [],
         translations: options.translations,
         copyImagesFrom: options.copyImagesFrom,
@@ -256,9 +276,31 @@ export function createRecipesService(deps: {
     extraMeta: row.extraMeta,
   });
 
-  /** The signed-in reader's private note (null when signed out or none). */
-  const noteOf = async (viewerId: string | null, recipeId: string) =>
-    viewerId ? ((await repository.findNote(viewerId, recipeId)) ?? null) : null;
+  /**
+   * What `viewerId` (null: anonymous) may do with a recipe: read it when it is theirs, public, or
+   * unlisted with its current share token (`token`, or the one they added it to their recipes
+   * with). `saved`: they added it by link (and may still read it).
+   */
+  const access = async (row: RecipeRow, viewerId: string | null, token?: string) => {
+    if (row.ownerId === viewerId) return { readable: true, saved: false };
+    const link = viewerId ? await repository.findSaved(viewerId, row.id) : undefined;
+    const withToken = (candidate: string | null | undefined) =>
+      row.visibility === 'unlisted' && !!candidate && candidate === row.shareToken;
+    const readable = row.visibility === 'public' || withToken(token) || withToken(link?.shareToken);
+    return { readable, saved: readable && link !== undefined };
+  };
+
+  /** The detail for a reader allowed to read it, with their own note and link. */
+  const detailFor = async (
+    row: RecipeRow,
+    viewerId: string | null,
+    lang: Locale | undefined,
+    saved: boolean,
+  ) =>
+    toDetail(row, viewerId, lang, {
+      myNote: viewerId ? ((await repository.findNote(viewerId, row.id)) ?? null) : null,
+      saved,
+    });
 
   /** The recipe if `userId` owns it (others get not_found, never forbidden). */
   const owned = async (id: string, userId: string) => {
@@ -336,8 +378,9 @@ export function createRecipesService(deps: {
     },
 
     /**
-     * A recipe as `viewerId` (null: anonymous) may read it from its id: owner or public. In `lang`
-     * when it has that translation, in its base language otherwise.
+     * A recipe as `viewerId` (null: anonymous) may read it from its id: owner, public, or unlisted
+     * and added to their recipes with its current link. In `lang` when it has that translation, in
+     * its base language otherwise.
      */
     async get(
       id: string,
@@ -346,8 +389,8 @@ export function createRecipesService(deps: {
     ): Promise<RecipeDetail | NotFound> {
       const row = await repository.findById(id);
       if (!row) return NOT_FOUND;
-      if (row.ownerId !== viewerId && row.visibility !== 'public') return NOT_FOUND;
-      return toDetail(row, viewerId, lang, await noteOf(viewerId, row.id));
+      const { readable, saved } = await access(row, viewerId);
+      return readable ? detailFor(row, viewerId, lang, saved) : NOT_FOUND;
     },
 
     /** A recipe from its share link: only while it is unlisted (the link is revoked otherwise). */
@@ -358,12 +401,12 @@ export function createRecipesService(deps: {
     ): Promise<RecipeDetail | NotFound> {
       const row = await repository.findByShareToken(token);
       if (!row || row.visibility !== 'unlisted') return NOT_FOUND;
-      return toDetail(row, viewerId, lang, await noteOf(viewerId, row.id));
+      return detailFor(row, viewerId, lang, (await access(row, viewerId)).saved);
     },
 
     /**
      * The reader's private note: on a recipe they may read (their own, a public one, or an
-     * unlisted one with its share token). An empty text removes it.
+     * unlisted one with its share token or added with it). An empty text removes it.
      */
     async saveNote(
       id: string,
@@ -372,12 +415,7 @@ export function createRecipesService(deps: {
       token?: string,
     ): Promise<{ myNote: string | null } | NotFound> {
       const row = await repository.findById(id);
-      const readable =
-        row &&
-        (row.ownerId === userId ||
-          row.visibility === 'public' ||
-          (row.visibility === 'unlisted' && token !== undefined && token === row.shareToken));
-      if (!readable) return NOT_FOUND;
+      if (!row || !(await access(row, userId, token)).readable) return NOT_FOUND;
       await repository.saveNote(userId, id, text, now());
       return { myNote: text || null };
     },
@@ -482,20 +520,45 @@ export function createRecipesService(deps: {
     },
 
     /**
-     * "Add to my library": an independent private copy of a recipe `userId` can read — public, or
-     * unlisted with its share link.
+     * "Add to my recipes": a link to a recipe of someone else that `userId` may read (public, or
+     * unlisted with its share link), never a copy: they always see the author's current version.
+     * An unlisted recipe keeps working while that link is the recipe's.
+     */
+    async saveLink(
+      id: string,
+      userId: string,
+      token: string | undefined,
+    ): Promise<{ saved: true } | NotFound | OwnRecipe> {
+      const row = await repository.findById(id);
+      if (!row) return NOT_FOUND;
+      if (row.ownerId === userId) return OWN_RECIPE;
+      if (!(await access(row, userId, token)).readable) return NOT_FOUND;
+      // The token only matters for an unlisted recipe (it is the current one: checked above).
+      const shareToken = row.visibility === 'unlisted' ? row.shareToken : null;
+      await repository.saveLink(userId, id, shareToken, now());
+      return { saved: true };
+    },
+
+    /** Takes a recipe added by link out of the user's recipes (nothing when it was not there). */
+    async removeLink(id: string, userId: string): Promise<{ saved: false }> {
+      await repository.removeLink(userId, id);
+      return { saved: false };
+    },
+
+    /**
+     * "Make a copy in my recipes": an independent private copy of a recipe `userId` can read
+     * (public, or unlisted with its share link or added with it). The copy no longer follows the
+     * author's changes; it replaces the link the user may have added.
      */
     async copy(
       id: string,
       userId: string,
       token: string | undefined,
-    ): Promise<{ id: string } | NotFound | InvalidRecipe> {
+    ): Promise<{ id: string } | NotFound | InvalidRecipe | OwnRecipe> {
       const row = await repository.findById(id);
-      const readable =
-        row &&
-        (row.visibility === 'public' ||
-          (row.visibility === 'unlisted' && token !== undefined && token === row.shareToken));
-      if (!row || !readable || row.ownerId === userId) return NOT_FOUND;
+      if (!row) return NOT_FOUND;
+      if (row.ownerId === userId) return OWN_RECIPE;
+      if (!(await access(row, userId, token)).readable) return NOT_FOUND;
       const parsed = await parseFields(baseFields(row), row.bodyMarkdown, row.lang);
       if ('error' in parsed) return parsed;
       // The photos only when they fit in the reader's storage (the recipe is copied anyway).
@@ -505,12 +568,15 @@ export function createRecipesService(deps: {
           (await repository.imageBytesOfRecipe(row.id)) <=
           maxImageBytes;
       // Tags, translations and photos are copied too (plan §4); translations as stored.
-      return insert(userId, parsed.document, row.lang, {
+      const created = await insert(userId, parsed.document, row.lang, {
         copiedFromId: row.id,
+        copiedFromOwnerId: row.ownerId,
         tagIds: row.tagIds,
         translations: row.translations,
         copyImagesFrom: photosFit ? row.id : undefined,
       });
+      await repository.removeLink(userId, row.id);
+      return created;
     },
 
     /**
@@ -626,14 +692,17 @@ export function createRecipesService(deps: {
       return { recipe: row ? summary(row) : null };
     },
 
+    /** "My recipes": the user's own and the ones they added by link (`search.scope`). */
     async listMine(userId: string, search: RecipeSearch): Promise<RecipePage> {
       const query = await listQuery(search);
-      return query ? page(repository.listByOwner(userId, query)) : EMPTY_PAGE;
+      return query ? page(repository.listLibrary(userId, search.scope, query)) : EMPTY_PAGE;
     },
 
-    async gallery(search: RecipeSearch): Promise<RecipePage> {
+    async gallery(search: RecipeSearch, viewerId: string | null): Promise<RecipePage> {
       const query = await listQuery(search);
-      return query ? page(repository.listPublic(query)) : EMPTY_PAGE;
+      return query
+        ? page(repository.listPublic({ ...query, viewerId: viewerId ?? undefined }))
+        : EMPTY_PAGE;
     },
   };
 }

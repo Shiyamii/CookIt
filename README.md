@@ -32,7 +32,7 @@ Recipes end up scattered: bookmarks, screenshots, paper notes, sites full of ads
 ## Features
 
 - **Invite-only accounts**: admins create one-click invitation links (sent by email when SMTP is configured) and manage users. Optional **2FA (TOTP)** and **passkeys**. **Optional email**: invitations, "forgot your password?", a test email.
-- **Recipe visibility**: private, unlisted (secret link) or public (public gallery, no account needed). Copy any shared recipe into your own library.
+- **Recipe visibility**: private, unlisted (secret link) or public (public gallery, no account needed). Add a shared recipe to your recipes (a link that follows the author's changes) or make a copy of your own.
 - **Summary and notes**: a one-line summary on the cards, a public word from the author, and a private note of your own on any recipe you can read.
 - **Markdown import/export** with a simple, human-readable format and special syntax for timers and scalable quantities.
 - **Two editors**: a structured visual editor (mobile friendly) and a markdown editor, switchable without losing anything.
@@ -168,7 +168,7 @@ bun run parse my-recipe.md --canonical   # canonical form, as exported
 
 ### Recipes
 
-**My recipes** lists and searches your recipes; **New recipe** opens the editor: a visual editor (form, groups, drag and drop, timers inserted at the cursor, adjustable quantities) or a markdown editor, switchable at any time without losing anything, plus a preview. Each recipe is private, unlisted (readable with its share link) or public (listed in the **Gallery**, readable without an account). A recipe of someone else can be added to your library as an independent copy. Recipes get tags from a common list (by category: dish type, diet, cuisine…), used as filters in lists.
+**My recipes** lists and searches your recipes; **New recipe** opens the editor: a visual editor (form, groups, drag and drop, timers inserted at the cursor, adjustable quantities) or a markdown editor, switchable at any time without losing anything, plus a preview. Each recipe is private, unlisted (readable with its share link) or public (listed in the **Gallery**, readable without an account). A recipe of someone else can be added to your recipes as a link, always in its author's latest version, or copied as an independent recipe of your own (it then says whose recipe it came from). Recipes get tags from a common list (by category: dish type, diet, cuisine…), used as filters in lists.
 
 **Add a recipe** offers a quick creation (title and servings, completed later), a step-by-step wizard (paste the ingredients and the steps; durations like "10 min" or "1h30" become timers), the import of markdown (pasted, a `.md` file or a zip) or of a recipe web page (schema.org), and the full editor. Every import shows a preview and asks to validate the tags. Each recipe can be exported as a `.md` file, and all your recipes as a zip.
 

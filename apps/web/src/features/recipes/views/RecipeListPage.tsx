@@ -27,6 +27,22 @@ export function RecipeListPage({ kind }: { kind: 'mine' | 'gallery' }) {
         )}
       </div>
       {!mine && <p className="text-muted-foreground">{t('recipes.gallery.subtitle')}</p>}
+      {mine && (
+        <div role="group" aria-label={t('recipes.scope.label')} className="flex flex-wrap gap-1.5">
+          {vm.scopes.map((value) => (
+            <Button
+              key={value}
+              size="sm"
+              variant={value === vm.scope ? 'default' : 'outline'}
+              aria-pressed={value === vm.scope}
+              className="rounded-full"
+              onClick={() => vm.chooseScope(value)}
+            >
+              {t(`recipes.scope.${value}`)}
+            </Button>
+          ))}
+        </div>
+      )}
 
       <div className="relative">
         <Search
@@ -90,7 +106,9 @@ export function RecipeListPage({ kind }: { kind: 'mine' | 'gallery' }) {
           {vm.searching
             ? t('recipes.noResults')
             : mine
-              ? t('recipes.mine.empty')
+              ? vm.scope === 'saved'
+                ? t('recipes.mine.emptySaved')
+                : t('recipes.mine.empty')
               : t('recipes.gallery.empty')}
         </p>
       )}

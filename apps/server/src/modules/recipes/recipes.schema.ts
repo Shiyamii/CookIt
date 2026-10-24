@@ -37,8 +37,12 @@ export const recipes = pgTable(
     // Plain text: the owner can copy the share link again at any time. Only works while unlisted.
     shareToken: text('share_token').unique(),
     sourceUrl: text('source_url'),
-    // "Add to my library": the recipe this one was copied from (kept if the original goes).
+    // "Make a copy in my recipes": the recipe this one was copied from (kept if the original
+    // goes) and its author (null once their account is gone).
     copiedFromId: text('copied_from_id'),
+    copiedFromOwnerId: text('copied_from_owner_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
     // No step yet: "to complete" in lists, cannot be cooked (derived from the body on save).
     hasSteps: boolean('has_steps').notNull().default(false),
     // The author's public note (plain text, not part of the markdown nor translated).
@@ -150,4 +154,27 @@ export const recipeNotes = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.recipeId] })],
+);
+
+/**
+ * "Add to my recipes": a link to someone else's recipe, not a copy (the reader always sees the
+ * author's current version). An unlisted recipe keeps the share token it was added with: the link
+ * works while that token is the recipe's (a new share link or another visibility cuts it off).
+ */
+export const savedRecipes = pgTable(
+  'saved_recipes',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    recipeId: text('recipe_id')
+      .notNull()
+      .references(() => recipes.id, { onDelete: 'cascade' }),
+    shareToken: text('share_token'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.recipeId] }),
+    index('saved_recipes_recipe_idx').on(table.recipeId),
+  ],
 );

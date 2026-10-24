@@ -194,7 +194,7 @@ test('a recipe photo is seen by whoever may read the recipe', async ({ browser, 
   await setVisibility(page.request, id, 'private');
   expect(await status(visitor)).toBe(404);
 
-  // "Add to my library" copies the photos; deleting the recipe deletes its own.
+  // "Make a copy in my recipes" copies the photos; deleting the recipe deletes its own.
   await setVisibility(page.request, id, 'public');
   const copy = await member.request.post(`/api/v1/recipes/${id}/copy`, {
     headers: ORIGIN_HEADER,

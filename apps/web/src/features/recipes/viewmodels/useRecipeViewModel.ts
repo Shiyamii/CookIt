@@ -16,15 +16,18 @@ import {
   fetchRecipe,
   fetchSharedRecipe,
   RECIPES_QUERY_KEY,
+  removeRecipeLink,
+  saveRecipeLink,
   setVisibility,
 } from '../model/recipes';
 import { missingLanguages, readingLanguage } from '../model/translation';
 
 /**
- * A recipe page: `/recipes/:id` (owner or public recipe) or `/shared#token=…` (unlisted share
- * link). Servings can be changed (quantities follow, timers don't); the owner manages visibility
- * and deletion; another signed-in user can add it to their library. Shown in the language
- * chosen (`?lang=` when the page opens), else the interface's, else the base language.
+ * A recipe page: `/recipes/:id` (owner, public recipe, or one added by link) or `/shared#token=…`
+ * (unlisted share link). Servings can be changed (quantities follow, timers don't); the owner
+ * manages visibility and deletion; another signed-in user adds it to their recipes (a link to the
+ * author's version) or makes a copy of their own. Shown in the language chosen (`?lang=` when the
+ * page opens), else the interface's, else the base language.
  */
 export function useRecipeViewModel(source: 'id' | 'shared') {
   const { id = '' } = useParams();
@@ -35,6 +38,7 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
   const [servings, setServings] = useState<number>();
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmCopy, setConfirmCopy] = useState(false);
   const [error, setError] = useState<string>();
   const { i18n } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -117,9 +121,24 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
     mutationFn: () => copyRecipe(detail?.id ?? '', source === 'shared' ? token : undefined),
     onMutate: () => setError(undefined),
     onSuccess: async (created) => {
+      setConfirmCopy(false);
       await refresh();
       await navigate(`/recipes/${created.id}`);
     },
+    onError: (failure) => {
+      setConfirmCopy(false);
+      setError(errorCode(failure));
+    },
+  });
+
+  // "Add to my recipes": a link to this recipe (no copy); taken out again the same way.
+  const link = useMutation({
+    mutationFn: async (add: boolean) => {
+      if (add) await saveRecipeLink(detail?.id ?? '', source === 'shared' ? token : undefined);
+      else await removeRecipeLink(detail?.id ?? '');
+    },
+    onMutate: () => setError(undefined),
+    onSuccess: () => refresh(),
     onError: (failure) => setError(errorCode(failure)),
   });
 
@@ -169,7 +188,7 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
     setServings: (value: number) => setServings(Math.max(1, Math.min(1000, Math.round(value)))),
     resetServings: () => setServings(undefined),
     error,
-    busy: visibility.isPending || removal.isPending || copy.isPending,
+    busy: visibility.isPending || removal.isPending || copy.isPending || link.isPending,
     changeVisibility: (value: RecipeVisibility) => visibility.mutate(value),
     copied,
     copyShareUrl: async () => {
@@ -185,14 +204,25 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
     askDelete: () => setConfirmDelete(true),
     cancelDelete: () => setConfirmDelete(false),
     deleteRecipe: () => removal.mutate(),
-    addToLibrary: () => copy.mutate(),
+    /** The reader added it to their recipes (a link to the author's version). */
+    saved: detail?.saved ?? false,
+    addToMyRecipes: () => link.mutate(true),
+    removeFromMyRecipes: () => link.mutate(false),
+    confirmCopy,
+    askCopy: () => setConfirmCopy(true),
+    cancelCopy: () => setConfirmCopy(false),
+    makeCopy: () => copy.mutate(),
+    /** A copy: the original's author and the original, when the reader may open it. */
+    copiedFrom: detail?.copiedFrom ?? null,
     incomplete: detail?.incomplete ?? false,
     /**
-     * Cooking reads the recipe from its id: the owner's or a public one (an unlisted recipe of
-     * someone else is cooked from the reader's library).
+     * Cooking reads the recipe from its id: the owner's, a public one, or one added by link (an
+     * unlisted recipe of someone else is added to the reader's recipes first).
      */
     canCook:
-      user !== null && detail !== undefined && (detail.isOwner || detail.visibility === 'public'),
+      user !== null &&
+      detail !== undefined &&
+      (detail.isOwner || detail.visibility === 'public' || detail.saved),
     cookHref: detail
       ? `/cook?${new URLSearchParams({
           recipe: detail.id,

@@ -1,4 +1,4 @@
-import type { Locale, RecipeVisibility } from '@cookit/shared';
+import type { Locale, RecipeScope, RecipeVisibility } from '@cookit/shared';
 import { and, asc, desc, eq, exists, like, ne, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Database } from '../../db';
@@ -10,6 +10,7 @@ import {
   recipes,
   recipeTags,
   recipeTranslations,
+  savedRecipes,
 } from './recipes.schema';
 
 /** The language-dependent part of a recipe (plan §3), as stored. */
@@ -42,6 +43,11 @@ export type RecipeRow = {
   shareToken: string | null;
   sourceUrl: string | null;
   copiedFromId: string | null;
+  /** A copy: the original's author (null once their account is gone). */
+  copiedFromOwnerId: string | null;
+  copiedFromOwnerName: string | null;
+  /** A copy: the original's visibility, null when it was deleted. */
+  copiedFromVisibility: RecipeVisibility | null;
   title: string;
   description: string;
   summary: string;
@@ -70,7 +76,11 @@ export type RecipeListRow = Pick<
   | 'ownerImage'
   | 'hasSteps'
   | 'updatedAt'
-> & { coverId: string | null };
+> & {
+  coverId: string | null;
+  /** The reader's own recipe. */
+  mine: boolean;
+};
 
 /** What a save writes: the columns of part 1 and the body. */
 export type RecipeContent = {
@@ -92,6 +102,7 @@ export type NewRecipe = RecipeContent & {
   ownerId: string;
   lang: Locale;
   copiedFromId?: string | null;
+  copiedFromOwnerId?: string | null;
   /** Other languages, stored as given (a copy keeps the original's translations). */
   translations?: (TranslationContent & { lang: Locale })[];
   /** A copy: the recipe whose photos are copied too. */
@@ -117,6 +128,8 @@ export type ListQuery = {
   tagIds?: string[];
   /** Show titles, descriptions and summaries in this language when the recipe has it. */
   lang?: Locale;
+  /** The reader (`mine` in the rows); none for an anonymous visitor. */
+  viewerId?: string;
   limit: number;
   offset: number;
 };
@@ -148,7 +161,15 @@ export type RecipesRepository = {
     options?: { renewImageIds?: boolean },
   ): Promise<void>;
   delete(id: string): Promise<void>;
-  listByOwner(ownerId: string, query: ListQuery): Promise<RecipeListRow[]>;
+  /**
+   * "My recipes": the user's own (`mine`), the ones they added by link that they may still read
+   * (`saved`: public, or unlisted with the token they added it with), or both (`all`).
+   */
+  listLibrary(
+    userId: string,
+    scope: RecipeScope,
+    query: Omit<ListQuery, 'viewerId'>,
+  ): Promise<RecipeListRow[]>;
   listPublic(query: ListQuery): Promise<RecipeListRow[]>;
   /**
    * One recipe with steps among the owner's and the public ones, picked by `seed` (the same seed
@@ -177,6 +198,11 @@ export type RecipesRepository = {
   findNote(userId: string, recipeId: string): Promise<string | undefined>;
   /** Saves a reader's note; an empty text deletes it. */
   saveNote(userId: string, recipeId: string, text: string, now: Date): Promise<void>;
+  /** The share token a user added a recipe with (null: public), undefined when not added. */
+  findSaved(userId: string, recipeId: string): Promise<{ shareToken: string | null } | undefined>;
+  /** Adds a recipe to the user's recipes by link (again: its token is replaced). */
+  saveLink(userId: string, recipeId: string, shareToken: string | null, now: Date): Promise<void>;
+  removeLink(userId: string, recipeId: string): Promise<void>;
   /** Adds a photo after the others; `too_many` when the recipe already has `max`. */
   addImage(recipeId: string, image: NewImage, max: number): Promise<'ok' | 'too_many'>;
   /** False when the recipe has no such photo. */
@@ -196,6 +222,10 @@ const baseTranslation = and(
   eq(recipeTranslations.lang, recipes.baseLang),
 );
 
+/** A copy's original and that original's author. */
+const original = alias(recipes, 'original');
+const originalOwner = alias(user, 'original_owner');
+
 const rowColumns = {
   id: recipes.id,
   ownerId: recipes.ownerId,
@@ -208,6 +238,9 @@ const rowColumns = {
   shareToken: recipes.shareToken,
   sourceUrl: recipes.sourceUrl,
   copiedFromId: recipes.copiedFromId,
+  copiedFromOwnerId: recipes.copiedFromOwnerId,
+  copiedFromOwnerName: originalOwner.name,
+  copiedFromVisibility: original.visibility,
   hasSteps: recipes.hasSteps,
   authorNote: recipes.authorNote,
   title: recipeTranslations.title,
@@ -224,7 +257,7 @@ const shown = alias(recipeTranslations, 'shown');
 const shownJoin = (lang: Locale | undefined) =>
   and(eq(shown.recipeId, recipes.id), eq(shown.lang, lang ?? sql`${recipes.baseLang}`));
 
-const listColumns = {
+const listColumns = (viewerId: string | undefined) => ({
   id: recipes.id,
   lang: sql<Locale>`coalesce(${shown.lang}, ${recipes.baseLang})`,
   title: sql<string>`coalesce(${shown.title}, ${recipeTranslations.title})`,
@@ -240,7 +273,18 @@ const listColumns = {
   coverId: sql<
     string | null
   >`(select ${recipeImages.id} from ${recipeImages} where ${recipeImages.recipeId} = ${recipes.id} order by ${recipeImages.position}, ${recipeImages.id} limit 1)`,
-};
+  mine: viewerId ? sql<boolean>`${recipes.ownerId} = ${viewerId}` : sql<boolean>`false`,
+});
+
+/**
+ * Recipes `userId` added by link and may still read: public, or unlisted with the share token
+ * they were added with (a new link or another visibility cuts them off). Never their own.
+ */
+const savedBy = (userId: string) =>
+  and(
+    ne(recipes.ownerId, userId),
+    sql`exists (select 1 from ${savedRecipes} where ${savedRecipes.userId} = ${userId} and ${savedRecipes.recipeId} = ${recipes.id} and (${recipes.visibility} = 'public' or (${recipes.visibility} = 'unlisted' and ${savedRecipes.shareToken} = ${recipes.shareToken})))`,
+  );
 
 const imageBytes =
   sql<number>`coalesce(sum(octet_length(${recipeImages.data}) + octet_length(${recipeImages.thumb})), 0)::bigint`.mapWith(
@@ -258,6 +302,8 @@ export function createRecipesRepository(db: Database): RecipesRepository {
       .from(recipes)
       .innerJoin(recipeTranslations, baseTranslation)
       .innerJoin(user, eq(user.id, recipes.ownerId))
+      .leftJoin(original, eq(original.id, recipes.copiedFromId))
+      .leftJoin(originalOwner, eq(originalOwner.id, recipes.copiedFromOwnerId))
       .where(where);
     if (!row) return undefined;
     const tagRows = await db
@@ -324,7 +370,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         ]
       : [desc(recipes.updatedAt)];
     return db
-      .select(listColumns)
+      .select(listColumns(query.viewerId))
       .from(recipes)
       .innerJoin(recipeTranslations, baseTranslation)
       .leftJoin(shown, shownJoin(query.lang))
@@ -345,6 +391,7 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         servings: recipe.servings,
         sourceUrl: recipe.sourceUrl,
         copiedFromId: recipe.copiedFromId ?? null,
+        copiedFromOwnerId: recipe.copiedFromOwnerId ?? null,
         hasSteps: recipe.hasSteps,
         createdAt: recipe.now,
         updatedAt: recipe.now,
@@ -462,13 +509,21 @@ export function createRecipesRepository(db: Database): RecipesRepository {
       await db.delete(recipes).where(eq(recipes.id, id));
     },
 
-    listByOwner: (ownerId, query) => list(eq(recipes.ownerId, ownerId), query),
+    listLibrary: (userId, scope, query) =>
+      list(
+        scope === 'mine'
+          ? eq(recipes.ownerId, userId)
+          : scope === 'saved'
+            ? savedBy(userId)
+            : or(eq(recipes.ownerId, userId), savedBy(userId)),
+        { ...query, viewerId: userId },
+      ),
 
     listPublic: (query) => list(eq(recipes.visibility, 'public'), query),
 
     async pick(ownerId, seed, exclude, lang) {
       const [row] = await db
-        .select(listColumns)
+        .select(listColumns(ownerId))
         .from(recipes)
         .innerJoin(recipeTranslations, baseTranslation)
         .leftJoin(shown, shownJoin(lang))
@@ -491,6 +546,8 @@ export function createRecipesRepository(db: Database): RecipesRepository {
         .from(recipes)
         .innerJoin(recipeTranslations, baseTranslation)
         .innerJoin(user, eq(user.id, recipes.ownerId))
+        .leftJoin(original, eq(original.id, recipes.copiedFromId))
+        .leftJoin(originalOwner, eq(originalOwner.id, recipes.copiedFromOwnerId))
         .where(eq(recipes.ownerId, ownerId))
         .orderBy(recipes.createdAt, recipes.id);
       const links = await db
@@ -540,6 +597,30 @@ export function createRecipesRepository(db: Database): RecipesRepository {
           target: [recipeNotes.userId, recipeNotes.recipeId],
           set: { text, updatedAt: now },
         });
+    },
+
+    async findSaved(userId, recipeId) {
+      const [row] = await db
+        .select({ shareToken: savedRecipes.shareToken })
+        .from(savedRecipes)
+        .where(and(eq(savedRecipes.userId, userId), eq(savedRecipes.recipeId, recipeId)));
+      return row;
+    },
+
+    async saveLink(userId, recipeId, shareToken, now) {
+      await db
+        .insert(savedRecipes)
+        .values({ userId, recipeId, shareToken, createdAt: now })
+        .onConflictDoUpdate({
+          target: [savedRecipes.userId, savedRecipes.recipeId],
+          set: { shareToken },
+        });
+    },
+
+    async removeLink(userId, recipeId) {
+      await db
+        .delete(savedRecipes)
+        .where(and(eq(savedRecipes.userId, userId), eq(savedRecipes.recipeId, recipeId)));
     },
 
     async deleteTranslation(recipeId, lang) {
