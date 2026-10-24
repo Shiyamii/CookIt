@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NotInDemo } from '@/components/NotInDemo';
 import { Textarea } from '@/components/ui/textarea';
 import { useImportViewModel, type ImportTab } from '../viewmodels/useImportViewModel';
 import { DiagnosticsList } from './DiagnosticsList';
@@ -156,6 +157,7 @@ export function ImportPage({ initialTab = 'text' }: { initialTab?: ImportTab }) 
                   </div>
                 </div>
               )}
+              {vm.tab === 'url' && <NotInDemo />}
               {vm.tab === 'url' && (
                 <div className="grid gap-2">
                   <Label htmlFor="import-url">{t('recipes.import.urlLabel')}</Label>

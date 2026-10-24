@@ -38,7 +38,7 @@ export const fr: Translations = {
     reset: 'Recommencer',
     resetTitle: 'Recommencer la démo ?',
     resetText: 'Les recettes, listes et réglages de cette démo sont effacés de ce navigateur.',
-    unavailable: 'Pas disponible dans la démo.',
+    unavailable: 'Pas dans la démo : il faut un vrai serveur CookIt.',
   },
   about: {
     link: 'À propos de CookIt',

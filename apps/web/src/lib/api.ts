@@ -51,6 +51,12 @@ export const apiGet = <T>(path: string) => request<T>('GET', path);
 export const apiPost = <T>(path: string, body: unknown = {}) => request<T>('POST', path, body);
 export const apiPut = <T>(path: string, body: unknown = {}) => request<T>('PUT', path, body);
 export const apiDelete = <T>(path: string, body?: unknown) => request<T>('DELETE', path, body);
+/** Reads a file answer (e.g. a zip). */
+export async function apiBlob(path: string): Promise<Blob> {
+  const res = await send(`/api/v1${path}`, { method: 'GET', credentials: 'same-origin' });
+  if (!res.ok) throw new ApiError(res.status, `http_${res.status}`);
+  return res.blob();
+}
 /** Sends files (multipart form). */
 export const apiUpload = <T>(method: 'POST' | 'PUT', path: string, form: FormData) =>
   request<T>(method, path, form);

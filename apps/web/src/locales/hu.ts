@@ -38,7 +38,7 @@ export const hu: Translations = {
     reset: 'Újrakezdés',
     resetTitle: 'Újrakezded a bemutatót?',
     resetText: 'A bemutató receptjei, listái és beállításai törlődnek ebből a böngészőből.',
-    unavailable: 'A bemutatóban nem érhető el.',
+    unavailable: 'A bemutatóban nem érhető el: ehhez valódi CookIt-szerver kell.',
   },
   about: {
     link: 'A CookItről',

@@ -36,7 +36,7 @@ export const en = {
     reset: 'Start again',
     resetTitle: 'Start the demo again?',
     resetText: 'The recipes, lists and settings of this demo are deleted from this browser.',
-    unavailable: 'Not available in the demo.',
+    unavailable: 'Not in the demo: this needs a real CookIt server.',
   },
   about: {
     link: 'About CookIt',

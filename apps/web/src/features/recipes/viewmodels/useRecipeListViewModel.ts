@@ -5,7 +5,8 @@ import { useTagCatalog } from '@/features/catalog/viewmodels/useCatalogs';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { errorCode } from '@/lib/api';
-import { EXPORT_ALL_URL } from '../model/importing';
+import { IS_DEMO } from '@/lib/demo';
+import { downloadAllRecipes, EXPORT_ALL_URL } from '../model/importing';
 import { fetchGallery, fetchMyRecipes, RECIPES_QUERY_KEY } from '../model/recipes';
 
 const SEARCH_DELAY_MS = 300;
@@ -116,5 +117,12 @@ export function useRecipeListViewModel(kind: 'mine' | 'gallery') {
     loadingMore: query.isFetchingNextPage,
     loadMore: () => void query.fetchNextPage(),
     exportAllUrl: EXPORT_ALL_URL,
+    /** Demo build: the link has no server behind it, the zip is made in the page. */
+    onExportAll: IS_DEMO
+      ? (event: { preventDefault(): void }) => {
+          event.preventDefault();
+          void downloadAllRecipes();
+        }
+      : undefined,
   };
 }

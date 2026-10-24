@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/FormField';
+import { NotInDemo } from '@/components/NotInDemo';
 import { PictureButton } from '@/components/PictureButton';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -38,18 +39,20 @@ export function ProfilePage() {
               name={vm.name || vm.username}
               className="size-24 text-3xl"
             />
-            <div className="flex flex-wrap gap-2">
-              <PictureButton
-                label={vm.image ? t('account.profile.change') : t('account.profile.add')}
-                disabled={vm.pictureBusy}
-                onFile={vm.choosePicture}
-              />
-              {vm.image && (
-                <Button variant="ghost" onClick={vm.removePicture} disabled={vm.pictureBusy}>
-                  <Trash2 /> {t('account.profile.remove')}
-                </Button>
-              )}
-            </div>
+            <NotInDemo>
+              <div className="flex flex-wrap gap-2">
+                <PictureButton
+                  label={vm.image ? t('account.profile.change') : t('account.profile.add')}
+                  disabled={vm.pictureBusy}
+                  onFile={vm.choosePicture}
+                />
+                {vm.image && (
+                  <Button variant="ghost" onClick={vm.removePicture} disabled={vm.pictureBusy}>
+                    <Trash2 /> {t('account.profile.remove')}
+                  </Button>
+                )}
+              </div>
+            </NotInDemo>
           </div>
           {vm.pictureBusy && (
             <p role="status" className="text-sm text-muted-foreground">
