@@ -14,6 +14,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // GitHub's runners have 4 vCPUs (Playwright's default would be 2 workers): most of the suite
+  // waits on the app, timers and the push sink rather than on the CPU.
+  workers: process.env.CI ? 4 : undefined,
   // In CI, also a JUnit file for Codecov Test Analytics (flaky and slow tests).
   reporter: process.env.CI
     ? [['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'reports/junit-e2e.xml' }]]
@@ -24,7 +27,13 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: ALONE },
+    // Tests tagged @server check the server only (push, reminders: no page): on desktop only.
+    {
+      name: 'mobile',
+      use: { ...devices['Pixel 7'] },
+      testIgnore: ALONE,
+      grepInvert: /@server/,
+    },
     { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: ALONE },
     // Closes the gallery to visitors, which the other tests rely on: once they are done.
     {

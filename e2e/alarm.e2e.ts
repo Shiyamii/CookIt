@@ -131,81 +131,86 @@ test('a finished timer rings on any page until stopped; +1 min re-arms it', asyn
   await expect.poll(async () => (await sessionTimers(page)).length).toBe(0);
 });
 
-test('with the app closed, the notification comes back until stopped', async ({
-  browser,
-  page: admin,
-}) => {
-  test.setTimeout(120_000);
-  const { page } = await newMember(browser, admin, 'reminded');
-  const recipeId = await createRecipe(page);
-  const phone = sinkSubscription();
-  const subscribed = await page.request.post('/api/v1/push/subscriptions', {
-    headers: ORIGIN_HEADER,
-    data: phone.json,
-  });
-  expect(subscribed.status()).toBe(200);
-  const timer = await startTimer(page, recipeId, 1000);
+test(
+  'with the app closed, the notification comes back until stopped',
+  { tag: '@server' },
+  async ({ browser, page: admin }) => {
+    test.setTimeout(120_000);
+    const { page } = await newMember(browser, admin, 'reminded');
+    const recipeId = await createRecipe(page);
+    const phone = sinkSubscription();
+    const subscribed = await page.request.post('/api/v1/push/subscriptions', {
+      headers: ORIGIN_HEADER,
+      data: phone.json,
+    });
+    expect(subscribed.status()).toBe(200);
+    const timer = await startTimer(page, recipeId, 1000);
 
-  await expect.poll(async () => (await phone.messages()).length, { timeout: 20_000 }).toBe(1);
-  const [first] = await phone.messages();
-  expect(first?.payload).toMatchObject({
-    tag: `timer-${timer.id}`,
-    timerId: timer.id,
-    stopLabel: 'Stop',
-  });
-  // A reminder 30 s later, the same notification again.
-  await expect.poll(async () => (await phone.messages()).length, { timeout: 45_000 }).toBe(2);
-  const [, second] = await phone.messages();
-  expect(second!.receivedAt - first!.receivedAt).toBeGreaterThanOrEqual(29_000);
-  expect(second?.payload).toEqual(first?.payload);
+    await expect.poll(async () => (await phone.messages()).length, { timeout: 20_000 }).toBe(1);
+    const [first] = await phone.messages();
+    expect(first?.payload).toMatchObject({
+      tag: `timer-${timer.id}`,
+      timerId: timer.id,
+      stopLabel: 'Stop',
+    });
+    // A reminder 30 s later, the same notification again.
+    await expect.poll(async () => (await phone.messages()).length, { timeout: 45_000 }).toBe(2);
+    const [, second] = await phone.messages();
+    expect(second!.receivedAt - first!.receivedAt).toBeGreaterThanOrEqual(29_000);
+    expect(second?.payload).toEqual(first?.payload);
 
-  // "Stop" on the notification (what the service worker sends): no more reminders.
-  const stop = await page.request.post(`/api/v1/cook/timers/${timer.id}/stop`, {
-    headers: ORIGIN_HEADER,
-    data: {},
-  });
-  expect(stop.status()).toBe(200);
-  expect(await sessionTimers(page)).toEqual([]);
-  await new Promise((resolve) => setTimeout(resolve, 40_000));
-  expect(await phone.messages()).toHaveLength(2);
+    // "Stop" on the notification (what the service worker sends): no more reminders.
+    const stop = await page.request.post(`/api/v1/cook/timers/${timer.id}/stop`, {
+      headers: ORIGIN_HEADER,
+      data: {},
+    });
+    expect(stop.status()).toBe(200);
+    expect(await sessionTimers(page)).toEqual([]);
+    await new Promise((resolve) => setTimeout(resolve, 40_000));
+    expect(await phone.messages()).toHaveLength(2);
 
-  // Checked input, signed in only.
-  expect(
-    (
-      await page.request.post('/api/v1/cook/timers/not-an-id/stop', {
-        headers: ORIGIN_HEADER,
-        data: {},
-      })
-    ).status(),
-  ).toBe(400);
-  const visitor = await newVisitor(browser);
-  expect(
-    (
-      await visitor.request.post(`/api/v1/cook/timers/${timer.id}/stop`, {
-        headers: ORIGIN_HEADER,
-        data: {},
-      })
-    ).status(),
-  ).toBe(401);
-  await visitor.context().close();
-});
+    // Checked input, signed in only.
+    expect(
+      (
+        await page.request.post('/api/v1/cook/timers/not-an-id/stop', {
+          headers: ORIGIN_HEADER,
+          data: {},
+        })
+      ).status(),
+    ).toBe(400);
+    const visitor = await newVisitor(browser);
+    expect(
+      (
+        await visitor.request.post(`/api/v1/cook/timers/${timer.id}/stop`, {
+          headers: ORIGIN_HEADER,
+          data: {},
+        })
+      ).status(),
+    ).toBe(401);
+    await visitor.context().close();
+  },
+);
 
-test('without "ring until stopped", one notification only', async ({ browser, page: admin }) => {
-  test.setTimeout(90_000);
-  const { page } = await newMember(browser, admin, 'once');
-  const saved = await page.request.put('/api/v1/me/alarm', {
-    headers: ORIGIN_HEADER,
-    data: { sound: 'classic', volume: 80, vibrate: true, repeat: false },
-  });
-  expect(saved.status()).toBe(200);
-  const recipeId = await createRecipe(page);
-  const phone = sinkSubscription();
-  await page.request.post('/api/v1/push/subscriptions', {
-    headers: ORIGIN_HEADER,
-    data: phone.json,
-  });
-  await startTimer(page, recipeId, 1000);
-  await expect.poll(async () => (await phone.messages()).length, { timeout: 20_000 }).toBe(1);
-  await new Promise((resolve) => setTimeout(resolve, 40_000));
-  expect(await phone.messages()).toHaveLength(1);
-});
+test(
+  'without "ring until stopped", one notification only',
+  { tag: '@server' },
+  async ({ browser, page: admin }) => {
+    test.setTimeout(90_000);
+    const { page } = await newMember(browser, admin, 'once');
+    const saved = await page.request.put('/api/v1/me/alarm', {
+      headers: ORIGIN_HEADER,
+      data: { sound: 'classic', volume: 80, vibrate: true, repeat: false },
+    });
+    expect(saved.status()).toBe(200);
+    const recipeId = await createRecipe(page);
+    const phone = sinkSubscription();
+    await page.request.post('/api/v1/push/subscriptions', {
+      headers: ORIGIN_HEADER,
+      data: phone.json,
+    });
+    await startTimer(page, recipeId, 1000);
+    await expect.poll(async () => (await phone.messages()).length, { timeout: 20_000 }).toBe(1);
+    await new Promise((resolve) => setTimeout(resolve, 40_000));
+    expect(await phone.messages()).toHaveLength(1);
+  },
+);
