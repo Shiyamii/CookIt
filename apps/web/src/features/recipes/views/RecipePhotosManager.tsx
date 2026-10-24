@@ -1,6 +1,7 @@
 import type { RecipeImage } from '@cookit/shared';
 import { ChevronLeft, ChevronRight, Star, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { NotInDemo } from '@/components/NotInDemo';
 import { PictureButton } from '@/components/PictureButton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -111,14 +112,16 @@ export function RecipePhotosManager({
         </p>
       )}
       {vm.canAdd && (
-        <div className="justify-self-start">
-          <PictureButton
-            multiple
-            label={t('recipes.photos.add')}
-            disabled={vm.busy}
-            onFiles={vm.addFiles}
-          />
-        </div>
+        <NotInDemo>
+          <div className="justify-self-start">
+            <PictureButton
+              multiple
+              label={t('recipes.photos.add')}
+              disabled={vm.busy}
+              onFiles={vm.addFiles}
+            />
+          </div>
+        </NotInDemo>
       )}
     </div>
   );

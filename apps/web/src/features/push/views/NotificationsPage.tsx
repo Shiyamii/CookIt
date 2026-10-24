@@ -1,5 +1,6 @@
 import { Bell, BellOff, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { NotInDemo } from '@/components/NotInDemo';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,66 +21,68 @@ export function NotificationsPage() {
       <h1 className="text-2xl font-semibold">{t('push.title')}</h1>
       <p className="text-muted-foreground">{t('push.intro')}</p>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex flex-wrap items-center gap-2">
-            <h2>{t('push.thisDevice')}</h2>
-            {vm.status !== 'loading' && (
-              <Badge variant={vm.status === 'on' ? 'default' : 'secondary'}>
-                {t(vm.status === 'on' ? 'push.badgeOn' : 'push.badgeOff')}
-              </Badge>
+      <NotInDemo>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              <h2>{t('push.thisDevice')}</h2>
+              {vm.status !== 'loading' && (
+                <Badge variant={vm.status === 'on' ? 'default' : 'secondary'}>
+                  {t(vm.status === 'on' ? 'push.badgeOn' : 'push.badgeOff')}
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription data-testid="push-status">
+              {vm.status === 'loading' ? t('common.loading') : t(`push.status.${vm.status}`)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            {vm.error && (
+              <Alert variant="destructive" role="alert">
+                <AlertDescription>{t(`errors.${vm.error}`, t('errors.unknown'))}</AlertDescription>
+              </Alert>
             )}
-          </CardTitle>
-          <CardDescription data-testid="push-status">
-            {vm.status === 'loading' ? t('common.loading') : t(`push.status.${vm.status}`)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          {vm.error && (
-            <Alert variant="destructive" role="alert">
-              <AlertDescription>{t(`errors.${vm.error}`, t('errors.unknown'))}</AlertDescription>
-            </Alert>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {vm.status === 'off' && (
-              <Button onClick={vm.enable} disabled={vm.busy}>
-                <Bell /> {t('push.enable')}
-              </Button>
-            )}
-            {vm.status === 'on' && (
-              <>
-                <Button variant="outline" onClick={vm.test} disabled={vm.testing}>
-                  <Send /> {t('push.test')}
+            <div className="flex flex-wrap gap-2">
+              {vm.status === 'off' && (
+                <Button onClick={vm.enable} disabled={vm.busy}>
+                  <Bell /> {t('push.enable')}
                 </Button>
-                <Button variant="outline" onClick={vm.disable} disabled={vm.busy}>
-                  <BellOff /> {t('push.disable')}
-                </Button>
-              </>
-            )}
-          </div>
-          {vm.testSent !== undefined && (
-            <p role="status" className="text-sm text-muted-foreground">
-              {t('push.testSent', { count: vm.testSent })}
-            </p>
-          )}
-          {vm.devices.length > 0 && (
-            <div className="grid gap-2">
-              <h3 className="text-sm font-medium">{t('push.devices')}</h3>
-              <ul className="grid gap-1 text-sm">
-                {vm.devices.map((device) => (
-                  <li key={device.id} className="flex flex-wrap gap-x-2">
-                    <span>{device.name || t('push.unknownDevice')}</span>
-                    <span className="text-muted-foreground">
-                      {date.format(new Date(device.createdAt))}
-                    </span>
-                    {device.current && <Badge variant="secondary">{t('push.current')}</Badge>}
-                  </li>
-                ))}
-              </ul>
+              )}
+              {vm.status === 'on' && (
+                <>
+                  <Button variant="outline" onClick={vm.test} disabled={vm.testing}>
+                    <Send /> {t('push.test')}
+                  </Button>
+                  <Button variant="outline" onClick={vm.disable} disabled={vm.busy}>
+                    <BellOff /> {t('push.disable')}
+                  </Button>
+                </>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {vm.testSent !== undefined && (
+              <p role="status" className="text-sm text-muted-foreground">
+                {t('push.testSent', { count: vm.testSent })}
+              </p>
+            )}
+            {vm.devices.length > 0 && (
+              <div className="grid gap-2">
+                <h3 className="text-sm font-medium">{t('push.devices')}</h3>
+                <ul className="grid gap-1 text-sm">
+                  {vm.devices.map((device) => (
+                    <li key={device.id} className="flex flex-wrap gap-x-2">
+                      <span>{device.name || t('push.unknownDevice')}</span>
+                      <span className="text-muted-foreground">
+                        {date.format(new Date(device.createdAt))}
+                      </span>
+                      {device.current && <Badge variant="secondary">{t('push.current')}</Badge>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </NotInDemo>
 
       <section className="grid gap-4" aria-labelledby="push-help">
         <h2 id="push-help" className="text-xl font-semibold">

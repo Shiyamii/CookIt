@@ -6,7 +6,7 @@ import {
   type RecipeDocument,
   type Unit,
 } from '@cookit/shared';
-import { apiPost } from '@/lib/api';
+import { apiBlob, apiPost } from '@/lib/api';
 
 /**
  * Imports (plan §5.2): markdown pasted or read from `.md` files and zips, or a web page (JSON-LD,
@@ -121,7 +121,11 @@ export function markdownFileName(title: string): string {
 
 /** Saves a text as a file of the user (the browser's download). */
 export function downloadText(name: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+  downloadBlob(name, new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+}
+
+function downloadBlob(name: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = name;
@@ -131,3 +135,8 @@ export function downloadText(name: string, text: string): void {
 
 /** "Export all my recipes": a zip built by the server. */
 export const EXPORT_ALL_URL = '/api/v1/recipes/export';
+
+/** The same zip from the API in the page (demo build: no server behind the link). */
+export async function downloadAllRecipes(): Promise<void> {
+  downloadBlob('cookit-recipes.zip', await apiBlob('/recipes/export'));
+}

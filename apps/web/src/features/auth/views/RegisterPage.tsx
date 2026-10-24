@@ -1,6 +1,7 @@
 import { PASSWORD_MIN_LENGTH } from '@cookit/shared';
 import { useTranslation } from 'react-i18next';
 import { FormField } from '@/components/FormField';
+import { NotInDemo } from '@/components/NotInDemo';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +34,7 @@ export function RegisterPage() {
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={vm.submit} noValidate>
+          <NotInDemo />
           {vm.error && (
             <Alert variant="destructive" role="alert">
               <AlertDescription>{t(`errors.${vm.error}`, t('errors.unknown'))}</AlertDescription>

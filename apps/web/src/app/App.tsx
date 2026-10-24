@@ -53,80 +53,84 @@ const translationPage = async () => ({
   Component: (await import('@/features/recipes/views/TranslationPage')).TranslationPage,
 });
 
-const router = createBrowserRouter([
-  {
-    element: <AppLayout />,
-    children: [
-      { index: true, element: <HomePage /> },
-      { path: 'login', element: <LoginPage /> },
-      // Invite and first-admin links share the sign-up page (the token says which one it is).
-      { path: 'invite', element: <RegisterPage /> },
-      { path: 'setup', element: <RegisterPage /> },
-      { path: 'reset-password', element: <ResetPasswordPage /> },
-      { path: 'forgot-password', element: <ForgotPasswordPage /> },
-      {
-        path: 'recipes',
-        element: <RequireAccess level="user" />,
-        children: [
-          { index: true, element: <RecipeListPage kind="mine" /> },
-          { path: 'new', element: <AddRecipePage /> },
-          { path: 'new/editor', lazy: editorPage },
-          { path: 'new/wizard', lazy: wizardPage },
-          { path: 'import', lazy: importPage },
-          { path: 'import/ai', lazy: importAiPage },
-          { path: ':id/edit', lazy: editorPage },
-          { path: ':id/translate/:lang', lazy: translationPage },
-        ],
-      },
-      // Readable without an account when public (the server decides).
-      { path: 'recipes/:id', element: <RecipePage source="id" /> },
-      { path: 'gallery', element: <RecipeListPage kind="gallery" /> },
-      { path: 'about', element: <AboutPage /> },
-      // Unlisted recipes: `/shared#token=…`.
-      { path: 'shared', element: <RecipePage source="shared" /> },
-      {
-        path: 'cook',
-        element: <RequireAccess level="user" />,
-        children: [{ index: true, lazy: cookPage }],
-      },
-      {
-        path: 'shopping',
-        element: <RequireAccess level="user" />,
-        children: [{ index: true, lazy: shoppingPage }],
-      },
-      {
-        path: 'members',
-        element: <RequireAccess level="user" />,
-        children: [
-          { index: true, element: <MembersPage /> },
-          { path: ':username', element: <MemberPage /> },
-        ],
-      },
-      {
-        path: 'account',
-        element: <RequireAccess level="user" />,
-        children: [
-          { path: 'profile', element: <ProfilePage /> },
-          { path: 'security', element: <SecurityPage /> },
-          { path: 'notifications', element: <NotificationsPage /> },
-          { path: 'alarm', element: <AlarmPage /> },
-        ],
-      },
-      {
-        path: 'admin',
-        element: <RequireAccess level="admin" />,
-        children: [
-          { path: 'invites', element: <InvitesPage /> },
-          { path: 'users', element: <UsersPage /> },
-          { path: 'tags', element: <TagsAdminPage /> },
-          { path: 'units', element: <UnitsAdminPage /> },
-          { path: 'settings', element: <SiteSettingsPage /> },
-        ],
-      },
-      { path: '*', element: <NotFoundPage /> },
-    ],
-  },
-]);
+const router = createBrowserRouter(
+  [
+    {
+      element: <AppLayout />,
+      children: [
+        { index: true, element: <HomePage /> },
+        { path: 'login', element: <LoginPage /> },
+        // Invite and first-admin links share the sign-up page (the token says which one it is).
+        { path: 'invite', element: <RegisterPage /> },
+        { path: 'setup', element: <RegisterPage /> },
+        { path: 'reset-password', element: <ResetPasswordPage /> },
+        { path: 'forgot-password', element: <ForgotPasswordPage /> },
+        {
+          path: 'recipes',
+          element: <RequireAccess level="user" />,
+          children: [
+            { index: true, element: <RecipeListPage kind="mine" /> },
+            { path: 'new', element: <AddRecipePage /> },
+            { path: 'new/editor', lazy: editorPage },
+            { path: 'new/wizard', lazy: wizardPage },
+            { path: 'import', lazy: importPage },
+            { path: 'import/ai', lazy: importAiPage },
+            { path: ':id/edit', lazy: editorPage },
+            { path: ':id/translate/:lang', lazy: translationPage },
+          ],
+        },
+        // Readable without an account when public (the server decides).
+        { path: 'recipes/:id', element: <RecipePage source="id" /> },
+        { path: 'gallery', element: <RecipeListPage kind="gallery" /> },
+        { path: 'about', element: <AboutPage /> },
+        // Unlisted recipes: `/shared#token=…`.
+        { path: 'shared', element: <RecipePage source="shared" /> },
+        {
+          path: 'cook',
+          element: <RequireAccess level="user" />,
+          children: [{ index: true, lazy: cookPage }],
+        },
+        {
+          path: 'shopping',
+          element: <RequireAccess level="user" />,
+          children: [{ index: true, lazy: shoppingPage }],
+        },
+        {
+          path: 'members',
+          element: <RequireAccess level="user" />,
+          children: [
+            { index: true, element: <MembersPage /> },
+            { path: ':username', element: <MemberPage /> },
+          ],
+        },
+        {
+          path: 'account',
+          element: <RequireAccess level="user" />,
+          children: [
+            { path: 'profile', element: <ProfilePage /> },
+            { path: 'security', element: <SecurityPage /> },
+            { path: 'notifications', element: <NotificationsPage /> },
+            { path: 'alarm', element: <AlarmPage /> },
+          ],
+        },
+        {
+          path: 'admin',
+          element: <RequireAccess level="admin" />,
+          children: [
+            { path: 'invites', element: <InvitesPage /> },
+            { path: 'users', element: <UsersPage /> },
+            { path: 'tags', element: <TagsAdminPage /> },
+            { path: 'units', element: <UnitsAdminPage /> },
+            { path: 'settings', element: <SiteSettingsPage /> },
+          ],
+        },
+        { path: '*', element: <NotFoundPage /> },
+      ],
+    },
+  ],
+  // The demo is served from a sub-path (GitHub Pages); `/` otherwise.
+  { basename: import.meta.env.BASE_URL.replace(/\/$/, '') || '/' },
+);
 
 export function App() {
   return (

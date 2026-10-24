@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://github.com/Shiyamii/CookIt"><img src="https://img.shields.io/github/v/release/Shiyamii/CookIt?sort=semver&logo=github&label=GitHub" alt="GitHub release" /></a>
   <a href="https://hub.docker.com/r/shiyamii/cookit"><img src="https://img.shields.io/docker/v/shiyamii/cookit?sort=semver&logo=docker&logoColor=white&label=Docker%20Hub" alt="Docker Hub image" /></a>
+  <a href="https://shiyamii.github.io/CookIt/"><img src="https://img.shields.io/badge/demo-try%20it-brightgreen" alt="Online demo" /></a>
   <a href="https://github.com/Shiyamii/CookIt/actions/workflows/ci.yml"><img src="https://github.com/Shiyamii/CookIt/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="https://codecov.io/gh/Shiyamii/CookIt"><img src="https://codecov.io/gh/Shiyamii/CookIt/graph/badge.svg" alt="Coverage" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license" /></a>
@@ -15,6 +16,8 @@
 **Your self-hosted recipe book.** CookIt keeps your recipes on your own server and helps you actually cook them: scale the servings, follow the steps one at a time, run several dishes at once, and get timers that ring even with the app closed.
 
 Install it from the Docker image [`shiyamii/cookit`](https://hub.docker.com/r/shiyamii/cookit); the source code is on [GitHub](https://github.com/Shiyamii/CookIt).
+
+**Try it first in the [online demo](https://shiyamii.github.io/CookIt/)**: fictional recipes, switch between a member and an admin, nothing to install. It runs entirely in your browser (your changes stay there, "Start again" erases them); what needs a real server (accounts, security, pictures, notifications, import from a web page) says so.
 
 The coverage badge counts the unit tests (parser, scaling, services, page logic); the server routes, the database and the pages are tested end to end with Playwright against the built image.
 
@@ -157,6 +160,13 @@ bun run test:e2e
 
 The tests sign in as `e2e_admin`, created through the rescue CLI on an empty database. If your local database already has another admin, start from a fresh one: `docker compose -f docker-compose.dev.yml down -v`.
 
+The online demo is a build mode of the web app: the API runs in the page on in-memory data saved in the browser (`apps/web/src/demo/`), no server or database:
+
+```sh
+bun run dev:demo     # the demo with hot reload
+bun run test:demo    # build it for /CookIt/, then its Playwright tests (e2e/demo/)
+```
+
 A Husky pre-commit hook runs Prettier, ESLint and the unit tests; it is installed automatically by `bun install`.
 
 To see how the recipe parser reads a markdown file (and try serving scaling):
@@ -239,7 +249,7 @@ Images are published to Docker Hub as [`shiyamii/cookit`](https://hub.docker.com
 | `next`    | release candidate, e.g. `v0.2.0-rc.1` → image tag `0.2.0-rc.1`      |
 | `release` | stable release, e.g. `v0.2.0` → image tags `0.2.0`, `0.2`, `latest` |
 
-To release: merge `main` into `next` to publish a release candidate, then into `release` for the stable version. The full CI (including end-to-end tests against the image) must pass before anything is tagged or published. To republish the image of an existing version, run the **Release** workflow manually with that version.
+To release: merge `main` into `next` to publish a release candidate, then into `release` for the stable version (which also publishes the [online demo](https://shiyamii.github.io/CookIt/) to GitHub Pages; the **Demo (GitHub Pages)** workflow can also be run by hand). The full CI (including end-to-end tests against the image) must pass before anything is tagged or published. To republish the image of an existing version, run the **Release** workflow manually with that version.
 
 ## Deployment
 

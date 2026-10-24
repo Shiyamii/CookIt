@@ -10,10 +10,22 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Sends an API request: to the server, or, in the demo build, to the API running in the page
+ * (`src/demo/`, left out of the normal build).
+ */
+async function send(url: string, init: RequestInit): Promise<Response> {
+  if (import.meta.env.VITE_DEMO === '1') {
+    const { demoFetch } = await import('@/demo/server');
+    return demoFetch(url, init);
+  }
+  return fetch(url, init);
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   // A form (file upload) sets its own multipart content type.
   const form = body instanceof FormData;
-  const res = await fetch(`/api/v1${path}`, {
+  const res = await send(`/api/v1${path}`, {
     method,
     headers: {
       Accept: 'application/json',
@@ -39,6 +51,12 @@ export const apiGet = <T>(path: string) => request<T>('GET', path);
 export const apiPost = <T>(path: string, body: unknown = {}) => request<T>('POST', path, body);
 export const apiPut = <T>(path: string, body: unknown = {}) => request<T>('PUT', path, body);
 export const apiDelete = <T>(path: string, body?: unknown) => request<T>('DELETE', path, body);
+/** Reads a file answer (e.g. a zip). */
+export async function apiBlob(path: string): Promise<Blob> {
+  const res = await send(`/api/v1${path}`, { method: 'GET', credentials: 'same-origin' });
+  if (!res.ok) throw new ApiError(res.status, `http_${res.status}`);
+  return res.blob();
+}
 /** Sends files (multipart form). */
 export const apiUpload = <T>(method: 'POST' | 'PUT', path: string, form: FormData) =>
   request<T>(method, path, form);

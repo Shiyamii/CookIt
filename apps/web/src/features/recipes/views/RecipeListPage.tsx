@@ -135,7 +135,7 @@ export function RecipeListPage({ kind }: { kind: 'mine' | 'gallery' }) {
 
       {mine && vm.recipes.length > 0 && (
         <Button asChild variant="outline" className="justify-self-start">
-          <a href={vm.exportAllUrl} download>
+          <a href={vm.exportAllUrl} download onClick={vm.onExportAll}>
             <Download /> {t('recipes.exportAll')}
           </a>
         </Button>

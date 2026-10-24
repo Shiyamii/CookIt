@@ -29,6 +29,17 @@ export const hu: Translations = {
     dark: 'Sötét',
     system: 'Rendszer',
   },
+  demo: {
+    label: 'Bemutató',
+    notice: 'Bemutató: a módosításaid ebben a böngészőben maradnak.',
+    as: 'Bejelentkezve mint',
+    member: 'Tag · Alex',
+    admin: 'Admin · Camille',
+    reset: 'Újrakezdés',
+    resetTitle: 'Újrakezded a bemutatót?',
+    resetText: 'A bemutató receptjei, listái és beállításai törlődnek ebből a böngészőből.',
+    unavailable: 'A bemutatóban nem érhető el: ehhez valódi CookIt-szerver kell.',
+  },
   about: {
     link: 'A CookItről',
     title: 'CookIt',
@@ -47,6 +58,9 @@ export const hu: Translations = {
     githubText: 'A GitHubon: kód, hibajegyek és kiadások.',
     docker: 'Docker-kép',
     dockerText: 'A Docker Hubon: a kép a CookIt telepítéséhez.',
+    demo: 'Online bemutató',
+    demoText:
+      'Próbáld ki a CookItot a böngésződben: kitalált receptek, semmit sem kell telepíteni.',
     license: 'Nyílt forráskódú, MIT-licenc alatt.',
   },
   home: {
@@ -946,6 +960,7 @@ export const hu: Translations = {
     push_not_configured: 'Az értesítések nincsenek beállítva ezen a szerveren.',
     base_language: 'Ez a recept eredeti nyelve: a szerkesztőben módosíthatod.',
     own_recipe: 'Ez a recept már a tiéd.',
+    not_available_in_demo: 'A bemutatóban nem érhető el: ehhez valódi CookIt-szerver kell.',
     sign_in_required: 'Jelentkezz be, hogy lásd.',
     unknown: 'Hiba történt. Próbáld újra.',
     invalid_token: 'Ez a link már nem működik. Kérj újat.',

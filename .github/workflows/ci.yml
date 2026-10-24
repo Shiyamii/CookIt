@@ -142,3 +142,25 @@ jobs:
       - name: Container logs
         if: always()
         run: docker logs cookit
+
+  demo:
+    name: Demo (GitHub Pages build)
+    runs-on: ubuntu-latest
+    needs: checks
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      # The demo build and its Playwright tests (no server, no database): a change that breaks
+      # the demo shows here, not when it is published.
+      - run: bun run test:demo
+      - name: Upload the demo Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-demo
+          path: playwright-report-demo/
+          retention-days: 7

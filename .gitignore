@@ -9,8 +9,10 @@ coverage/
 .DS_Store
 .claude/settings.local.json
 playwright-report/
+playwright-report-demo/
 # JUnit test results (CI, Codecov Test Analytics)
 reports/
 test-results/
 # Playwright sessions created by the global setup
 e2e/.auth/
+dist-demo/

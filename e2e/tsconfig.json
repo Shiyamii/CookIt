@@ -5,5 +5,5 @@
     // Code passed to page.evaluate() runs in the browser.
     "lib": ["ES2023", "DOM"]
   },
-  "include": [".", "../playwright.config.ts"]
+  "include": [".", "../playwright.config.ts", "../playwright.demo.config.ts"]
 }

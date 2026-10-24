@@ -1,10 +1,10 @@
-import { CookingPot, ExternalLink } from 'lucide-react';
+import { CookingPot, ExternalLink, FlaskConical } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DockerIcon, GitHubIcon } from '@/components/BrandIcons';
 import { useAboutViewModel } from '../viewmodels/useAboutViewModel';
 
-/** About CookIt: what it is for, and where its code and its image are. */
+/** About CookIt: what it is for, and where its code, its image and its demo are. */
 export function AboutPage() {
   const { t } = useTranslation();
   const vm = useAboutViewModel();
@@ -47,6 +47,14 @@ export function AboutPage() {
             title={t('about.docker')}
             text={t('about.dockerText')}
           />
+          {vm.showDemo && (
+            <ProjectLink
+              href={vm.links.demo}
+              icon={<FlaskConical className="size-8" aria-hidden />}
+              title={t('about.demo')}
+              text={t('about.demoText')}
+            />
+          )}
         </div>
       </section>
 

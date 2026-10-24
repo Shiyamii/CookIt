@@ -61,7 +61,9 @@ test.describe('app shell', () => {
   });
 });
 
-test('the about page: what CookIt is, its version, its code and its image', async ({ page }) => {
+test('the about page: what CookIt is, its version, its code, its image and its demo', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.getByRole('link', { name: 'About CookIt' }).click();
   await expect(page).toHaveURL('/about');
@@ -75,5 +77,9 @@ test('the about page: what CookIt is, its version, its code and its image', asyn
   await expect(page.getByRole('link', { name: /Docker image/ })).toHaveAttribute(
     'href',
     'https://hub.docker.com/r/shiyamii/cookit',
+  );
+  await expect(page.getByRole('link', { name: /Online demo/ })).toHaveAttribute(
+    'href',
+    'https://shiyamii.github.io/CookIt/',
   );
 });
