@@ -34,6 +34,7 @@ export type RecipeRow = {
   id: string;
   ownerId: string;
   ownerName: string;
+  ownerUsername: string;
   /** URL of the owner's profile picture. */
   ownerImage: string | null;
   slug: string;
@@ -46,6 +47,7 @@ export type RecipeRow = {
   /** A copy: the original's author (null once their account is gone). */
   copiedFromOwnerId: string | null;
   copiedFromOwnerName: string | null;
+  copiedFromOwnerUsername: string | null;
   /** A copy: the original's visibility, null when it was deleted. */
   copiedFromVisibility: RecipeVisibility | null;
   title: string;
@@ -73,6 +75,7 @@ export type RecipeListRow = Pick<
   | 'servings'
   | 'visibility'
   | 'ownerName'
+  | 'ownerUsername'
   | 'ownerImage'
   | 'hasSteps'
   | 'updatedAt'
@@ -171,6 +174,8 @@ export type RecipesRepository = {
     query: Omit<ListQuery, 'viewerId'>,
   ): Promise<RecipeListRow[]>;
   listPublic(query: ListQuery): Promise<RecipeListRow[]>;
+  /** The public recipes of one owner (their member page). */
+  listPublicOf(ownerId: string, query: ListQuery): Promise<RecipeListRow[]>;
   /**
    * One recipe with steps among the owner's and the public ones, picked by `seed` (the same seed
    * gives the same recipe while they do not change), other than `exclude`.
@@ -226,10 +231,15 @@ const baseTranslation = and(
 const original = alias(recipes, 'original');
 const originalOwner = alias(user, 'original_owner');
 
+/** The username as the person typed it (the stored one is lowercased). */
+const usernameOf = (table: typeof user) =>
+  sql<string>`coalesce(${table.displayUsername}, ${table.username}, '')`;
+
 const rowColumns = {
   id: recipes.id,
   ownerId: recipes.ownerId,
   ownerName: user.name,
+  ownerUsername: usernameOf(user),
   ownerImage: user.image,
   slug: recipes.slug,
   lang: sql<Locale>`${recipes.baseLang}`,
@@ -240,6 +250,9 @@ const rowColumns = {
   copiedFromId: recipes.copiedFromId,
   copiedFromOwnerId: recipes.copiedFromOwnerId,
   copiedFromOwnerName: originalOwner.name,
+  copiedFromOwnerUsername: sql<
+    string | null
+  >`coalesce(${originalOwner.displayUsername}, ${originalOwner.username})`,
   copiedFromVisibility: original.visibility,
   hasSteps: recipes.hasSteps,
   authorNote: recipes.authorNote,
@@ -266,6 +279,7 @@ const listColumns = (viewerId: string | undefined) => ({
   servings: recipes.servings,
   visibility: recipes.visibility,
   ownerName: user.name,
+  ownerUsername: usernameOf(user),
   ownerImage: user.image,
   hasSteps: recipes.hasSteps,
   updatedAt: recipes.updatedAt,
@@ -520,6 +534,9 @@ export function createRecipesRepository(db: Database): RecipesRepository {
       ),
 
     listPublic: (query) => list(eq(recipes.visibility, 'public'), query),
+
+    listPublicOf: (ownerId, query) =>
+      list(and(eq(recipes.visibility, 'public'), eq(recipes.ownerId, ownerId)), query),
 
     async pick(ownerId, seed, exclude, lang) {
       const [row] = await db

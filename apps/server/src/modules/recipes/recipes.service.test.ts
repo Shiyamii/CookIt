@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { DEFAULT_UNITS, RECIPES_PAGE_SIZE, type RecipeSearch } from '@cookit/shared';
+import {
+  DEFAULT_UNITS,
+  RECIPES_PAGE_SIZE,
+  type RecipePage,
+  type RecipeSearch,
+} from '@cookit/shared';
 import type {
   ListQuery,
   NewImage,
@@ -29,6 +34,12 @@ const FIELDS = {
   lang: 'fr' as const,
 };
 const DOC = '# Tarte\n\nportions: 4\n\n---\n\n- 1 oeuf\n\n---\n\n1. Cuire.\n';
+/** A gallery page (the gallery answers `sign_in_required` to visitors when it is not public). */
+function galleryPage(result: RecipePage | { error: string }): RecipePage {
+  if ('error' in result) throw new Error(result.error);
+  return result;
+}
+
 const search = (partial: Partial<RecipeSearch> = {}): RecipeSearch => ({
   page: 1,
   tags: [],
@@ -49,6 +60,7 @@ function fakeRepository() {
     id: r.id,
     ownerId: r.ownerId,
     ownerName: `name-${r.ownerId}`,
+    ownerUsername: `user-${r.ownerId}`,
     ownerImage: null,
     slug: r.slug,
     lang: r.lang,
@@ -59,6 +71,7 @@ function fakeRepository() {
     copiedFromId: r.copiedFromId ?? null,
     copiedFromOwnerId: r.copiedFromOwnerId ?? null,
     copiedFromOwnerName: r.copiedFromOwnerId ? `name-${r.copiedFromOwnerId}` : null,
+    copiedFromOwnerUsername: r.copiedFromOwnerId ? `user-${r.copiedFromOwnerId}` : null,
     copiedFromVisibility: null as RecipeRow['copiedFromVisibility'],
     title: r.title,
     description: r.description,
@@ -149,6 +162,13 @@ function fakeRepository() {
       state.lastList = query;
       return listRows(
         [...rows.values()].filter((r) => r.visibility === 'public'),
+        query.viewerId,
+      );
+    },
+    async listPublicOf(ownerId, query) {
+      state.lastList = query;
+      return listRows(
+        [...rows.values()].filter((r) => r.visibility === 'public' && r.ownerId === ownerId),
         query.viewerId,
       );
     },
@@ -246,8 +266,9 @@ function fakeRepository() {
   return { repository, rows, images, state, notes, links };
 }
 
-function setup(options: { maxImageBytes?: number } = {}) {
+function setup(options: { maxImageBytes?: number; publicGallery?: boolean } = {}) {
   const fake = fakeRepository();
+  const gallery = { open: options.publicGallery ?? true };
   let n = 0;
   let tokens = 0;
   let clock = T0.getTime();
@@ -282,11 +303,12 @@ function setup(options: { maxImageBytes?: number } = {}) {
       },
     },
     generateToken: () => (tokens++ === 0 ? TOKEN : 'U'.repeat(43)),
+    publicGallery: async () => gallery.open,
     newId: () => `id-${++n}`,
     now: () => new Date((clock += 1000)),
     maxImageBytes: options.maxImageBytes,
   });
-  return { ...fake, service };
+  return { ...fake, service, gallery };
 }
 
 async function created(s: ReturnType<typeof setup>, owner = OWNER) {
@@ -633,7 +655,9 @@ describe('lists', () => {
     const a = await created(s);
     await created(s);
     await s.service.setVisibility(a, OWNER, 'public');
-    expect((await s.service.gallery(search(), null)).recipes.map((r) => r.id)).toEqual([a]);
+    expect(galleryPage(await s.service.gallery(search(), null)).recipes.map((r) => r.id)).toEqual([
+      a,
+    ]);
   });
   test('asks one more row than a page and computes the offset and the tsquery', async () => {
     const s = setup();
@@ -1519,11 +1543,13 @@ describe('added by link: more cases', () => {
     expect(detailOf(await s.service.get(copy.id, OTHER)).copiedFrom).toEqual({
       recipeId: null,
       ownerName: `name-${OWNER}`,
+      ownerUsername: `user-${OWNER}`,
     });
     await s.service.setVisibility(copy.id, OTHER, 'public');
     expect(detailOf(await s.service.get(copy.id, OWNER)).copiedFrom).toEqual({
       recipeId: id,
       ownerName: `name-${OWNER}`,
+      ownerUsername: `user-${OWNER}`,
     });
   });
 
@@ -1570,13 +1596,13 @@ describe('added by link: more cases', () => {
     const b = await created(s, OTHER);
     await s.service.setVisibility(a, OWNER, 'public');
     await s.service.setVisibility(b, OTHER, 'public');
-    const seen = await s.service.gallery(search(), OTHER);
+    const seen = galleryPage(await s.service.gallery(search(), OTHER));
     expect(Object.fromEntries(seen.recipes.map((r) => [r.id, r.mine]))).toEqual({
       [a]: false,
       [b]: true,
     });
     expect(s.state.lastList).toMatchObject({ viewerId: OTHER });
-    const anonymous = await s.service.gallery(search(), null);
+    const anonymous = galleryPage(await s.service.gallery(search(), null));
     expect(s.state.lastList?.viewerId).toBeUndefined();
     expect(anonymous.recipes.every((r) => !r.mine)).toBe(true);
   });
@@ -1605,6 +1631,140 @@ describe('where a copy comes from, for other readers', () => {
     await s.service.setVisibility(id, OWNER, 'public');
     expect(await s.service.get(copy.id, 'third')).toMatchObject({
       copiedFrom: { recipeId: id, ownerName: `name-${OWNER}` },
+    });
+  });
+});
+
+describe('gallery for members only (the instance setting)', () => {
+  test('a visitor reads no public recipe, nor the gallery, nor its photos', async () => {
+    const s = setup({ publicGallery: false });
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    const image = await s.service.addImage(id, OWNER, UPLOAD);
+    if ('error' in image) throw new Error('upload failed');
+    const imageId = s.rows.get(id)!.imageIds[0]!;
+
+    expect(await s.service.get(id, null)).toEqual({ error: 'not_found' });
+    expect(await s.service.gallery(search(), null)).toEqual({ error: 'sign_in_required' });
+    expect(await s.service.readImage(imageId, null, 'thumb')).toEqual({ error: 'not_found' });
+
+    // Every member still does.
+    expect(await s.service.get(id, OTHER)).toMatchObject({ id });
+    expect(galleryPage(await s.service.gallery(search(), OTHER)).recipes).toHaveLength(1);
+    // Served to members, but not cacheable as public (visitors may not see it).
+    expect(await s.service.readImage(imageId, OTHER, 'thumb')).toMatchObject({ public: false });
+  });
+
+  test('a share link still works without an account', async () => {
+    const s = setup({ publicGallery: false });
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    expect(await s.service.getShared(TOKEN, null)).toMatchObject({ id });
+  });
+
+  test('with a public gallery, a visitor reads public recipes', async () => {
+    const s = setup({ publicGallery: true });
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    expect(await s.service.get(id, null)).toMatchObject({ id });
+    expect(galleryPage(await s.service.gallery(search(), null)).recipes).toHaveLength(1);
+  });
+
+  test('the page of a member lists their public recipes only', async () => {
+    const s = setup({ publicGallery: false });
+    const shown = await created(s);
+    const hidden = await created(s);
+    await created(s, OTHER);
+    await s.service.setVisibility(shown, OWNER, 'public');
+    await s.service.setVisibility(hidden, OWNER, 'unlisted');
+    const page = await s.service.publicOf(OWNER, search(), OTHER);
+    expect(page.recipes.map((r) => r.id)).toEqual([shown]);
+    expect(page.recipes[0]).toMatchObject({ ownerUsername: `user-${OWNER}`, mine: false });
+  });
+});
+
+describe('gallery for members only: more cases', () => {
+  test('a visitor reads an unlisted recipe by its token and its photos, but not a private one', async () => {
+    const s = setup({ publicGallery: false });
+    const unlisted = await created(s);
+    const priv = await created(s);
+    await s.service.setVisibility(unlisted, OWNER, 'unlisted');
+    const a = await s.service.addImage(unlisted, OWNER, UPLOAD);
+    const b = await s.service.addImage(priv, OWNER, UPLOAD);
+    if ('error' in a || 'error' in b) throw new Error('upload failed');
+    expect(await s.service.readImage(a.id, null, 'full')).toHaveProperty('data');
+    expect(await s.service.readImage(b.id, null, 'full')).toEqual({ error: 'not_found' });
+    expect(await s.service.get(priv, null)).toEqual({ error: 'not_found' });
+  });
+
+  test('a visitor does not read a public recipe through its share token once it is public', async () => {
+    const s = setup({ publicGallery: false });
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'unlisted');
+    await s.service.setVisibility(id, OWNER, 'public');
+    expect(await s.service.getShared(TOKEN, null)).toEqual({ error: 'not_found' });
+    expect(await s.service.get(id, null)).toEqual({ error: 'not_found' });
+  });
+
+  test('the setting is read on every request: opening the gallery shows recipes at once', async () => {
+    const s = setup({ publicGallery: false });
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    expect(await s.service.get(id, null)).toEqual({ error: 'not_found' });
+    s.gallery.open = true;
+    expect(await s.service.get(id, null)).toMatchObject({ id });
+    s.gallery.open = false;
+    expect(await s.service.get(id, null)).toEqual({ error: 'not_found' });
+  });
+
+  test('a signed-in viewer is not blocked by the setting on a member page without recipes', async () => {
+    const s = setup({ publicGallery: false });
+    await created(s);
+    expect((await s.service.publicOf(OWNER, search(), OTHER)).recipes).toEqual([]);
+  });
+
+  test('the page of a member passes the viewer and the search on, and never lists private recipes', async () => {
+    const s = setup({ publicGallery: false });
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'private');
+    const page = await s.service.publicOf(OWNER, search({ page: 2, q: 'Crème' }), OTHER);
+    expect(page.recipes).toEqual([]);
+    expect(s.state.lastList).toMatchObject({ viewerId: OTHER, offset: RECIPES_PAGE_SIZE });
+  });
+});
+
+describe('usernames are for members only', () => {
+  test('a visitor never gets the author username (it signs in)', async () => {
+    const s = setup({ publicGallery: true });
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    const shared = await created(s);
+    await s.service.setVisibility(shared, OWNER, 'unlisted');
+
+    expect(await s.service.get(id, null)).toMatchObject({ ownerUsername: null });
+    expect(await s.service.getShared(TOKEN, null)).toMatchObject({ ownerUsername: null });
+    expect(galleryPage(await s.service.gallery(search(), null)).recipes[0]).toMatchObject({
+      ownerUsername: null,
+    });
+    // Members do.
+    expect(await s.service.get(id, OTHER)).toMatchObject({ ownerUsername: `user-${OWNER}` });
+    expect(galleryPage(await s.service.gallery(search(), OTHER)).recipes[0]).toMatchObject({
+      ownerUsername: `user-${OWNER}`,
+    });
+  });
+
+  test('a copy names its author username to its owner only when signed in', async () => {
+    const s = setup({ publicGallery: true });
+    const id = await created(s);
+    await s.service.setVisibility(id, OWNER, 'public');
+    const copy = await s.service.copy(id, OTHER, undefined);
+    if (!('id' in copy)) throw new Error('copy failed');
+    await s.service.setVisibility(copy.id, OTHER, 'public');
+    expect(await s.service.get(copy.id, null)).toMatchObject({
+      copiedFrom: { recipeId: id, ownerUsername: null },
+    });
+    expect(await s.service.get(copy.id, OTHER)).toMatchObject({
+      copiedFrom: { ownerUsername: `user-${OWNER}` },
     });
   });
 });

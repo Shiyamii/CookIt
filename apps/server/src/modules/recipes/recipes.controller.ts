@@ -93,11 +93,12 @@ export function createRecipesController(deps: {
     });
   }
 
-  // Public gallery: no account needed.
+  // Public gallery: members, and anyone when the instance's gallery is public.
   app.get('/api/v1/gallery', async (c) => {
     const query = search(c);
     if (!query.success) return c.json({ error: 'invalid_input' }, 400);
-    return c.json(await deps.recipes.gallery(query.data, c.var.user?.id ?? null));
+    const result = await deps.recipes.gallery(query.data, c.var.user?.id ?? null);
+    return 'error' in result ? c.json(result, 401) : c.json(result);
   });
 
   // Unlisted recipe from its share link (token in the body, never in a URL).

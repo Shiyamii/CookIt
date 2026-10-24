@@ -100,7 +100,19 @@ export function RecipeListPage({ kind }: { kind: 'mine' | 'gallery' }) {
       )}
 
       {vm.loading && <p className="text-muted-foreground">{t('common.loading')}</p>}
-      {vm.loadError && <p className="text-destructive">{t('errors.unknown')}</p>}
+      {vm.signInRequired ? (
+        <p className="text-muted-foreground">
+          {t('recipes.gallery.membersOnly')}{' '}
+          <Link
+            to="/login?redirect=%2Fgallery"
+            className="text-foreground underline decoration-primary decoration-2 underline-offset-2"
+          >
+            {t('auth.login.title')}
+          </Link>
+        </p>
+      ) : (
+        vm.loadError && <p className="text-destructive">{t('errors.unknown')}</p>
+      )}
       {!vm.loading && !vm.loadError && vm.recipes.length === 0 && (
         <p className="text-muted-foreground">
           {vm.searching
@@ -116,7 +128,7 @@ export function RecipeListPage({ kind }: { kind: 'mine' | 'gallery' }) {
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {vm.recipes.map((recipe) => (
           <li key={recipe.id} data-testid="recipe-card">
-            <RecipeCard recipe={recipe} showOwner={!mine} />
+            <RecipeCard recipe={recipe} showOwner={!mine} library={mine} />
           </li>
         ))}
       </ul>

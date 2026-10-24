@@ -6,6 +6,8 @@ export type Meta = {
   locales: string[];
   /** Email is configured: invites can be emailed, "forgot your password?" is offered. */
   email: boolean;
+  /** Public recipes and the gallery are readable without an account (else members only). */
+  publicGallery: boolean;
 };
 
 export const META_QUERY_KEY = ['meta'] as const;

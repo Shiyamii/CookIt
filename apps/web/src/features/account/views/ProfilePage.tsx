@@ -5,10 +5,11 @@ import { PictureButton } from '@/components/PictureButton';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
 
-/** The user's profile: picture and display name. */
+/** The user's profile: picture, display name, and whether to appear in the members list. */
 export function ProfilePage() {
   const { t } = useTranslation();
   const vm = useProfileViewModel();
@@ -91,6 +92,33 @@ export function ProfilePage() {
               {t('common.save')}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>{t('account.profile.membersTitle')}</h2>
+          </CardTitle>
+          <CardDescription>{t('account.profile.membersHint')}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          {vm.listedError && (
+            <Alert variant="destructive" role="alert">
+              <AlertDescription>
+                {t(`errors.${vm.listedError}`, t('errors.unknown'))}
+              </AlertDescription>
+            </Alert>
+          )}
+          <label className="flex min-h-11 cursor-pointer items-center gap-3">
+            <Checkbox
+              className="size-5"
+              checked={vm.listed === true}
+              disabled={vm.listed === null || vm.listedSaving}
+              onCheckedChange={(checked) => vm.setListed(checked === true)}
+            />
+            <span>{t('account.profile.listed')}</span>
+          </label>
         </CardContent>
       </Card>
     </div>

@@ -70,12 +70,21 @@ export function UsersPage() {
                 </p>
               </div>
               {user.role === 'admin' && <Badge>{t('admin.users.admin')}</Badge>}
+              {user.listed && <Badge variant="secondary">{t('admin.users.listed')}</Badge>}
               {user.disabledAt && <Badge variant="destructive">{t('admin.users.disabled')}</Badge>}
             </div>
             {vm.isSelf(user) ? (
               <span className="text-sm text-muted-foreground">{t('admin.users.you')}</span>
             ) : (
               <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={vm.busyId === user.id}
+                  onClick={() => vm.toggleListed(user)}
+                >
+                  {user.listed ? t('admin.users.unlist') : t('admin.users.list')}
+                </Button>
                 {user.disabledAt ? (
                   <Button
                     variant="outline"

@@ -18,9 +18,11 @@ export function MainNav() {
           {t('nav.myRecipes')}
         </NavLink>
       )}
-      <NavLink to="/gallery" className={linkClass}>
-        {t('nav.gallery')}
-      </NavLink>
+      {vm.showGallery && (
+        <NavLink to="/gallery" className={linkClass}>
+          {t('nav.gallery')}
+        </NavLink>
+      )}
       {vm.signedIn && (
         <NavLink to="/cook" className={linkClass}>
           {t('nav.cook')}

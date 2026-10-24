@@ -174,6 +174,10 @@ export const hu: Translations = {
         'A receptjeiden és a menüben látszik. A felhasználóneved ({{username}}) nem változik.',
       nameRequired: 'Adj meg egy nevet (legfeljebb 100 karakter).',
       saved: 'Név elmentve.',
+      membersTitle: 'Taglista',
+      membersHint:
+        'Az oldal tagjai látják, ki szerepel a listában, a nyilvános receptjeivel együtt. Az oldalad a receptjeidből továbbra is megnyitható.',
+      listed: 'Szerepelek a taglistában',
     },
     security: {
       title: 'Biztonság',
@@ -533,6 +537,7 @@ export const hu: Translations = {
       title: 'Galéria',
       subtitle: 'Az oldalon nyilvánosan megosztott receptek.',
       empty: 'Még nincs nyilvános recept.',
+      membersOnly: 'Az oldal galériája csak a tagoknak szól.',
     },
     visibility: {
       label: 'Ki láthatja',
@@ -788,7 +793,36 @@ export const hu: Translations = {
         'Küldd el ezt a linket neki: {{user}} (3 napig érvényes). Csak most jelenik meg.',
       deleteTitle: 'Törlöd: {{user}}?',
       deleteText: 'A fiók véglegesen törlődik. Ez nem vonható vissza.',
+      listed: 'A taglistában',
+      list: 'Felvétel a taglistába',
+      unlist: 'Eltávolítás a taglistából',
     },
+    settings: {
+      title: 'Oldalbeállítások',
+      galleryTitle: 'Galéria',
+      galleryHint:
+        'A nyilvános receptek mindig láthatók minden tag számára. A galériával együtt a fiók nélküli látogatóknak is megnyithatod őket.',
+      publicGallery: 'A fiók nélküli látogatók is láthatják a galériát',
+      isPublic: 'A nyilvános recepteket bárki olvashatja.',
+      isMembers:
+        'A nyilvános receptek csak a tagoknak szólnak. A megosztási linkek továbbra is mindenkinek működnek.',
+    },
+  },
+  members: {
+    title: 'Tagok',
+    subtitle: 'Azok a tagok, akik úgy döntöttek, hogy itt megjelennek, a nyilvános receptjeikkel.',
+    yourChoice: 'Megjelensz-e itt: a profilodban döntheted el.',
+    search: 'Tag keresése',
+    empty: 'Még senki sem döntött úgy, hogy megjelenik a listában.',
+    noResults: 'Egy tag sem felel meg ennek a keresésnek.',
+    publicRecipes_one: '{{count}} nyilvános recept',
+    publicRecipes_other: '{{count}} nyilvános recept',
+    recipesTitle_one: 'Nyilvános recept ({{count}})',
+    recipesTitle_other: 'Nyilvános receptek ({{count}})',
+    noRecipes: 'Még nincs nyilvános recept.',
+    youAreListed: 'Szerepelsz a taglistában.',
+    youAreNotListed: 'Nem szerepelsz a taglistában.',
+    change: 'Módosítás',
   },
   cook: {
     title: 'Főzés',
@@ -912,6 +946,7 @@ export const hu: Translations = {
     push_not_configured: 'Az értesítések nincsenek beállítva ezen a szerveren.',
     base_language: 'Ez a recept eredeti nyelve: a szerkesztőben módosíthatod.',
     own_recipe: 'Ez a recept már a tiéd.',
+    sign_in_required: 'Jelentkezz be, hogy lásd.',
     unknown: 'Hiba történt. Próbáld újra.',
     invalid_token: 'Ez a link már nem működik. Kérj újat.',
     username_taken: 'Ez a felhasználónév már foglalt.',

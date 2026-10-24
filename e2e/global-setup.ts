@@ -51,6 +51,10 @@ export default async function globalSetup() {
   // The tests expect an English interface for the admin (a failed run may have left another one).
   const locale = await api.post('/api/v1/auth/update-user', { data: { locale: 'en' } });
   if (!locale.ok()) throw new Error(`Admin locale reset failed: ${locale.status()}`);
+  // Most tests read public recipes as visitors: the gallery is opened to them (closed by default;
+  // members-only.e2e.ts checks that mode, then opens it again).
+  const settings = await api.put('/api/v1/admin/settings', { data: { publicGallery: true } });
+  if (!settings.ok()) throw new Error(`Opening the gallery failed: ${settings.status()}`);
   await api.storageState({ path: ADMIN_STATE });
   await api.dispose();
 

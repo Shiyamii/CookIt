@@ -10,10 +10,11 @@ import {
   disableUser,
   enableUser,
   listUsers,
+  setUserListed,
   USERS_QUERY_KEY,
 } from '../model/admin';
 
-type Action = 'disable' | 'enable' | 'delete' | 'reset';
+type Action = 'disable' | 'enable' | 'delete' | 'reset' | 'list' | 'unlist';
 
 export function useUsersViewModel() {
   const queryClient = useQueryClient();
@@ -27,6 +28,9 @@ export function useUsersViewModel() {
       if (action === 'disable') await disableUser(user.id);
       if (action === 'enable') await enableUser(user.id);
       if (action === 'delete') await deleteUser(user.id);
+      if (action === 'list' || action === 'unlist') {
+        await setUserListed(user.id, action === 'list');
+      }
       if (action === 'reset') {
         const { url } = await createResetLink(user.id);
         setResetLink({ user, url, copied: false });
@@ -48,6 +52,8 @@ export function useUsersViewModel() {
     disable: (user: UserSummary) => run('disable', user),
     enable: (user: UserSummary) => run('enable', user),
     createResetLink: (user: UserSummary) => run('reset', user),
+    /** Puts the user in the members list, or takes them out. */
+    toggleListed: (user: UserSummary) => run(user.listed ? 'unlist' : 'list', user),
     resetLink,
     copyResetLink: async () => {
       if (resetLink) setResetLink({ ...resetLink, copied: await copyToClipboard(resetLink.url) });

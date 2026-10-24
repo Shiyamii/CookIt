@@ -231,6 +231,8 @@ export type RecipeSummary = {
   servings: number;
   visibility: RecipeVisibility;
   ownerName: string;
+  /** The owner's username (their member page); null for a visitor without an account. */
+  ownerUsername: string | null;
   /** URL of the owner's profile picture. */
   ownerImage: string | null;
   /** Thumbnail URL of the cover (first photo). */
@@ -268,6 +270,8 @@ export type RecipeDetail = {
   body: string;
   visibility: RecipeVisibility;
   ownerName: string;
+  /** The owner's username (their member page); null for a visitor without an account. */
+  ownerUsername: string | null;
   /** URL of the owner's profile picture. */
   ownerImage: string | null;
   /** Photos, the cover first. */
@@ -284,7 +288,11 @@ export type RecipeDetail = {
    * Where a copy comes from (same readers as `copiedFromId`): the original's author (null when their
    * account is gone) and the original itself when the reader may open it.
    */
-  copiedFrom: { recipeId: string | null; ownerName: string | null } | null;
+  copiedFrom: {
+    recipeId: string | null;
+    ownerName: string | null;
+    ownerUsername: string | null;
+  } | null;
   /** The signed-in reader added it to their recipes (a link, not a copy). */
   saved: boolean;
   tagIds: string[];
@@ -308,6 +316,7 @@ export const RECIPE_ERRORS = [
   'too_many_images',
   'storage_full',
   'own_recipe',
+  'sign_in_required',
 ] as const;
 
 /**

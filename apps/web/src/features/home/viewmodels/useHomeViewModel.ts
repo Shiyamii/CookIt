@@ -74,6 +74,8 @@ export function useHomeViewModel() {
   return {
     status: isLoading ? 'loading' : user ? 'signed_in' : 'signed_out',
     apiStatus,
+    /** Visitors may browse the gallery (the instance's setting). */
+    publicGallery: meta.data?.publicGallery === true,
     name: user?.name ?? '',
     cooking: cooking && {
       recipes: cooking.items.map((item, index) => ({

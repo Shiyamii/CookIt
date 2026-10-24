@@ -17,6 +17,7 @@ export type UsersRepository = {
    */
   disable(id: string, now: Date): Promise<GuardedChange>;
   enable(id: string): Promise<void>;
+  setListed(id: string, listed: boolean): Promise<void>;
   /**
    * Deletes the account unless it is the last enabled admin. Sessions, accounts and reset links
    * go with it (foreign keys `on delete cascade`).
@@ -75,6 +76,10 @@ export function createUsersRepository(db: Database): UsersRepository {
 
     async enable(id) {
       await db.update(user).set({ disabledAt: null }).where(eq(user.id, id));
+    },
+
+    async setListed(id, listed) {
+      await db.update(user).set({ listed }).where(eq(user.id, id));
     },
 
     delete(id) {

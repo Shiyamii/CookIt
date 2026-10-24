@@ -260,7 +260,11 @@ test.describe('authorization', () => {
     expect(refused.status()).toBe(404);
     // The original is gone from view: its author is still named, without a link to it.
     const after2 = await (await reader.page.request.get(`/api/v1/recipes/${copyId}`)).json();
-    expect(after2.copiedFrom).toEqual({ recipeId: null, ownerName: owner.username });
+    expect(after2.copiedFrom).toEqual({
+      recipeId: null,
+      ownerName: owner.username,
+      ownerUsername: owner.username,
+    });
     const own = await owner.page.request.post(`/api/v1/recipes/${id}/copy`, {
       data: {},
       headers: ORIGIN_HEADER,

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTagCatalog } from '@/features/catalog/viewmodels/useCatalogs';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
+import { errorCode } from '@/lib/api';
 import { EXPORT_ALL_URL } from '../model/importing';
 import { fetchGallery, fetchMyRecipes, RECIPES_QUERY_KEY } from '../model/recipes';
 
@@ -109,6 +110,8 @@ export function useRecipeListViewModel(kind: 'mine' | 'gallery') {
     recipes: query.data?.pages.flatMap((page) => page.recipes) ?? [],
     loading: query.isPending,
     loadError: query.isError,
+    /** The gallery is for members only on this instance. */
+    signInRequired: query.isError && errorCode(query.error) === 'sign_in_required',
     hasMore: query.hasNextPage,
     loadingMore: query.isFetchingNextPage,
     loadMore: () => void query.fetchNextPage(),

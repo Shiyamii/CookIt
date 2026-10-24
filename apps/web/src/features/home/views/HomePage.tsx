@@ -54,9 +54,11 @@ function Welcome({ vm }: { vm: Vm }) {
           <Button asChild>
             <Link to="/login">{t('auth.login.title')}</Link>
           </Button>
-          <Button asChild variant="outline">
-            <Link to="/gallery">{t('home.browseGallery')}</Link>
-          </Button>
+          {vm.publicGallery && (
+            <Button asChild variant="outline">
+              <Link to="/gallery">{t('home.browseGallery')}</Link>
+            </Button>
+          )}
         </div>
         <div className="flex items-center justify-between gap-4 text-sm">
           <span className="text-muted-foreground">{t('home.apiStatus')}</span>
@@ -235,7 +237,7 @@ function Recent({ vm }: { vm: Vm }) {
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {vm.recent.map((recipe) => (
             <li key={recipe.id} data-testid="recipe-card">
-              <RecipeCard recipe={recipe} showOwner={false} />
+              <RecipeCard recipe={recipe} showOwner={false} library />
             </li>
           ))}
         </ul>

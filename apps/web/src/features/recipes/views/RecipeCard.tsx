@@ -8,11 +8,19 @@ const VISIBILITY_ICON = { private: Lock, unlisted: Link2, public: Globe };
 
 /**
  * A recipe in a list: cover thumbnail, title, description, servings, author or visibility. In the
- * user's recipes, one of someone else (added by link) shows its author and a bookmark.
+ * user's recipes (`library`), one of someone else (added by link) shows its author and a bookmark.
  */
-export function RecipeCard({ recipe, showOwner }: { recipe: RecipeSummary; showOwner: boolean }) {
+export function RecipeCard({
+  recipe,
+  showOwner,
+  library = false,
+}: {
+  recipe: RecipeSummary;
+  showOwner: boolean;
+  library?: boolean;
+}) {
   const { t } = useTranslation();
-  const added = !showOwner && !recipe.mine;
+  const added = library && !showOwner && !recipe.mine;
   const Icon = added ? BookmarkCheck : VISIBILITY_ICON[recipe.visibility];
   return (
     <Link

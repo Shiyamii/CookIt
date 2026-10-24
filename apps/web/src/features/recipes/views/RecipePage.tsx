@@ -69,17 +69,35 @@ export function RecipePage({ source }: { source: 'id' | 'shared' }) {
           {!vm.isOwner && (
             <UserAvatar image={vm.ownerImage} name={vm.ownerName} className="size-6 text-xs" />
           )}
-          {vm.isOwner ? t('recipes.yours') : t('recipes.by', { name: vm.ownerName })}
+          {vm.isOwner ? (
+            t('recipes.yours')
+          ) : vm.signedIn && vm.ownerUsername ? (
+            <Link
+              to={`/members/${encodeURIComponent(vm.ownerUsername)}`}
+              className="underline decoration-primary decoration-2 underline-offset-2"
+            >
+              {t('recipes.by', { name: vm.ownerName })}
+            </Link>
+          ) : (
+            t('recipes.by', { name: vm.ownerName })
+          )}
           {vm.incomplete && <Badge variant="secondary">{t('recipes.incomplete')}</Badge>}
         </p>
         {vm.copiedFrom && (
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <Badge variant="secondary">
-              <CopyPlus aria-hidden />
-              {t('recipes.library.copyOf', {
-                name: vm.copiedFrom.ownerName ?? t('recipes.library.formerMember'),
-              })}
-            </Badge>
+            {vm.copiedFrom.ownerUsername ? (
+              <Badge variant="secondary" asChild>
+                <Link to={`/members/${encodeURIComponent(vm.copiedFrom.ownerUsername)}`}>
+                  <CopyPlus aria-hidden />
+                  {t('recipes.library.copyOf', { name: vm.copiedFrom.ownerName ?? '' })}
+                </Link>
+              </Badge>
+            ) : (
+              <Badge variant="secondary">
+                <CopyPlus aria-hidden />
+                {t('recipes.library.copyOf', { name: t('recipes.library.formerMember') })}
+              </Badge>
+            )}
             {vm.copiedFrom.recipeId && (
               <Link
                 to={`/recipes/${vm.copiedFrom.recipeId}`}

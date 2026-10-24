@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/** Tests that change the whole instance: each in its own project, after the others. */
+const ALONE = ['**/restart.e2e.ts', '**/members-only.e2e.ts'];
+
 // End-to-end tests run against the built image (Node runtime), never against the Vite dev server.
 // Start it first: docker compose -f docker-compose.dev.yml up -d --build
 export default defineConfig({
@@ -21,14 +24,21 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: '**/restart.e2e.ts' },
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: '**/restart.e2e.ts' },
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: ALONE },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: ALONE },
+    // Closes the gallery to visitors, which the other tests rely on: once they are done.
+    {
+      name: 'members-only',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: '**/members-only.e2e.ts',
+      dependencies: ['mobile', 'desktop'],
+    },
     // Stops and starts the app container: alone, once every other test is done.
     {
       name: 'restart',
       use: { ...devices['Desktop Chrome'] },
       testMatch: '**/restart.e2e.ts',
-      dependencies: ['mobile', 'desktop'],
+      dependencies: ['members-only'],
     },
   ],
 });

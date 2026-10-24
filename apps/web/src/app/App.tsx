@@ -8,6 +8,7 @@ import { NotificationsPage } from '@/features/push/views/NotificationsPage';
 import { InvitesPage } from '@/features/admin/views/InvitesPage';
 import { TagsAdminPage } from '@/features/catalog/views/TagsAdminPage';
 import { UnitsAdminPage } from '@/features/catalog/views/UnitsAdminPage';
+import { SiteSettingsPage } from '@/features/admin/views/SiteSettingsPage';
 import { UsersPage } from '@/features/admin/views/UsersPage';
 import { LoginPage } from '@/features/auth/views/LoginPage';
 import { RegisterPage } from '@/features/auth/views/RegisterPage';
@@ -15,6 +16,8 @@ import { RequireAccess } from '@/features/auth/views/RequireAccess';
 import { ResetPasswordPage } from '@/features/auth/views/ResetPasswordPage';
 import { ForgotPasswordPage } from '@/features/auth/views/ForgotPasswordPage';
 import { HomePage } from '@/features/home/views/HomePage';
+import { MemberPage } from '@/features/members/views/MemberPage';
+import { MembersPage } from '@/features/members/views/MembersPage';
 import { AddRecipePage } from '@/features/recipes/views/AddRecipePage';
 import { RecipeListPage } from '@/features/recipes/views/RecipeListPage';
 import { RecipePage } from '@/features/recipes/views/RecipePage';
@@ -92,6 +95,14 @@ const router = createBrowserRouter([
         children: [{ index: true, lazy: shoppingPage }],
       },
       {
+        path: 'members',
+        element: <RequireAccess level="user" />,
+        children: [
+          { index: true, element: <MembersPage /> },
+          { path: ':username', element: <MemberPage /> },
+        ],
+      },
+      {
         path: 'account',
         element: <RequireAccess level="user" />,
         children: [
@@ -109,6 +120,7 @@ const router = createBrowserRouter([
           { path: 'users', element: <UsersPage /> },
           { path: 'tags', element: <TagsAdminPage /> },
           { path: 'units', element: <UnitsAdminPage /> },
+          { path: 'settings', element: <SiteSettingsPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

@@ -38,6 +38,8 @@ export const RATE_LIMITS = {
   settingsSavePerAccount: { name: 'settings-save:account', limit: 60, windowSeconds: 10 * 60 },
   // Every item checked in the shop is a save.
   shoppingSavePerAccount: { name: 'shopping-save:account', limit: 600, windowSeconds: 10 * 60 },
+  // Member pages by username: browsing is a few pages, trying usernames is many.
+  memberPagePerAccount: { name: 'member-page:account', limit: 300, windowSeconds: 10 * 60 },
 } satisfies Record<string, RateLimitRule>;
 
 /**

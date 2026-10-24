@@ -174,6 +174,10 @@ export const fr: Translations = {
         "Affiché sur vos recettes et dans le menu. Votre nom d'utilisateur ({{username}}) ne change pas.",
       nameRequired: 'Saisissez un nom (100 caractères au plus).',
       saved: 'Nom enregistré.',
+      membersTitle: 'Liste des membres',
+      membersHint:
+        'Les membres de ce site voient qui apparaît dans la liste, avec ses recettes publiques. Votre page reste accessible depuis vos recettes.',
+      listed: 'Apparaître dans la liste des membres',
     },
     security: {
       title: 'Sécurité',
@@ -536,6 +540,7 @@ export const fr: Translations = {
       title: 'Galerie',
       subtitle: 'Les recettes partagées publiquement sur ce site.',
       empty: 'Pas encore de recette publique.',
+      membersOnly: 'La galerie de ce site est réservée à ses membres.',
     },
     visibility: {
       label: 'Qui peut la voir',
@@ -794,7 +799,36 @@ export const fr: Translations = {
       resetLinkFor: 'Envoyez ce lien à {{user}} (valable 3 jours). Il n’est affiché qu’une fois.',
       deleteTitle: 'Supprimer {{user}} ?',
       deleteText: 'Le compte est supprimé définitivement. Impossible de revenir en arrière.',
+      listed: 'Dans la liste des membres',
+      list: 'Mettre dans la liste des membres',
+      unlist: 'Retirer de la liste des membres',
     },
+    settings: {
+      title: 'Réglages du site',
+      galleryTitle: 'Galerie',
+      galleryHint:
+        'Les recettes publiques sont toujours visibles par tous les membres. Vous pouvez aussi les ouvrir, avec la galerie, aux visiteurs sans compte.',
+      publicGallery: 'Les visiteurs sans compte peuvent voir la galerie',
+      isPublic: 'Les recettes publiques sont lisibles par tout le monde.',
+      isMembers:
+        'Les recettes publiques sont réservées aux membres. Les liens de partage marchent toujours pour tout le monde.',
+    },
+  },
+  members: {
+    title: 'Membres',
+    subtitle: 'Les membres qui ont choisi d’apparaître ici, avec leurs recettes publiques.',
+    yourChoice: 'Y apparaître ou non : votre profil.',
+    search: 'Chercher un membre',
+    empty: 'Personne n’a encore choisi d’apparaître dans la liste.',
+    noResults: 'Aucun membre ne correspond à cette recherche.',
+    publicRecipes_one: '{{count}} recette publique',
+    publicRecipes_other: '{{count}} recettes publiques',
+    recipesTitle_one: 'Recette publique ({{count}})',
+    recipesTitle_other: 'Recettes publiques ({{count}})',
+    noRecipes: 'Pas encore de recette publique.',
+    youAreListed: 'Vous apparaissez dans la liste des membres.',
+    youAreNotListed: 'Vous n’apparaissez pas dans la liste des membres.',
+    change: 'Changer',
   },
   cook: {
     title: 'En cuisine',
@@ -919,6 +953,7 @@ export const fr: Translations = {
     push_not_configured: 'Les notifications ne sont pas configurées sur ce serveur.',
     base_language: 'C’est la langue d’origine de la recette : modifiez-la avec l’éditeur.',
     own_recipe: 'Cette recette est déjà à vous.',
+    sign_in_required: 'Connectez-vous pour voir ceci.',
     unknown: 'Une erreur est survenue. Réessayez.',
     invalid_token: 'Ce lien ne fonctionne plus. Demandez-en un nouveau.',
     username_taken: 'Ce nom d’utilisateur est déjà pris.',

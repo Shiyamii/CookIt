@@ -8,6 +8,7 @@ import { apiBodyLimit, noStore, sameOrigin, securityHeaders, staticCaching } fro
 import { createAccountSecurityController } from './modules/account-security/account-security.controller';
 import { createAuthController } from './modules/auth/auth.controller';
 import { createCookingController } from './modules/cooking/cooking.controller';
+import { createMembersController } from './modules/members/members.controller';
 import { createProfileController } from './modules/profile/profile.controller';
 import { createPushController } from './modules/push/push.controller';
 import { sessionMiddleware } from './modules/auth/auth.middleware';
@@ -45,6 +46,7 @@ export function createApp(container: Container) {
   app.route('/', createShoppingController(container));
   app.route('/', createPushController(container));
   app.route('/', createProfileController(container));
+  app.route('/', createMembersController(container));
   app.route('/', createTagsController(container));
   app.route('/', createUnitsController(container));
 

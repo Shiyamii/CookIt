@@ -186,6 +186,8 @@ export type UserSummary = {
   locale: string;
   createdAt: string;
   disabledAt: string | null;
+  /** Appears in the members list. */
+  listed: boolean;
 };
 
 /** Errors returned by the account API as `{ error }`, translated by the UI. */

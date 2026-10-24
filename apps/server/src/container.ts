@@ -24,6 +24,8 @@ import { createUnitsService } from './modules/units/units.service';
 import { createImportService } from './modules/import/import.service';
 import { safeFetchHtml } from './lib/safe-fetch';
 import { createPushSender, isPushEndpoint } from './lib/web-push';
+import { createMembersRepository } from './modules/members/members.repository';
+import { createMembersService } from './modules/members/members.service';
 import { createProfileRepository } from './modules/profile/profile.repository';
 import { createProfileService } from './modules/profile/profile.service';
 import { createPushRepository } from './modules/push/push.repository';
@@ -54,7 +56,20 @@ export function createContainer(db: Database) {
     log,
   });
   const units = createUnitsService({ repository: createUnitsRepository(db) });
+  const system = createSystemService({
+    repository: createSystemRepository(db),
+    version: env.APP_VERSION,
+    email: mail.enabled,
+  });
   const tags = createTagsService({ repository: createTagsRepository(db) });
+  const recipes = createRecipesService({
+    repository: createRecipesRepository(db),
+    origin: env.ORIGIN,
+    units: () => units.catalog(),
+    tags,
+    generateToken,
+    publicGallery: () => system.publicGallery(),
+  });
   return {
     auth: createAuth(db),
     mail,
@@ -65,11 +80,7 @@ export function createContainer(db: Database) {
       repository: createAccountSecurityRepository(db),
       verifyPassword,
     }),
-    system: createSystemService({
-      repository: createSystemRepository(db),
-      version: env.APP_VERSION,
-      email: mail.enabled,
-    }),
+    system,
     rateLimits: createRateLimitService({ repository: createRateLimitRepository(db) }),
     invites: createInvitesService({
       repository: createInvitesRepository(db),
@@ -90,13 +101,8 @@ export function createContainer(db: Database) {
     }),
     profile: createProfileService({ repository: createProfileRepository(db) }),
     importer: createImportService({ fetchHtml: (url) => safeFetchHtml(url) }),
-    recipes: createRecipesService({
-      repository: createRecipesRepository(db),
-      origin: env.ORIGIN,
-      units: () => units.catalog(),
-      tags,
-      generateToken,
-    }),
+    recipes,
+    members: createMembersService({ repository: createMembersRepository(db), recipes }),
     users: createUsersService({ repository: createUsersRepository(db), passwordReset }),
   };
 }

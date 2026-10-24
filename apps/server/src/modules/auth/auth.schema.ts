@@ -29,6 +29,8 @@ export const user = pgTable(
     role: text('role', { enum: USER_ROLES }).notNull().default('user'),
     locale: text('locale').notNull().default('fr'),
     disabledAt: timestamp('disabled_at', { withTimezone: true }),
+    // Appears in the members list (the user's choice, or an admin's). Not a Better Auth field.
+    listed: boolean('listed').notNull().default(false),
     twoFactorEnabled: boolean('two_factor_enabled').notNull().default(false),
     ...timestamps,
   },

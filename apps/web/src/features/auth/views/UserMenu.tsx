@@ -5,9 +5,11 @@ import {
   LogOut,
   Mail,
   Ruler,
+  Settings,
   ShieldCheck,
   Tags,
   Users,
+  UsersRound,
 } from 'lucide-react';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useTranslation } from 'react-i18next';
@@ -66,6 +68,11 @@ export function UserMenu() {
             <AlarmClock /> {t('alarm.title')}
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/members">
+            <UsersRound /> {t('members.title')}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {vm.isAdmin && (
           <>
@@ -87,6 +94,11 @@ export function UserMenu() {
             <DropdownMenuItem asChild>
               <Link to="/admin/units">
                 <Ruler /> {t('catalog.units.title')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/admin/settings">
+                <Settings /> {t('admin.settings.title')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

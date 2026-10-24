@@ -1,16 +1,17 @@
 import { updateProfileInputSchema } from '@cookit/shared';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { errorCode } from '@/lib/api';
 import { ImageError } from '@/lib/images';
 import { SESSION_QUERY_KEY } from '@/features/auth/model/auth';
 import { useSession } from '@/features/auth/viewmodels/useSession';
+import { fetchListed, MEMBERS_QUERY_KEY, saveListed } from '@/features/members/model/members';
 import { RECIPES_QUERY_KEY } from '@/features/recipes/model/recipes';
 import { removeAvatar, saveDisplayName, uploadAvatar } from '../model/profile';
 
 const failure = (error: unknown) => (error instanceof ImageError ? error.code : errorCode(error));
 
-/** Profile page: display name and profile picture. */
+/** Profile page: display name, profile picture, and whether to appear in the members list. */
 export function useProfileViewModel() {
   const { user } = useSession();
   const queryClient = useQueryClient();
@@ -34,6 +35,16 @@ export function useProfileViewModel() {
     },
   });
   const upload = useMutation({ mutationFn: uploadAvatar, onSuccess: refresh });
+
+  const LISTED_KEY = [...MEMBERS_QUERY_KEY, 'me', 'listed'];
+  const listed = useQuery({ queryKey: LISTED_KEY, queryFn: fetchListed });
+  const listing = useMutation({
+    mutationFn: saveListed,
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(LISTED_KEY, saved);
+      await queryClient.invalidateQueries({ queryKey: MEMBERS_QUERY_KEY });
+    },
+  });
   const removal = useMutation({ mutationFn: removeAvatar, onSuccess: refresh });
 
   const pictureError = upload.isError
@@ -63,6 +74,11 @@ export function useProfileViewModel() {
       }
       nameMutation.mutate();
     },
+    /** Appears in the members list (null while loading). */
+    listed: listing.isPending ? listing.variables : (listed.data?.listed ?? null),
+    listedSaving: listing.isPending,
+    listedError: listing.isError ? errorCode(listing.error) : undefined,
+    setListed: (value: boolean) => listing.mutate(value),
     pictureBusy: upload.isPending || removal.isPending,
     pictureError,
     choosePicture: (file: File | undefined) => {

@@ -161,6 +161,7 @@ export function useRecipeViewModel(source: 'id' | 'shared') {
     /** Shown in a translation (not the base language): edited through the translation screen. */
     isTranslation: detail !== undefined && detail.lang !== detail.baseLang,
     ownerName: detail?.ownerName ?? '',
+    ownerUsername: detail?.ownerUsername ?? '',
     /** What the notes block needs. */
     notes: detail
       ? {

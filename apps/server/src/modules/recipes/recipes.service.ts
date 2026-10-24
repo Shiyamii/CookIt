@@ -50,6 +50,8 @@ export type StorageFull = { error: 'storage_full' };
 export type InvalidOrder = { error: 'invalid_order' };
 /** The user's own recipe is already in their recipes: it is not added by link nor copied. */
 export type OwnRecipe = { error: 'own_recipe' };
+/** The gallery is for members only on this instance. */
+export type SignInRequired = { error: 'sign_in_required' };
 
 const NOT_FOUND: NotFound = { error: 'not_found' };
 const INVALID_TAGS: InvalidTags = { error: 'invalid_tags' };
@@ -101,9 +103,10 @@ function searchText(document: RecipeDocument): string {
 /**
  * Recipes: CRUD, visibility, sharing, links, copies, lists and search. Access rules (plan §5.2,
  * phase 4 criterion): a private recipe is only ever seen by its owner (admins included: no
- * exception); a public one by anyone, signed in or not; an unlisted one by its owner and by whoever
- * has its share link, or added it to their recipes with the link that is still the recipe's. Only
- * the owner changes a recipe. Whatever is not visible answers `not_found`.
+ * exception); a public one by every member, and without an account when the instance's gallery is
+ * public; an unlisted one by its owner and by whoever has its share link, or added it to their
+ * recipes with the link that is still the recipe's. Only the owner changes a recipe. Whatever is
+ * not visible answers `not_found`.
  */
 export function createRecipesService(deps: {
   repository: RecipesRepository;
@@ -117,6 +120,8 @@ export function createRecipesService(deps: {
     catalog(): Promise<TagCategory[]>;
   };
   generateToken: () => string;
+  /** Public recipes are readable without an account (the instance's setting). */
+  publicGallery: () => Promise<boolean>;
   newId?: () => string;
   now?: () => Date;
   /** Photo storage per user (tests use a small one). */
@@ -156,6 +161,8 @@ export function createRecipesService(deps: {
       body: shown.bodyMarkdown,
       visibility: row.visibility,
       ownerName: row.ownerName,
+      // Usernames sign in: only members see them (they open the members' pages).
+      ownerUsername: viewerId ? row.ownerUsername : null,
       ownerImage: row.ownerImage,
       images: row.imageIds.map(recipeImageUrls),
       isOwner,
@@ -171,6 +178,7 @@ export function createRecipesService(deps: {
           ? {
               recipeId: originalReadable ? row.copiedFromId : null,
               ownerName: row.copiedFromOwnerName,
+              ownerUsername: viewerId ? row.copiedFromOwnerUsername : null,
             }
           : null,
       saved: reader.saved,
@@ -286,7 +294,10 @@ export function createRecipesService(deps: {
     const link = viewerId ? await repository.findSaved(viewerId, row.id) : undefined;
     const withToken = (candidate: string | null | undefined) =>
       row.visibility === 'unlisted' && !!candidate && candidate === row.shareToken;
-    const readable = row.visibility === 'public' || withToken(token) || withToken(link?.shareToken);
+    const readable =
+      (row.visibility === 'public' && (viewerId !== null || (await deps.publicGallery()))) ||
+      withToken(token) ||
+      withToken(link?.shareToken);
     return { readable, saved: readable && link !== undefined };
   };
 
@@ -325,17 +336,22 @@ export function createRecipesService(deps: {
     return { updatedAt: at.toISOString() };
   };
 
-  const summary = ({ hasSteps, coverId, ...row }: RecipeListRow): RecipeSummary => ({
+  /** A list row; the owner's username only for a signed-in viewer (usernames sign in). */
+  const summary = (
+    { hasSteps, coverId, ...row }: RecipeListRow,
+    signedIn: boolean,
+  ): RecipeSummary => ({
     ...row,
+    ownerUsername: signedIn ? row.ownerUsername : null,
     cover: coverId ? recipeImageUrls(coverId).thumbUrl : null,
     incomplete: !hasSteps,
     updatedAt: row.updatedAt.toISOString(),
   });
 
-  const page = async (rows: Promise<RecipeListRow[]>): Promise<RecipePage> => {
+  const page = async (rows: Promise<RecipeListRow[]>, signedIn: boolean): Promise<RecipePage> => {
     const found = await rows;
     return {
-      recipes: found.slice(0, RECIPES_PAGE_SIZE).map(summary),
+      recipes: found.slice(0, RECIPES_PAGE_SIZE).map((row) => summary(row, signedIn)),
       hasMore: found.length > RECIPES_PAGE_SIZE,
     };
   };
@@ -672,10 +688,15 @@ export function createRecipesService(deps: {
       const image = await repository.findImage(imageId, size);
       if (!image) return NOT_FOUND;
       if (image.visibility === 'private' && image.ownerId !== viewerId) return NOT_FOUND;
+      // A public recipe's photos follow the recipe: members only, unless the gallery is public.
+      if (image.visibility === 'public' && viewerId === null && !(await deps.publicGallery())) {
+        return NOT_FOUND;
+      }
       return {
         contentType: image.contentType,
         data: image.data,
-        public: image.visibility === 'public',
+        // Shared caches and the HTTP cache keep it a year: only while visitors may see it too.
+        public: image.visibility === 'public' && (await deps.publicGallery()),
       };
     },
 
@@ -689,19 +710,35 @@ export function createRecipesService(deps: {
       const row =
         (await repository.pick(userId, seed, query.exclude, query.lang)) ??
         (query.exclude ? await repository.pick(userId, seed, undefined, query.lang) : undefined);
-      return { recipe: row ? summary(row) : null };
+      return { recipe: row ? summary(row, true) : null };
     },
 
     /** "My recipes": the user's own and the ones they added by link (`search.scope`). */
     async listMine(userId: string, search: RecipeSearch): Promise<RecipePage> {
       const query = await listQuery(search);
-      return query ? page(repository.listLibrary(userId, search.scope, query)) : EMPTY_PAGE;
+      return query ? page(repository.listLibrary(userId, search.scope, query), true) : EMPTY_PAGE;
     },
 
-    async gallery(search: RecipeSearch, viewerId: string | null): Promise<RecipePage> {
+    /** The public recipes: for members, and for anyone when the instance's gallery is public. */
+    async gallery(
+      search: RecipeSearch,
+      viewerId: string | null,
+    ): Promise<RecipePage | SignInRequired> {
+      if (viewerId === null && !(await deps.publicGallery())) return { error: 'sign_in_required' };
       const query = await listQuery(search);
       return query
-        ? page(repository.listPublic({ ...query, viewerId: viewerId ?? undefined }))
+        ? page(
+            repository.listPublic({ ...query, viewerId: viewerId ?? undefined }),
+            viewerId !== null,
+          )
+        : EMPTY_PAGE;
+    },
+
+    /** The public recipes of one member (their page), for a signed-in viewer. */
+    async publicOf(ownerId: string, search: RecipeSearch, viewerId: string): Promise<RecipePage> {
+      const query = await listQuery(search);
+      return query
+        ? page(repository.listPublicOf(ownerId, { ...query, viewerId }), true)
         : EMPTY_PAGE;
     },
   };

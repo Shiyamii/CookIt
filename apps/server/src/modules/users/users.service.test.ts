@@ -16,6 +16,7 @@ function user(overrides: Partial<UserRow> & { id: string }): UserRow {
     role: 'user',
     locale: 'fr',
     disabledAt: null,
+    listed: false,
     twoFactorEnabled: false,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -52,6 +53,10 @@ function setup(initial: UserRow[]) {
     async enable(id) {
       const target = users.get(id);
       if (target) target.disabledAt = null;
+    },
+    async setListed(id, listed) {
+      const target = users.get(id);
+      if (target) target.listed = listed;
     },
     async delete(id) {
       if (isLastEnabledAdmin(id)) return 'last_admin';
@@ -91,6 +96,7 @@ describe('users service: list', () => {
         locale: 'fr',
         createdAt: '2026-01-01T00:00:00.000Z',
         disabledAt: NOW.toISOString(),
+        listed: false,
       },
     ]);
   });
@@ -225,5 +231,37 @@ describe('users service: createResetLinkForUsername (rescue CLI)', () => {
     const { service, resetLinks } = setup([admin]);
     expect(await service.createResetLinkForUsername('nobody')).toBeUndefined();
     expect(resetLinks).toEqual([]);
+  });
+});
+
+describe('users service: members list', () => {
+  test('an admin puts a user in the members list or takes them out', async () => {
+    const { service } = setup([user({ id: 'Bob' })]);
+    expect(await service.setListed('Bob', true)).toEqual({ ok: true });
+    expect((await service.list())[0]?.listed).toBe(true);
+    expect(await service.setListed('Bob', false)).toEqual({ ok: true });
+    expect((await service.list())[0]?.listed).toBe(false);
+  });
+
+  test('an unknown user is not_found', async () => {
+    const { service } = setup([]);
+    expect(await service.setListed('nobody', true)).toEqual({ ok: false, error: 'not_found' });
+  });
+
+  test('listing someone twice in a row stays listed, and other users are untouched', async () => {
+    const { service } = setup([user({ id: 'Bob' }), user({ id: 'Ann' })]);
+    await service.setListed('Bob', true);
+    await service.setListed('Bob', true);
+    const listed = Object.fromEntries((await service.list()).map((u) => [u.id, u.listed]));
+    expect(listed).toEqual({ Bob: true, Ann: false });
+  });
+
+  test('a disabled user or the last admin can still be put in or out of the list', async () => {
+    const { service } = setup([
+      user({ id: 'Root', role: 'admin' }),
+      user({ id: 'Gone', disabledAt: NOW }),
+    ]);
+    expect(await service.setListed('Root', true)).toEqual({ ok: true });
+    expect(await service.setListed('Gone', true)).toEqual({ ok: true });
   });
 });

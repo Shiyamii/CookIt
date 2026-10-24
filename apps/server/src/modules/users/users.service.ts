@@ -16,6 +16,7 @@ function summary(user: UserRow): UserSummary {
     locale: user.locale,
     createdAt: user.createdAt.toISOString(),
     disabledAt: user.disabledAt?.toISOString() ?? null,
+    listed: user.listed,
   };
 }
 
@@ -62,6 +63,13 @@ export function createUsersService(deps: {
       const check = await checkTarget(actorId, targetId);
       if (!check.ok) return check;
       return guarded(await deps.repository.delete(targetId));
+    },
+
+    /** Whether the user appears in the members list (they can change it too). */
+    async setListed(targetId: string, listed: boolean): Promise<Outcome> {
+      if (!(await deps.repository.findById(targetId))) return { ok: false, error: 'not_found' };
+      await deps.repository.setListed(targetId, listed);
+      return { ok: true };
     },
 
     async createResetLink(actorId: string, targetId: string) {
