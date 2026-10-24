@@ -1,8 +1,11 @@
 import type {
+  AlarmSettings,
+  CookState,
   InstanceSettings,
   Locale,
   LocalizedLabels,
   RecipeVisibility,
+  ShoppingState,
   UnitEntry,
 } from '@cookit/shared';
 
@@ -81,9 +84,12 @@ export type DemoState = {
   }[];
   units: UnitEntry[];
   settings: InstanceSettings | undefined;
+  cookSessions: { userId: string; version: number; updatedAt: Date; state: CookState }[];
+  shoppingLists: { userId: string; version: number; updatedAt: Date; state: ShoppingState }[];
+  alarms: { userId: string; settings: AlarmSettings; updatedAt: Date }[];
 };
 
-export const STATE_VERSION = 1;
+export const STATE_VERSION = 2;
 
 export function emptyState(): DemoState {
   return {
@@ -98,6 +104,9 @@ export function emptyState(): DemoState {
     tags: [],
     units: [],
     settings: undefined,
+    cookSessions: [],
+    shoppingLists: [],
+    alarms: [],
   };
 }
 

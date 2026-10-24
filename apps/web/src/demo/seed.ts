@@ -1,4 +1,4 @@
-import { DEFAULT_TAG_CATEGORIES, DEFAULT_UNITS } from '@cookit/shared';
+import { DEFAULT_TAG_CATEGORIES, DEFAULT_UNITS, isLocale, type Locale } from '@cookit/shared';
 import type { RecipesService } from '../../../server/src/modules/recipes/recipes.service';
 import type { TagsService } from '../../../server/src/modules/tags/tags.service';
 import { DEMO_LINKS, DEMO_RECIPES, type DemoRecipe } from './recipes';
@@ -35,12 +35,22 @@ function user(id: string, username: string, name: string, extra: Partial<DemoUse
   };
 }
 
+/** The visitor's language (their browser's), for the accounts they use. */
+function visitorLocale(): Locale {
+  const found = navigator.languages
+    .map((tag) => tag.slice(0, 2).toLowerCase())
+    .find((lang) => isLocale(lang));
+  return found && isLocale(found) ? found : 'en';
+}
+
 /** Accounts, unit and tag catalogs: what the database seeds hold on a new instance. */
 export function seedState(): DemoState {
   const state = emptyState();
+  // The profile language wins in the app: the visitor's accounts speak their browser's.
+  const locale = visitorLocale();
   state.users = [
-    user(OWNERS.admin, 'Camille', 'Camille', { role: 'admin' }),
-    user(OWNERS.member, 'Alex', 'Alex'),
+    user(OWNERS.admin, 'Camille', 'Camille', { role: 'admin', locale }),
+    user(OWNERS.member, 'Alex', 'Alex', { locale }),
     user(OWNERS.zsofia, 'Zsofia', 'Zsófia', { locale: 'hu' }),
     user(OWNERS.sam, 'Sam', 'Sam', { locale: 'en', listed: false }),
   ];

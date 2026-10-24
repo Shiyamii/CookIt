@@ -1,6 +1,17 @@
+import { updateProfileInputSchema } from '@cookit/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../../server/src/http/app-env';
 import type { SessionUser } from '../../../server/src/modules/auth/auth';
+import { createCookingController } from '../../../server/src/modules/cooking/cooking.controller';
+import { createCookingService } from '../../../server/src/modules/cooking/cooking.service';
+import { createMembersController } from '../../../server/src/modules/members/members.controller';
+import { createMembersService } from '../../../server/src/modules/members/members.service';
+import { createProfileController } from '../../../server/src/modules/profile/profile.controller';
+import { createProfileService } from '../../../server/src/modules/profile/profile.service';
+import { createPushController } from '../../../server/src/modules/push/push.controller';
+import { createPushService } from '../../../server/src/modules/push/push.service';
+import { createShoppingController } from '../../../server/src/modules/shopping/shopping.controller';
+import { createShoppingService } from '../../../server/src/modules/shopping/shopping.service';
 import { createRateLimitService } from '../../../server/src/modules/rate-limit/rate-limit.service';
 import { createRecipesController } from '../../../server/src/modules/recipes/recipes.controller';
 import { createRecipesService } from '../../../server/src/modules/recipes/recipes.service';
@@ -16,6 +27,13 @@ import {
   createMemoryTagsRepository,
   createMemoryUnitsRepository,
 } from './repositories/catalog';
+import {
+  createMemoryCookingRepository,
+  createMemoryMembersRepository,
+  createMemoryProfileRepository,
+  createMemoryPushRepository,
+  createMemoryShoppingRepository,
+} from './repositories/member';
 import { createMemoryRecipesRepository } from './repositories/recipes';
 import { seedRecipes, seedState } from './seed';
 import { demoRole, DEMO_USER_IDS } from './session';
@@ -33,7 +51,7 @@ function generateToken(): string {
 /**
  * The CookIt API inside the page (demo build only): the server's own controllers and services,
  * on in-memory repositories saved in the browser. What needs a real server (accounts, email,
- * push, URL import, photos) is not mounted: those routes answer 404.
+ * URL import, photos) is not mounted: those routes answer 404. Push answers "not configured".
  */
 function createDemoApi(holder: { state: DemoState }) {
   const state = () => holder.state;
@@ -51,6 +69,18 @@ function createDemoApi(holder: { state: DemoState }) {
     tags,
     generateToken,
     publicGallery: () => system.publicGallery(),
+  });
+  const cooking = createCookingService({ repository: createMemoryCookingRepository(state) });
+  const shopping = createShoppingService({ repository: createMemoryShoppingRepository(state) });
+  const profile = createProfileService({ repository: createMemoryProfileRepository(state) });
+  const members = createMembersService({
+    repository: createMemoryMembersRepository(state),
+    recipes,
+  });
+  // No push service in the demo: no key, subscriptions refused ("not configured").
+  const push = createPushService({
+    repository: createMemoryPushRepository(),
+    isPushEndpoint: () => false,
   });
 
   const app = new Hono<AppEnv>();
@@ -74,10 +104,24 @@ function createDemoApi(holder: { state: DemoState }) {
       },
     });
   });
+  // Better Auth's profile change (display name, language): the visitor's demo account.
+  app.post('/api/v1/auth/update-user', async (c) => {
+    const input = updateProfileInputSchema.safeParse(await c.req.json().catch(() => undefined));
+    const u = holder.state.users.find((candidate) => candidate.id === c.var.user?.id);
+    if (!u) return c.json({ error: 'unauthorized' }, 401);
+    if (!input.success) return c.json({ error: 'invalid_input' }, 400);
+    Object.assign(u, input.data, { updatedAt: new Date() });
+    return c.json({ status: true });
+  });
   app.route('/', createSystemController(system));
   app.route('/', createRecipesController({ recipes, rateLimits }));
   app.route('/', createTagsController({ tags }));
   app.route('/', createUnitsController({ units }));
+  app.route('/', createCookingController({ cooking, rateLimits }));
+  app.route('/', createShoppingController({ shopping, rateLimits }));
+  app.route('/', createProfileController({ profile, rateLimits }));
+  app.route('/', createMembersController({ members, rateLimits }));
+  app.route('/', createPushController({ push, rateLimits }));
   app.all('/api/*', (c) => c.json({ error: 'not_available_in_demo' }, 404));
   return { app, recipes, tags };
 }

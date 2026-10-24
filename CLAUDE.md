@@ -168,7 +168,9 @@ When recipes are stored (phase 4): Zod schemas for the columns must refuse line 
 - A **build mode of the web app** (`vite build --mode demo`, `VITE_DEMO` = `'1'`): the API runs **in the page**. `src/lib/api.ts` sends `/api/v1/…` to `demoFetch` (`src/demo/server.ts`), a Hono app with the **server's own controllers and services** on in-memory repositories (`src/demo/repositories/`), saved in IndexedDB after every change (`src/demo/state.ts`). The normal build and the image contain none of it (the import sits behind `import.meta.env.VITE_DEMO`).
 - Two server modules cannot load in a browser and are replaced in demo mode by the `cookit-demo-stubs` Vite plugin: `apps/server/src/env.ts` (reads `process.env` when loaded) → `src/demo/stubs/env.ts`, `@hono/node-server/conninfo` → `src/demo/stubs/conninfo.ts`. Keep server services free of Node-only APIs at load time.
 - Demo mode: router `basename` from `BASE_URL` (`DEMO_BASE`, `/CookIt/` on Pages; `MSYS_NO_PATHCONV=1` in Git Bash, which rewrites `/CookIt/` into a Windows path), `404.html` = `index.html` (deep links on Pages), no service worker and no PWA plugin. `features/demo/views/DemoBanner.tsx`: who the visitor is (the member Alex or the admin Camille, `src/demo/session.ts`, page reloaded) and "Start again" (IndexedDB and local storage cleared).
-- Starting data (`src/demo/seed.ts`, `src/demo/recipes.ts`): four fictional accounts, the default units and tags, recipes created through the recipes service (parsed like an import), a translated recipe, a link, a copy, notes; the gallery is public. Not mounted (answer 404 `not_available_in_demo`): accounts, email, push, URL import, photos.
+- Starting data (`src/demo/seed.ts`, `src/demo/recipes.ts`): four fictional accounts (the visitor's two speak their browser's language: the profile language wins in the app), the default units and tags, recipes created through the recipes service (parsed like an import), a translated recipe, a link, a copy, notes; the gallery is public.
+- Mounted: system, recipes, tags, units, cooking, shopping, profile (alarm; no pictures), members, push (no key: "not configured"), and `POST /api/v1/auth/update-user` (name, language). Not mounted (404 `not_available_in_demo`): accounts and sign-in, 2FA and passkeys, email, URL import, photos. The in-memory repositories follow the Drizzle ones' contracts (search: every word as a prefix of a word, without stemming, results by date rather than by rank; unit-tested in `src/demo/repositories/*.test.ts`).
+- Tests: `e2e/demo/*.demo.ts` (`playwright.demo.config.ts`: Vite preview of the demo build under `/CookIt/`, no Docker; each test has its own browser, so its own demo data). `bun run test:demo` builds first.
 
 ## Notes and summary
 
@@ -329,6 +331,7 @@ bun run build                                      # build web, then bundle serv
 bun run start                                      # run the built server under Node
 bun run build:demo                                 # the demo (GitHub Pages) into apps/web/dist-demo (DEMO_BASE=/CookIt/ for its sub-path)
 bun run dev:demo                                   # the demo with Vite's dev server
+bun run test:demo                                  # build the demo, then its Playwright tests (e2e/demo/*.demo.ts, playwright.demo.config.ts)
 bun run parse <file.md> [--servings N] [--lang fr|en|hu] [--json | --canonical]  # what the recipe parser reads
 bun run emails                                     # compile the MJML email templates (after changing one, or the theme)
 node apps/server/dist/cli.js admin:reset-link <username>  # rescue CLI (in the container: node dist/cli.js …; also setup-link, rate-limits:clear, push:vapid-keys)

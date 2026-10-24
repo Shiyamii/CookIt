@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:demo": "vite build --mode demo --outDir dist-demo",
     "dev:demo": "vite --mode demo",
+    "preview:demo": "vite preview --mode demo --outDir dist-demo --port 4174 --strictPort",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.sw.json"
   },
