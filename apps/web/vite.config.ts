@@ -10,10 +10,16 @@ const demoStub = (name: string) =>
   fileURLToPath(new URL(`./src/demo/stubs/${name}`, import.meta.url));
 
 /**
- * Demo build: the server's controllers and services run in the page. Two of their modules only
- * make sense in Node and are replaced: the environment settings, read when the module loads, and
- * the socket address.
+ * Demo build: the server's controllers and services run in the page. Their modules that only make
+ * sense in Node are replaced (`src/demo/stubs/`): the environment settings (read when the module
+ * loads), the socket address, link tokens (node:crypto) and the mailer (nodemailer).
  */
+const SERVER_STUBS: Record<string, string> = {
+  '/apps/server/src/env': 'env.ts',
+  '/apps/server/src/lib/tokens': 'tokens.ts',
+  '/apps/server/src/lib/mailer': 'mailer.ts',
+};
+
 function demoStubs(): Plugin {
   return {
     name: 'cookit-demo-stubs',
@@ -26,7 +32,8 @@ function demoStubs(): Plugin {
       if (source === '@hono/node-server/conninfo') return demoStub('conninfo.ts');
       if (!importer || !source.startsWith('.')) return null;
       const target = resolve(dirname(importer), source).replace(/\\/g, '/');
-      return target.endsWith('/apps/server/src/env') ? demoStub('env.ts') : null;
+      const stub = Object.entries(SERVER_STUBS).find(([path]) => target.endsWith(path));
+      return stub ? demoStub(stub[1]) : null;
     },
   };
 }

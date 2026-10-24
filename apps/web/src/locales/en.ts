@@ -945,6 +945,7 @@ export const en = {
     push_not_configured: 'Notifications are not set up on this server.',
     base_language: 'This is the original language of the recipe: change it with the editor.',
     own_recipe: 'This recipe is already yours.',
+    not_available_in_demo: 'Not available in the demo: it needs a real CookIt server.',
     sign_in_required: 'Sign in to see this.',
     unknown: 'Something went wrong. Please try again.',
     invalid_token: 'This link does not work anymore. Ask for a new one.',

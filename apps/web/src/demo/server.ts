@@ -2,7 +2,13 @@ import { updateProfileInputSchema } from '@cookit/shared';
 import { Hono } from 'hono';
 import type { AppEnv } from '../../../server/src/http/app-env';
 import type { SessionUser } from '../../../server/src/modules/auth/auth';
+import type { Auth } from '../../../server/src/modules/auth/auth';
 import { createCookingController } from '../../../server/src/modules/cooking/cooking.controller';
+import { createInvitesController } from '../../../server/src/modules/invites/invites.controller';
+import { createInvitesService } from '../../../server/src/modules/invites/invites.service';
+import type { PasswordResetService } from '../../../server/src/modules/password-reset/password-reset.service';
+import { createUsersController } from '../../../server/src/modules/users/users.controller';
+import { createUsersService } from '../../../server/src/modules/users/users.service';
 import { createCookingService } from '../../../server/src/modules/cooking/cooking.service';
 import { createMembersController } from '../../../server/src/modules/members/members.controller';
 import { createMembersService } from '../../../server/src/modules/members/members.service';
@@ -27,6 +33,7 @@ import {
   createMemoryTagsRepository,
   createMemoryUnitsRepository,
 } from './repositories/catalog';
+import { createMemoryInvitesRepository, createMemoryUsersRepository } from './repositories/admin';
 import {
   createMemoryCookingRepository,
   createMemoryMembersRepository,
@@ -38,6 +45,11 @@ import { createMemoryRecipesRepository } from './repositories/recipes';
 import { seedRecipes, seedState } from './seed';
 import { demoRole, DEMO_USER_IDS } from './session';
 import { clearState, loadState, saveState, type DemoState } from './state';
+import { DemoUnavailableError } from './unavailable';
+
+const unavailable = () => {
+  throw new DemoUnavailableError();
+};
 
 /** 32 random bytes in base64url, like the server's link tokens. */
 function generateToken(): string {
@@ -77,6 +89,18 @@ function createDemoApi(holder: { state: DemoState }) {
     repository: createMemoryMembersRepository(state),
     recipes,
   });
+  const origin = location.origin + (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '');
+  // Accounts are managed (disabled, listed, deleted); passwords and sign-in need the real server.
+  const users = createUsersService({
+    repository: createMemoryUsersRepository(state),
+    passwordReset: { createLink: unavailable } as unknown as PasswordResetService,
+  });
+  const invites = createInvitesService({
+    repository: createMemoryInvitesRepository(state),
+    origin,
+    hashPassword: unavailable,
+  });
+  const auth = { api: { signInUsername: unavailable } } as unknown as Auth;
   // No push service in the demo: no key, subscriptions refused ("not configured").
   const push = createPushService({
     repository: createMemoryPushRepository(),
@@ -84,6 +108,12 @@ function createDemoApi(holder: { state: DemoState }) {
   });
 
   const app = new Hono<AppEnv>();
+  app.onError((error, c) => {
+    if (error instanceof DemoUnavailableError) {
+      return c.json({ error: 'not_available_in_demo' }, 501);
+    }
+    throw error;
+  });
   // The signed-in visitor: the demo member or the demo admin (demo banner).
   app.use('/api/*', async (c, next) => {
     const found = holder.state.users.find((u) => u.id === DEMO_USER_IDS[demoRole()]);
@@ -113,6 +143,9 @@ function createDemoApi(holder: { state: DemoState }) {
     Object.assign(u, input.data, { updatedAt: new Date() });
     return c.json({ status: true });
   });
+  // Pictures need a server to store and serve them.
+  app.put('/api/v1/me/avatar', unavailable);
+  app.post('/api/v1/recipes/:id/images', unavailable);
   app.route('/', createSystemController(system));
   app.route('/', createRecipesController({ recipes, rateLimits }));
   app.route('/', createTagsController({ tags }));
@@ -122,6 +155,8 @@ function createDemoApi(holder: { state: DemoState }) {
   app.route('/', createProfileController({ profile, rateLimits }));
   app.route('/', createMembersController({ members, rateLimits }));
   app.route('/', createPushController({ push, rateLimits }));
+  app.route('/', createUsersController({ users }));
+  app.route('/', createInvitesController({ invites, auth, rateLimits }));
   app.all('/api/*', (c) => c.json({ error: 'not_available_in_demo' }, 404));
   return { app, recipes, tags };
 }

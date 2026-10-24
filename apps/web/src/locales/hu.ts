@@ -957,6 +957,7 @@ export const hu: Translations = {
     push_not_configured: 'Az értesítések nincsenek beállítva ezen a szerveren.',
     base_language: 'Ez a recept eredeti nyelve: a szerkesztőben módosíthatod.',
     own_recipe: 'Ez a recept már a tiéd.',
+    not_available_in_demo: 'A bemutatóban nem érhető el: ehhez valódi CookIt-szerver kell.',
     sign_in_required: 'Jelentkezz be, hogy lásd.',
     unknown: 'Hiba történt. Próbáld újra.',
     invalid_token: 'Ez a link már nem működik. Kérj újat.',

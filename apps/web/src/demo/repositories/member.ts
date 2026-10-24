@@ -4,6 +4,7 @@ import type { ProfileRepository } from '../../../../server/src/modules/profile/p
 import type { PushRepository } from '../../../../server/src/modules/push/push.repository';
 import type { ShoppingRepository } from '../../../../server/src/modules/shopping/shopping.repository';
 import type { DemoState } from '../state';
+import { DemoUnavailableError } from '../unavailable';
 
 /** The cooking session of each user, in memory (demo only: no timers to notify). */
 export function createMemoryCookingRepository(state: () => DemoState): CookingRepository {
@@ -63,7 +64,7 @@ export function createMemoryProfileRepository(state: () => DemoState): ProfileRe
   const s = state;
   return {
     async replaceAvatar() {
-      throw new Error('Profile pictures are not part of the demo');
+      throw new DemoUnavailableError();
     },
     async removeAvatar() {},
     async findAvatar() {

@@ -964,6 +964,7 @@ export const fr: Translations = {
     push_not_configured: 'Les notifications ne sont pas configurées sur ce serveur.',
     base_language: 'C’est la langue d’origine de la recette : modifiez-la avec l’éditeur.',
     own_recipe: 'Cette recette est déjà à vous.',
+    not_available_in_demo: 'Pas disponible dans la démo : il faut un vrai serveur CookIt.',
     sign_in_required: 'Connectez-vous pour voir ceci.',
     unknown: 'Une erreur est survenue. Réessayez.',
     invalid_token: 'Ce lien ne fonctionne plus. Demandez-en un nouveau.',

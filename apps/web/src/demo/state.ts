@@ -8,6 +8,7 @@ import type {
   ShoppingState,
   UnitEntry,
 } from '@cookit/shared';
+import type { InviteRow } from '../../../server/src/modules/invites/invites.repository';
 
 // The whole demo "database": plain objects kept in memory, saved in the browser (IndexedDB)
 // after every change. The in-memory repositories (`demo/repositories/`) read and write it with
@@ -59,6 +60,8 @@ export type StoredTranslation = {
   updatedAt: Date;
 };
 
+export type StoredInvite = InviteRow;
+
 export type DemoState = {
   /** Changes when the shape changes: an older saved state is replaced by a new seed. */
   version: number;
@@ -87,9 +90,10 @@ export type DemoState = {
   cookSessions: { userId: string; version: number; updatedAt: Date; state: CookState }[];
   shoppingLists: { userId: string; version: number; updatedAt: Date; state: ShoppingState }[];
   alarms: { userId: string; settings: AlarmSettings; updatedAt: Date }[];
+  invites: StoredInvite[];
 };
 
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 
 export function emptyState(): DemoState {
   return {
@@ -107,6 +111,7 @@ export function emptyState(): DemoState {
     cookSessions: [],
     shoppingLists: [],
     alarms: [],
+    invites: [],
   };
 }
 
