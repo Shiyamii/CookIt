@@ -58,6 +58,8 @@ export const fr: Translations = {
     githubText: 'Sur GitHub : le code, les tickets et les versions.',
     docker: 'Image Docker',
     dockerText: 'Sur Docker Hub : l’image pour installer CookIt.',
+    demo: 'Démo en ligne',
+    demoText: 'Essayez CookIt dans votre navigateur : des recettes fictives, rien à installer.',
     license: 'Logiciel libre, sous licence MIT.',
   },
   home: {

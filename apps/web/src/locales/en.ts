@@ -55,6 +55,8 @@ export const en = {
     githubText: 'On GitHub: code, issues and releases.',
     docker: 'Docker image',
     dockerText: 'On Docker Hub: the image to install CookIt.',
+    demo: 'Online demo',
+    demoText: 'Try CookIt in your browser: fictional recipes, nothing to install.',
     license: 'Open source, under the MIT license.',
   },
   home: {

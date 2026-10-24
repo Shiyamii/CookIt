@@ -289,4 +289,6 @@ Decisions not covered by `plan-site-recettes.md`, one line of justification each
 
 - **The demo runs the server's own controllers and services in the page** (Hono works in a browser), on in-memory repositories saved in IndexedDB: the same validation, access rules and parser as production, instead of a hand-written fake API that would drift. Two Node-only modules are swapped by a Vite plugin in demo mode, the server code is not changed.
 - **Demo code lives in `main`, behind a build mode**, not on a long-lived branch: a separate branch would fall behind every feature. The normal build leaves it out.
+- **"Not in the demo" is said before the click** (`NotInDemo`), not only by the 501 answer after it; the zip export, which is a plain link in the app, is made in the page instead of being refused.
+- **Published with each stable release** (`.github/workflows/pages.yml`, push to `release`, or by hand), so the demo shows the released version, not work in progress; its Playwright tests also run in CI on every pull request, so a broken demo is seen before it is published.
 - **No service worker in the demo**: nothing to cache from or notify with, and a cache on a shared `github.io` origin could outlive the demo.

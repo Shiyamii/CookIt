@@ -58,6 +58,9 @@ export const hu: Translations = {
     githubText: 'A GitHubon: kód, hibajegyek és kiadások.',
     docker: 'Docker-kép',
     dockerText: 'A Docker Hubon: a kép a CookIt telepítéséhez.',
+    demo: 'Online bemutató',
+    demoText:
+      'Próbáld ki a CookItot a böngésződben: kitalált receptek, semmit sem kell telepíteni.',
     license: 'Nyílt forráskódú, MIT-licenc alatt.',
   },
   home: {

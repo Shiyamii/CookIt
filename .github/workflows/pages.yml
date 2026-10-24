@@ -1,0 +1,54 @@
+name: Demo (GitHub Pages)
+
+# The online demo: the web app with its API running in the page, fictional recipes, every change
+# kept in the visitor's browser (no server). Published to https://shiyamii.github.io/CookIt/ with
+# each stable release, or by hand ("Run workflow").
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test the demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      # Built for the Pages sub-path (/CookIt/), then its Playwright tests against that build.
+      - run: bun run test:demo
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-demo
+          path: playwright-report-demo/
+          retention-days: 7
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist-demo
+
+  deploy:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

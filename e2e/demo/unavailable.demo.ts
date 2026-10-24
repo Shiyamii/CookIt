@@ -68,3 +68,9 @@ test('"Export all my recipes" downloads the zip made in the page', async ({ page
   expect(names.every((name) => name.endsWith('.md'))).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the about page of the demo does not link to the demo', async ({ page }) => {
+  await page.goto('about');
+  await expect(page.getByRole('link', { name: /Source code/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Online demo/ })).toHaveCount(0);
+});
