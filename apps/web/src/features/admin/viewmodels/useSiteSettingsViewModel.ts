@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { errorCode } from '@/lib/api';
 import { META_QUERY_KEY } from '@/features/system/model/meta';
 import { fetchSettings, saveSettings, SETTINGS_QUERY_KEY } from '../model/admin';
@@ -7,6 +8,8 @@ import { fetchSettings, saveSettings, SETTINGS_QUERY_KEY } from '../model/admin'
 export function useSiteSettingsViewModel() {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: SETTINGS_QUERY_KEY, queryFn: fetchSettings });
+  // The choice shows at once, while it is saved (back to the saved one if it fails).
+  const [chosen, setChosen] = useState<boolean>();
   const save = useMutation({
     mutationFn: saveSettings,
     onSuccess: async (saved) => {
@@ -14,17 +17,19 @@ export function useSiteSettingsViewModel() {
       // The navigation and the home page read it from the meta.
       await queryClient.invalidateQueries({ queryKey: META_QUERY_KEY });
     },
+    onSettled: () => setChosen(undefined),
   });
 
   return {
     loading: settings.isPending,
     loadError: settings.isError,
-    publicGallery: save.isPending
-      ? save.variables.publicGallery
-      : (settings.data?.publicGallery ?? false),
+    publicGallery: chosen ?? settings.data?.publicGallery ?? false,
     saving: save.isPending,
     saved: save.isSuccess,
     error: save.isError ? errorCode(save.error) : undefined,
-    setPublicGallery: (publicGallery: boolean) => save.mutate({ publicGallery }),
+    setPublicGallery: (publicGallery: boolean) => {
+      setChosen(publicGallery);
+      save.mutate({ publicGallery });
+    },
   };
 }
