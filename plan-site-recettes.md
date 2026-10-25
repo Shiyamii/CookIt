@@ -4,7 +4,7 @@ Document destiné à Claude Code. Travailler **phase par phase**, un commit par 
 
 ## 1. Objectif
 
-Application web de recettes, auto-hébergée sur **Coolify**, avec :
+Application web de recettes, auto-hébergée (une image Docker + PostgreSQL), avec :
 
 - Comptes utilisateurs, **inscription sur invitation uniquement**, gestion rapide des invitations et des utilisateurs par un admin.
 - Recettes **privées / non listées (lien secret) / publiques**.
@@ -25,7 +25,7 @@ Hors périmètre pour l'instant : appli native (Capacitor, Android seulement, pl
 | Front            | **React** + TypeScript, **SPA** (Vite, lancé avec Bun), React Router, TanStack Query pour l'état serveur                                                                                                                                                                                                                                                                                                           |
 | Back             | **Hono** sur **Node.js** (LTS, `@hono/node-server`) + TypeScript, validation des entrées avec **Zod** ; pilote Postgres Node (`postgres` ou `pg`) avec Drizzle                                                                                                                                                                                                                                                     |
 | UI               | **shadcn/ui** (Radix) + **Tailwind CSS**, icônes `lucide-react`, mobile first                                                                                                                                                                                                                                                                                                                                      |
-| Base de données  | **PostgreSQL** (conteneur séparé géré par Coolify)                                                                                                                                                                                                                                                                                                                                                                 |
+| Base de données  | **PostgreSQL** (conteneur séparé)                                                                                                                                                                                                                                                                                                                                                                                  |
 | ORM / migrations | **Drizzle ORM** + drizzle-kit                                                                                                                                                                                                                                                                                                                                                                                      |
 | Auth             | **Better Auth** (adaptateur Drizzle, intégration Hono) avec les plugins `twoFactor` (TOTP + codes de secours) et `passkey` (WebAuthn) ; sessions par cookie (httpOnly, secure, sameSite=lax) ; hash des mots de passe en **argon2id via `@node-rs/argon2`** (binaires précompilés, fonction de hachage personnalisée branchée sur Better Auth ; à défaut, le hash scrypt par défaut de Better Auth est acceptable) |
 | Push             | bibliothèque `web-push` + clés VAPID, service worker                                                                                                                                                                                                                                                                                                                                                               |
@@ -36,7 +36,7 @@ Hors périmètre pour l'instant : appli native (Capacitor, Android seulement, pl
 | Qualité du code  | **Prettier** (formatage), **ESLint** (config « flat », règles TypeScript et React), **Husky** : hook pre-commit qui lance Prettier, ESLint et les tests unitaires (`bun test`) ; un commit est refusé si l'un d'eux échoue                                                                                                                                                                                         |
 | Conteneur        | **Une seule image** Dockerfile multi-stage : étapes d'installation et de build avec `oven/bun`, **image finale `node:<LTS>-slim`** (Debian, glibc, pas Alpine, pour les binaires précompilés) ne contenant que le build et les dépendances de production : Hono sert l'API (`/api/*`) **et** les fichiers statiques de la SPA                                                                                      |
 
-Pas de SQLite, pas de stockage de l'état dans des fichiers : tout l'état est dans Postgres, pour qu'une sauvegarde de la base (par exemple le backup de Coolify) suffise sans script maison.
+Pas de SQLite, pas de stockage de l'état dans des fichiers : tout l'état est dans Postgres.
 
 ### Architecture du dépôt
 
@@ -250,18 +250,17 @@ Une recette peut avoir un fichier markdown par langue. Pour que l'état d'une se
   - Le prompt est généré par le code (même mécanique que le prompt d'import).
   - En mode cuisine, chaque recette de la session garde sa langue (`state.items[].lang`) ; on peut la changer à la volée si les structures sont identiques.
 
-## 6. Déploiement sur Coolify
+## 6. Déploiement
 
-- Application déployée depuis l'**image Docker Hub** `shiyamii/cookit` (amd64) ; ressource **PostgreSQL** Coolify séparée dans le même projet.
+- Application livrée comme **image Docker Hub** `shiyamii/cookit` (amd64), utilisée avec une base **PostgreSQL** ; la façon de l'héberger n'est pas l'affaire du projet.
 - **Publication de l'image** : uniquement depuis un **tag de version** ou une **branche de release**, jamais à chaque push sur `main`. Le test de l'image (comme en CI) passe avant toute publication.
 - **Versions automatiques** : **semantic-release** crée les tags / branches de release avec le bon numéro de version, y compris des **release candidates** (`-rc.N`) : branche `next` → RC, branche `release` → version stable, `main` ne publie jamais.
 - Variables d'environnement : `DATABASE_URL`, `ORIGIN` (URL publique en https), `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `ADMIN_EMAIL`, `BETTER_AUTH_SECRET`, `WEBAUTHN_RP_ID` (domaine public, sans schéma), `WEBAUTHN_RP_NAME`. Documenter la génération des clés VAPID (`npx web-push generate-vapid-keys`).
-- Derrière Traefik (HTTPS géré par Coolify) : faire confiance aux en-têtes `X-Forwarded-*` uniquement venant du proxy, et vérifier que `ORIGIN` correspond au domaine public (utilisé pour la protection CSRF et les cookies `secure`).
+- Derrière un reverse proxy (HTTPS) : faire confiance aux en-têtes `X-Forwarded-*` uniquement venant du proxy, et vérifier que `ORIGIN` correspond au domaine public (utilisé pour la protection CSRF et les cookies `secure`).
 - Le build produit une image unique : build du front (Vite) copié dans l'image du serveur, Hono sert `/api/*` puis les fichiers statiques, avec fallback sur `index.html` pour les routes de la SPA.
 - Migrations Drizzle appliquées automatiquement au démarrage avant d'écouter.
-- Endpoint `/healthz` (vérifie l'accès à la base) pour le healthcheck Coolify.
+- Endpoint `/healthz` (vérifie l'accès à la base) pour le healthcheck.
 - Conteneur exécuté en utilisateur non root, aucun volume applicatif nécessaire (tout est en base ; images de couverture éventuelles stockées en base ou sur un volume documenté).
-- **Sauvegardes** : sauvegarde de la base Postgres, par exemple le backup de Coolify. Rien à coder côté appli, mais le README doit expliquer la procédure de restauration. S'y ajoute l'export zip de `.md` par utilisateur.
 - Fournir un `docker-compose.dev.yml` (app + Postgres) pour le développement local.
 
 ## 7. Sécurité (récapitulatif)
@@ -302,7 +301,7 @@ Chaque phase se termine par des tests verts, un commit propre et un court README
    _Critère : un timer lancé puis page fermée envoie bien la notification à l'heure ; un redémarrage du conteneur n'en perd aucun._
 9. **PWA et finitions** : manifest, installation, cache hors-ligne, thème, accessibilité, passe mobile complète.
    _Critère : Lighthouse PWA/accessibilité corrects, mode cuisine utilisable hors-ligne sur une recette déjà ouverte._
-10. **Déploiement et doc** : README (installation Coolify pas à pas, variables, VAPID, sauvegarde/restauration Postgres), test Playwright du parcours « invitation → créer recette → cuisiner avec timers », revue sécurité du §7.
+10. **Déploiement et doc** : README (installation de l'image Docker avec PostgreSQL, variables, VAPID), test Playwright du parcours « invitation → créer recette → cuisiner avec timers », revue sécurité du §7.
 11. **Optionnel** : SSE pour la synchro temps réel entre appareils, planification à rebours, groupes d'étapes affichés comme **pistes parallèles** (ex. pâtes et sauce menées en même temps dans une même recette), import Cooklang (`.cook`), Capacitor Android pour une vraie alarme, **envoi d'emails** (SMTP optionnel, voir §5.1), **IA intégrée** (appel d'une API de modèle ou d'un modèle local, configurable par l'admin, qui exécuterait les mêmes prompts que ceux proposés à la copie ; à ne faire qu'après avoir validé l'usage réel des prompts manuels).
 
 ## 9. Consignes pour Claude Code

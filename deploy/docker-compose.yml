@@ -1,6 +1,6 @@
 # CookIt — production deployment: published image + PostgreSQL.
 #
-# No host port is published: a reverse proxy (Coolify, Traefik, Caddy…) routes the traffic
+# No host port is published: a reverse proxy (Caddy, Traefik, nginx…) routes the traffic
 # to the `app` service on port 3000.
 #
 #
@@ -53,5 +53,5 @@ services:
     # Not published on the host: only the app reaches the database.
 
 volumes:
-  # All CookIt state lives here: back it up (e.g. Coolify's database backups or pg_dump).
+  # All CookIt state lives here.
   db-data:

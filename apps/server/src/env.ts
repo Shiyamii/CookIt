@@ -30,7 +30,7 @@ const envSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
   // Pre-filled on the first-admin setup page. Empty (as in the compose files) means unset.
   ADMIN_EMAIL: z.preprocess((value) => (value === '' ? undefined : value), z.email().optional()),
-  // Behind a reverse proxy (Coolify, Traefik…): read the client IP from X-Forwarded-For.
+  // Behind a reverse proxy: read the client IP from X-Forwarded-For.
   TRUST_PROXY: booleanFlag,
   // Multiplies every rate limit. 1 in production; raised for end-to-end tests, which all come
   // from the same IP and would otherwise lock each other out.

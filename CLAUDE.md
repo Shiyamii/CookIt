@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repository. The full functional spec (i
 
 ## Project
 
-**CookIt** is a self-hosted recipe book (a web app deployed on Coolify): keep your recipes on your own server and cook them step by step. It has invite-only accounts, private/unlisted/public recipes, markdown import/export with a custom syntax for timers and quantities, serving scaling, a multi-recipe cooking mode with server-scheduled Web Push timers, installable PWA, French/English/Hungarian UI.
+**CookIt** is a self-hosted recipe book (a web app: one Docker image + PostgreSQL): keep your recipes on your own server and cook them step by step. It has invite-only accounts, private/unlisted/public recipes, markdown import/export with a custom syntax for timers and quantities, serving scaling, a multi-recipe cooking mode with server-scheduled Web Push timers, installable PWA, French/English/Hungarian UI.
 
 ## Working rules
 
@@ -23,7 +23,7 @@ Guidance for Claude Code working in this repository. The full functional spec (i
 | Frontend         | React + TypeScript **SPA**, Vite, React Router, TanStack Query                                                                                                                                                                                     |
 | UI               | shadcn/ui (Radix) + Tailwind CSS, `lucide-react` icons, mobile first                                                                                                                                                                               |
 | Backend          | **Hono** on Node (`@hono/node-server`), TypeScript, **Zod** for input validation                                                                                                                                                                   |
-| Database         | **PostgreSQL** (separate Coolify container). No SQLite, no state in files.                                                                                                                                                                         |
+| Database         | **PostgreSQL** (its own container). No SQLite, no state in files.                                                                                                                                                                                  |
 | ORM / migrations | **Drizzle ORM** + drizzle-kit (Postgres driver `postgres` or `pg`)                                                                                                                                                                                 |
 | Auth             | **Better Auth** (Drizzle adapter, Hono integration), plugins `twoFactor` (TOTP + backup codes) and `passkey` (WebAuthn); cookie sessions (httpOnly, secure, sameSite=lax); argon2id via `@node-rs/argon2` (fallback: Better Auth's default scrypt) |
 | Push             | `web-push` + VAPID keys, service worker                                                                                                                                                                                                            |
@@ -312,7 +312,7 @@ argon2id; httpOnly/secure/sameSite cookies; Hono `csrf` middleware + `Origin` ch
    9c. **Images** — recipe cover + gallery, stored in Postgres and served as static-like URLs; display name and profile picture.
    9d. **Home page** — resume cooking, recent recipes, a random idea.
    9e. **Shopping list** — built from the ingredients of chosen recipes, organized and checked off; reminder on the home page.
-10. **Deployment & docs** — Coolify README, Playwright critical path, security review.
+10. **Deployment & docs** — README: installing the image with PostgreSQL, Playwright critical path, security review.
 11. **Optional** — SSE sync, backward planning, parallel tracks, Cooklang import, Capacitor Android, built-in AI. (Optional email — SMTP invites, self-service password reset — was done early, at the user's request.)
 
 ## Commands

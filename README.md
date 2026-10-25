@@ -15,11 +15,9 @@
 
 **Your self-hosted recipe book.** CookIt keeps your recipes on your own server and helps you actually cook them: scale the servings, follow the steps one at a time, run several dishes at once, and get timers that ring even with the app closed.
 
-Install it from the Docker image [`shiyamii/cookit`](https://hub.docker.com/r/shiyamii/cookit); the source code is on [GitHub](https://github.com/Shiyamii/CookIt).
+Install it from the Docker image [`shiyamii/cookit`](https://hub.docker.com/r/shiyamii/cookit) with PostgreSQL (see [Installation](#installation)); the source code is on [GitHub](https://github.com/Shiyamii/CookIt).
 
 **Try it first in the [online demo](https://shiyamii.github.io/CookIt/)**: fictional recipes, switch between a member and an admin, nothing to install. It runs entirely in your browser (your changes stay there, "Start again" erases them); what needs a real server (accounts, security, pictures, notifications, import from a web page) says so.
-
-The coverage badge counts the unit tests (parser, scaling, services, page logic); the server routes, the database and the pages are tested end to end with Playwright against the built image.
 
 ## Why CookIt
 
@@ -34,23 +32,81 @@ Recipes end up scattered: bookmarks, screenshots, paper notes, sites full of ads
 
 ## Features
 
-- **Invite-only accounts**: admins create one-click invitation links (sent by email when SMTP is configured) and manage users. Optional **2FA (TOTP)** and **passkeys**. **Optional email**: invitations, "forgot your password?", a test email.
-- **Recipe visibility**: private, unlisted (secret link) or public (the gallery, for the members of your site; an admin can open it to visitors without an account). Add a shared recipe to your recipes (a link that follows the author's changes) or make a copy of your own.
-- **Summary and notes**: a one-line summary on the cards, a public word from the author, and a private note of your own on any recipe you can read.
-- **Markdown import/export** with a simple, human-readable format and special syntax for timers and scalable quantities.
-- **Two editors**: a structured visual editor (mobile friendly) and a markdown editor, switchable without losing anything.
-- **Serving scaling** with readable rounding and clean fractions (½, ¼, ⅓).
-- **Cooking mode**: one step at a time, large buttons, ingredient checklist, screen kept awake, one-tap timers, several recipes at once.
-- **Multi-recipe sessions**: cook several dishes in parallel, with a shared timer bar where each timer is labeled with its dish.
-- **Web Push notifications** when a timer ends, sent by the server even with every page closed, and sent again every 30 s (10 times at most) until stopped.
-- **Alarm**: finished timers ring on every page like an alarm clock until stopped; five synthesized sounds, volume, vibration; settings for the account and, if wanted, per device.
-- **Many ways to add a recipe**: quick create, step-by-step wizard (paste ingredients/steps, automatic duration detection), markdown paste or file/zip upload, URL import (schema.org JSON-LD), or a ready-to-copy prompt for the AI assistant of your choice.
-- **Translations**: each recipe can have a French, an English and a Hungarian version, shown in the lists in your language when it exists; the UI is in French, English and Hungarian.
-- **Photos**: a cover and a gallery for each recipe (resized in the browser), a display name and a profile picture for each user.
-- **Tags** organized in categories, managed by the admin.
-- **Home page**: resume the cooking in progress, an idea of the day, your recent recipes.
-- **Shopping list**: add a recipe's ingredients (for the servings you want, minus what you have), one line per ingredient with each recipe's quantity, group lines by hand, order them (drag and drop or arrows), check them off in the shop, offline too.
-- **Installable PWA**, mobile first, works offline for the pages and recipes already opened, cooking mode included.
+### Recipes
+
+- **Two editors on the same text**: a visual editor made for phones (fields, ingredient and step groups, drag and drop, timers inserted at the cursor, adjustable quantities) and a markdown editor with highlighting; switch at any time without losing anything, with a live preview.
+- **Serving scaling** with readable rounding: metric amounts rounded sensibly (250 g, not 247.5 g), cooking units and counts as clean fractions (½, ⅓, ¼, ¾, ⅛), ranges kept (`2 to 3`). The text stays as you wrote it, only the numbers change; timer durations are never scaled.
+- **Units recognized in every spelling** (`c. à soupe`, `CaS`, `tbsp`, `ek`…) and in every language, from a catalog the admin can edit.
+- **A summary** (one line shown on the cards), a description, a source link, servings, and **up to 6 photos** per recipe (the first is the cover), resized in the browser before sending (location data removed).
+- **Tags in categories** (dish type, diet, cuisine…), chosen from a list managed by the admin, used as filters in every list.
+- **Search** in titles, descriptions and ingredients, accents ignored, every word as a prefix, with French, English and Hungarian word forms.
+- **Notes**: a public word from the author under the recipe, and a private note of your own on any recipe you can read.
+- **"To complete"** badge on recipes created without steps yet; local drafts and a warning before leaving unsaved changes; a stale save (edited elsewhere meanwhile) is detected instead of overwriting.
+
+### Adding and exporting recipes
+
+- **Quick creation**: a title and servings, completed later.
+- **Step-by-step wizard**: paste the ingredients and the steps as plain text; numbered lists are split, and durations ("10 min", "1h30", "20 percig") become timers.
+- **Markdown import**: pasted, a `.md` file, or a zip of many.
+- **Import from a web page** that publishes its recipe as schema.org data (most recipe sites), fetched safely by the server.
+- **Import with an AI**: CookIt writes a prompt (with the recipe format, your units and your tags) to copy into the assistant of your choice; paste the answer back. No AI is built in and nothing is sent anywhere.
+- **Every import shows a preview** and a "Validate tags" step: tags are recognized by name in any language, never created by an import.
+- **Export** one recipe as a `.md` file, or all your recipes as a zip, at any time.
+
+### Sharing and members
+
+- **Three visibilities**: private (only you), unlisted (anyone with the secret share link; a new link cuts off the old one), public (the gallery).
+- **The gallery** of public recipes is for the members of your site; an admin can open it to visitors without an account.
+- **"Add to my recipes"** keeps someone else's recipe in your list as a link, always in its author's latest version; **"Make a copy"** gives you an independent private copy (with its tags, translations and photos) that says whose recipe it came from.
+- **Members page** (opt-in): the members who chose to appear there, with their public recipes; an author's name on a recipe opens their page.
+- **Profile**: display name and profile picture.
+
+### Translations
+
+- Each recipe can have a **French, English and Hungarian version**; lists and pages show it in your language when it exists, and the recipe page switches languages.
+- **"Add a translation"** writes an AI prompt holding the recipe; the pasted translation is checked live against the original (same groups, ingredients, steps and timers).
+- The interface is in **French, English and Hungarian**, including the units, the duration detection and the prompts.
+
+### Cooking mode
+
+- **One step at a time**, large buttons, the screen kept awake, the ingredients to check off in a drawer (quantities for the servings you chose).
+- **One-tap timers** on the durations of a step, `+1 min`, cancel.
+- **Several dishes at once** (up to 5): one card per recipe with its color, its step and its next timer, and **one timer bar** for all of them, in the order they end, each timer naming its dish.
+- **Saved on the server at every action**: reload the page, or pick up your phone or tablet, and find the same step and timers; network cuts are caught up when the connection is back.
+
+### Timers that ring
+
+- **Alarm in the app**: a finished timer rings on every page like an alarm clock until you stop it; five sounds, volume, vibration, "ring until stopped"; settings for the account and, if wanted, per device.
+- **Notifications with the app closed** (Web Push, sent by the server): the dish and the timer name, even with the phone locked; sent again every 30 s (10 times at most) until stopped, with a "Stop" button on Android and computers; a tap opens the cooking mode on that dish. Help for each system (iPhone and iPad from the home screen, Android, computers, Brave).
+
+### Shopping list
+
+- **Add a recipe's ingredients** for the servings you want, unticking what you already have.
+- **One line per ingredient** with each recipe's quantity, and a total when the units match (`Eggs (3 · 2 = 5)`); group lines by hand (`flour` and `flour T55`), split them again.
+- **Order the lines** (drag and drop or arrows), check them off in the shop, free items of your own; a reminder on the home page.
+
+### Home page and app
+
+- **Home page**: resume the cooking in progress, an idea of the day (another one on demand), your recent recipes.
+- **Installable** on the home screen (Android, iPhone, computer), mobile first, light and dark themes, accessible (Lighthouse 100).
+- **Offline**: the pages and recipes already opened stay available, the cooking mode and the shopping list included; changes are sent when the network is back.
+
+### Accounts and administration
+
+- **Invite-only**: no open sign-up; an admin creates one-click invitation links (admin or member), sends them by email when SMTP is set, and revokes them.
+- **Two-step verification** (authenticator app + 10 backup codes) and **passkeys**, optional for each user.
+- **"Forgot your password?"** by email (when SMTP is set, for addresses that received their invitation by email); otherwise an admin creates a password reset link.
+- **Users page**: disable, enable, delete an account (never the last admin), reset links, members list choice.
+- **Categories and tags**, **units** (spellings per language, rounding) and **site settings** (open gallery or members only) managed from the account menu.
+- **Rescue commands** in the container: password reset link, a new first-admin link, lifting rate limits.
+
+### Security and privacy
+
+- Passwords hashed with argon2id, httpOnly secure cookies, CSRF protection, rate limiting on sign-in, sign-up and resets, link tokens stored hashed and kept out of server logs.
+- A strict Content Security Policy; recipe content is untrusted and never rendered as HTML (safe links only).
+- Import from a web page protected against requests to your local network (SSRF).
+- Pictures are re-encoded in the browser and checked by the server; every API input is validated.
+- No tracking, no third-party service: everything stays in your PostgreSQL database.
 
 ## Recipe format
 
@@ -61,6 +117,7 @@ A recipe is a markdown file in three parts separated by a line of dashes (with a
 
 > The real one, no cream. Mix the eggs off the heat.
 
+summary: Creamy without cream, ready in 20 minutes.
 servings: 4
 tags: main-course, italian
 source: https://example.com/recipe
@@ -94,28 +151,154 @@ format: 1
 
 - `[label](timer:10m "name")` creates a timer (`10m`, `1h30m`, `45s`). Timer durations are never scaled.
 - `[2 tbsp](q:)` marks an inline quantity that follows serving scaling.
-- Ingredient lines (`400 g spaghetti`, `1 ½ c. à café de sel`, `2-3 cloves garlic`) are scaled automatically; units are recognized in any of their spellings (`c. à soupe`, `CaS`, `tbsp`…), from a catalog the admin can edit. Lines without a number and unparsable lines are kept as-is.
+- Ingredient lines (`400 g spaghetti`, `1 ½ c. à café de sel`, `2-3 cloves garlic`) are scaled automatically. Lines without a number and unparsable lines are kept as-is: nothing is ever lost.
+- Keys can be written in French, English or Hungarian (`portions`, `servings`, `adag`…); unknown keys are kept.
 
-## Tech stack
+## Installation
 
-- **Frontend**: React + TypeScript SPA (Vite), React Router, TanStack Query, shadcn/ui + Tailwind CSS, react-i18next, CodeMirror 6, vite-plugin-pwa
-- **Backend**: Hono on Node.js, Zod, Drizzle ORM, Better Auth, web-push
-- **Database**: PostgreSQL
-- **Tooling**: Bun (package manager, workspaces, build, unit tests). Production runs on **Node.js**.
-- **Tests**: `bun test` (unit), Playwright (end-to-end against the built image)
-- **Code quality**: Prettier, ESLint, Husky pre-commit hook (Prettier + ESLint + unit tests)
+CookIt is one Docker image, [`shiyamii/cookit`](https://hub.docker.com/r/shiyamii/cookit) (linux/amd64), plus a PostgreSQL database (version 17 is the one tested). Database migrations run automatically at startup; the container needs no volume, all the data lives in PostgreSQL. The app listens on port **3000** and has a healthcheck on `/healthz` (database included).
 
-## Repository layout
+Put it behind **HTTPS** (a reverse proxy of your choice): notifications, passkeys and installing the app need it (browsers only allow them over HTTPS, or on `localhost`).
+
+### 1. Get the files
+
+With Docker Compose, the image and PostgreSQL are started together from [`deploy/`](deploy):
+
+```sh
+mkdir cookit && cd cookit
+curl -O https://raw.githubusercontent.com/Shiyamii/CookIt/main/deploy/docker-compose.yml
+curl -O https://raw.githubusercontent.com/Shiyamii/CookIt/main/deploy/docker-compose.ports.yml
+curl -o .env https://raw.githubusercontent.com/Shiyamii/CookIt/main/deploy/.env.example
+```
+
+### 2. Set the environment
+
+Edit `.env` (every line is commented). The required values:
+
+```sh
+ORIGIN=https://cookit.example.com          # the public URL, exactly as users type it (no trailing path)
+BETTER_AUTH_SECRET=...                      # openssl rand -base64 32
+POSTGRES_PASSWORD=...                       # openssl rand -hex 24 (URL-safe: it goes into DATABASE_URL)
+COOKIT_VERSION=latest                       # or a fixed version: 1.0.0, a minor line: 1.0
+```
+
+- **`ORIGIN`** is used for the cookies, the CSRF checks, the links in emails and the passkeys (bound to its domain: changing the domain later makes existing passkeys unusable).
+- **`BETTER_AUTH_SECRET`** signs the sessions and encrypts the two-step verification secrets: generate it once and **keep it** (a new one signs everybody out and turns two-step verification off in practice).
+- **`TRUST_PROXY`**: `true` (the default of `docker-compose.yml`) when exactly one reverse proxy is in front, so the rate limits see the real client address; `docker-compose.ports.yml` sets it to `false` (port published directly: `X-Forwarded-For` could be forged).
+- **`ADMIN_EMAIL`** (optional) is pre-filled on the first-admin page and used as the push contact.
+
+**Notifications** (optional, recommended): generate a VAPID key pair once and keep it (new keys make every device turn notifications on again):
+
+```sh
+docker run --rm --entrypoint node shiyamii/cookit:latest -e "console.log(require('web-push').generateVAPIDKeys())"
+```
+
+```sh
+VAPID_PUBLIC_KEY=...    # publicKey
+VAPID_PRIVATE_KEY=...   # privateKey
+VAPID_SUBJECT=mailto:you@example.com   # optional: default ADMIN_EMAIL, else ORIGIN
+```
+
+Without them, everything works except the notifications with the app closed (the alarm still rings in the open app).
+
+**Email** (optional): invitations by email, "forgot your password?" and a test email. Without `SMTP_HOST`, links are copied by hand and the email features are hidden.
+
+```sh
+SMTP_HOST=smtp.example.com
+SMTP_SECURITY=starttls                  # starttls (port 587, TLS required), tls (port 465), none (local relay only)
+SMTP_PORT=                              # default from SMTP_SECURITY
+SMTP_USER=cookit@example.com            # SMTP_USER and SMTP_PASSWORD: both or neither
+SMTP_PASSWORD=...
+SMTP_FROM=CookIt <cookit@example.com>   # required with SMTP_HOST
+```
+
+The app refuses to start with a clear message when a value is invalid (a secret too short, a development example with an HTTPS origin, half a key pair, a password sent without encryption…).
+
+### 3. Start
+
+Behind a reverse proxy (route your domain to the `app` service, port 3000; no host port is published):
+
+```sh
+docker compose up -d
+```
+
+Without a proxy (publishes the app on the host port `COOKIT_PORT`, 3000 by default):
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.ports.yml up -d
+```
+
+**With your own PostgreSQL** instead, run the image alone and give it the database URL:
+
+```sh
+docker run -d --name cookit --restart unless-stopped -p 3000:3000 \
+  -e DATABASE_URL=postgres://cookit:<password>@<db-host>:5432/cookit \
+  -e ORIGIN=https://cookit.example.com \
+  -e BETTER_AUTH_SECRET=<openssl rand -base64 32, kept> \
+  -e TRUST_PROXY=true \
+  shiyamii/cookit:latest
+```
+
+Add the other variables of the [reference](#environment-variables) with more `-e` (or `--env-file`).
+
+### 4. Create the first admin
+
+There is no default account. On first start (and on every start while no admin exists), the server prints a one-time link in its logs, valid 24 hours:
+
+```sh
+docker compose logs app     # or: docker logs cookit
+```
 
 ```
-apps/web          React SPA
-apps/server       Hono API, notification scheduler, database migrations
-packages/shared   Shared types and Zod schemas, markdown parser/serializer, scaling, AI prompt generators
+No admin account yet. Create it within 24 hours with this one-time link:
+  https://cookit.example.com/setup#token=…
 ```
 
-The server serves both the API (`/api/v1/*`) and the SPA from a single origin and a single Docker image.
+Open it to create the administrator account. Everyone else joins through an invitation link from the **Invitations** page of the account menu (with SMTP set, check it there with **Send me a test email**).
 
-## Getting started (development)
+### Upgrade
+
+Change `COOKIT_VERSION` (or keep `latest`), then `docker compose pull && docker compose up -d` (with `docker run`: pull the new tag and recreate the container). Migrations run at startup.
+
+### Rescue commands
+
+From the container (`docker compose exec app sh`, or `docker exec -it cookit sh`):
+
+```sh
+node dist/cli.js admin:reset-link <username>   # one-time password reset link (lost password, lost 2FA device)
+node dist/cli.js setup-link                    # new first-admin link, only while no enabled admin exists
+node dist/cli.js rate-limits:clear             # lift every rate limit (someone locked out)
+node dist/cli.js push:vapid-keys               # print a new VAPID key pair
+```
+
+A password reset link created by an admin also turns two-step verification off and removes the passkeys of that account.
+
+### Environment variables
+
+| Variable                                              | Description                                                                                                          |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                        | PostgreSQL connection string (set by `docker-compose.yml` from the `POSTGRES_*` values)                              |
+| `ORIGIN`                                              | **Required.** Public URL of the app (cookies, CSRF checks, links; its domain is the passkeys' domain)                |
+| `BETTER_AUTH_SECRET`                                  | **Required.** At least 32 characters: `openssl rand -base64 32`. Keep it                                             |
+| `ADMIN_EMAIL`                                         | Optional: pre-filled on the first-admin page; default push contact                                                   |
+| `TRUST_PROXY`                                         | `true` behind exactly one reverse proxy (client address from `X-Forwarded-For`), else `false` (default when unset)   |
+| `PORT`                                                | Port inside the container (default `3000`)                                                                           |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`              | Web Push keys (both or neither). Unset: no notifications with the app closed. Keep them                              |
+| `VAPID_SUBJECT`                                       | Contact for the push services: `mailto:you@example.com` or an https URL (default: `ADMIN_EMAIL`, else `ORIGIN`)      |
+| `SMTP_HOST`                                           | Optional email server. Unset: no email                                                                               |
+| `SMTP_SECURITY`                                       | `starttls` (default, TLS required), `tls`, or `none` (local relay only; refused with a password and an HTTPS origin) |
+| `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD`           | Port (default 587, 465 or 25 from `SMTP_SECURITY`) and credentials (both or neither)                                 |
+| `SMTP_FROM`                                           | Sender, e.g. `CookIt <cookit@example.com>` (required with `SMTP_HOST`)                                               |
+| `COOKIT_VERSION`, `COOKIT_PORT`                       | Compose only: the image tag, and the host port with `docker-compose.ports.yml`                                       |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Compose only: the database created by the `db` service (password required, URL-safe)                                 |
+
+### Good to know
+
+- iOS and iPadOS only deliver notifications to the app added to the home screen (iOS 16.4+); the Notifications page explains it for each system.
+- With the app closed, notifications use the system's sound (a web app cannot choose it). With the app open, the alarm rings with the sound chosen in **Alarm**.
+- `robots.txt` asks search engines not to index the instance.
+
+## Development
 
 ### Prerequisites
 
@@ -140,6 +323,8 @@ Full stack from the production image (app + PostgreSQL), on http://localhost:300
 docker compose -f docker-compose.dev.yml up --build
 ```
 
+Locally, `docker-compose.dev.yml` sends every email to a Mailpit running on your machine (ports 1025 and 8025, not started by the compose: `docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit`); read them at http://localhost:8025. The email templates are MJML (`apps/server/src/modules/mail/templates/`), compiled with the web theme's colors by `bun run emails`.
+
 ### Checks
 
 ```sh
@@ -158,7 +343,7 @@ bunx playwright install chromium   # first time only
 bun run test:e2e
 ```
 
-The tests sign in as `e2e_admin`, created through the rescue CLI on an empty database. If your local database already has another admin, start from a fresh one: `docker compose -f docker-compose.dev.yml down -v`.
+The tests sign in as `e2e_admin`, created through the rescue CLI on an empty database. If your local database already has another admin, start from a fresh one: `docker compose -f docker-compose.dev.yml down -v`. The coverage badge counts the unit tests (parser, scaling, services, page logic); the server routes, the database and the pages are tested end to end.
 
 The online demo is a build mode of the web app: the API runs in the page on in-memory data saved in the browser (`apps/web/src/demo/`), no server or database:
 
@@ -176,68 +361,25 @@ bun run parse packages/shared/src/recipe/fixtures/boeuf-bourguignon.md --serving
 bun run parse my-recipe.md --canonical   # canonical form, as exported
 ```
 
-### Recipes
+### Tech stack
 
-**My recipes** lists and searches your recipes; **New recipe** opens the editor: a visual editor (form, groups, drag and drop, timers inserted at the cursor, adjustable quantities) or a markdown editor, switchable at any time without losing anything, plus a preview. Each recipe is private, unlisted (readable with its share link) or public (listed in the **Gallery**, for every member; readable without an account only if an admin opens the gallery in **Site settings**). **Members** lists the members who chose to appear there (in their profile), with their public recipes; an author's name on a recipe opens their page. A recipe of someone else can be added to your recipes as a link, always in its author's latest version, or copied as an independent recipe of your own (it then says whose recipe it came from). Recipes get tags from a common list (by category: dish type, diet, cuisine…), used as filters in lists.
+- **Frontend**: React + TypeScript SPA (Vite), React Router, TanStack Query, shadcn/ui + Tailwind CSS, react-i18next, CodeMirror 6, vite-plugin-pwa
+- **Backend**: Hono on Node.js, Zod, Drizzle ORM, Better Auth, web-push
+- **Database**: PostgreSQL
+- **Tooling**: Bun (package manager, workspaces, build, unit tests). Production runs on **Node.js**.
+- **Tests**: `bun test` (unit), Playwright (end-to-end against the built image)
+- **Code quality**: Prettier, ESLint, Husky pre-commit hook (Prettier + ESLint + unit tests)
 
-**Add a recipe** offers a quick creation (title and servings, completed later), a step-by-step wizard (paste the ingredients and the steps; durations like "10 min" or "1h30" become timers), the import of markdown (pasted, a `.md` file or a zip) or of a recipe web page (schema.org), and the full editor. Every import shows a preview and asks to validate the tags. Each recipe can be exported as a `.md` file, and all your recipes as a zip.
-
-**Cooking mode**: "Cook" on a recipe opens one step at a time with large buttons, the ingredients to check in a drawer (quantities follow the servings), and timers started with a tap on the durations of a step (+1 min, cancel; a sound and a vibration when one ends while the page is open). The screen stays on. Progress is saved on the server at every action and kept in the browser during network cuts: reloading the page or opening it on another device finds the same step and timers. Several recipes can be cooked at once (up to 5): one card per recipe with its color, its step and its next timer, and one timer bar for all of them, in the order they end, each timer naming its dish.
-
-**Notifications**: from the account menu (or the notice in the cooking mode), turn on notifications on each device: when a timer ends, the server sends a notification with the dish and the timer name, even with the page closed or the phone locked; a tap opens the cooking mode on that recipe. On iPhone and iPad (iOS 16.4+), add CookIt to the home screen first and turn them on from there; the Notifications page explains it for each system.
-
-**Install and offline**: CookIt can be installed on the home screen (Android, iPhone, computer). The pages and recipes already opened stay available without network, so the cooking mode keeps working if the connection drops in the kitchen; changes are sent when it is back.
-
-**AI prompts** (no AI built in): "Import with an AI" gives a prompt to copy into the assistant of your choice, generated from the recipe format (with your tag list and units); paste the answer back, check the preview, save. On a recipe, "Add a translation" does the same for another language: the prompt holds the recipe, the pasted translation is checked live against the original (same groups, ingredients, steps and timers). A recipe is read in your interface language when it has that translation, and its page lets you switch languages.
-
-The admin manages **Categories and tags** and **Units** from the account menu. Units are data: their ways of writing (`c. à soupe`, `CaS`, `tbsp`…) are recognized in any language and decide how quantities are rounded; changing them never changes recipe texts.
-
-### First admin and accounts
-
-There is no default account. On first start (and on every restart while no admin exists), the server prints a one-time link in its logs, valid 24 hours:
+### Repository layout
 
 ```
-No admin account yet. Create it within 24 hours with this one-time link:
-  https://cookit.example.com/setup#token=…
+apps/web          React SPA
+apps/server       Hono API, notification scheduler, database migrations
+packages/shared   Shared types and Zod schemas, markdown parser/serializer, scaling, AI prompt generators
+deploy/           Docker Compose files to run the published image with PostgreSQL
 ```
 
-Open it to create the administrator account (`ADMIN_EMAIL`, if set, is pre-filled). Everyone else joins through an invitation link created on the **Invitations** admin page; there is no open sign-up. Without email the admin hands links over (chat, message…); with SMTP configured, the invitation can be emailed and users can ask for a password reset link from the sign-in page. Only addresses that received their invitation by email get reset links: other accounts (created before, or from a link handed over by hand) still ask an admin. From the **Users** page the admin can disable, delete a user or create a password reset link.
-
-Rescue commands, from the container's terminal (`docker exec -it <container> sh`, or Coolify's terminal):
-
-```sh
-node dist/cli.js admin:reset-link <username>   # one-time password reset link (lost password)
-node dist/cli.js setup-link                    # new first-admin link, only while no enabled admin exists
-node dist/cli.js rate-limits:clear             # lift every rate limit (someone locked out)
-```
-
-Each user can turn on **two-step verification** (authenticator app + 10 single-use backup codes) and add **passkeys** from the **Security** page of the account menu. Lost phone and backup codes: a password reset link (admin Users page, or `admin:reset-link` for an admin) turns two-step verification off and removes the passkeys.
-
-## Configuration
-
-| Variable                                    | Description                                                                                                                                   |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                              | PostgreSQL connection string                                                                                                                  |
-| `ORIGIN`                                    | Public HTTPS URL of the app (CSRF checks, secure cookies; its domain is the passkeys' domain)                                                 |
-| `BETTER_AUTH_SECRET`                        | Session signing secret: `openssl rand -base64 32`. Also encrypts 2FA secrets: changing it turns 2FA off in practice (users need a reset link) |
-| `ADMIN_EMAIL`                               | Optional: email pre-filled on the first-admin page                                                                                            |
-| `TRUST_PROXY`                               | `true` behind one reverse proxy (client IP from `X-Forwarded-For`)                                                                            |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`    | Web Push keys for the timer notifications. Unset: no notifications. Keep them: new keys make every device turn notifications on again         |
-| `VAPID_SUBJECT`                             | Contact for the push services: `mailto:you@example.com` or an https URL (default: `ADMIN_EMAIL`, else `ORIGIN`)                               |
-| `SMTP_HOST`                                 | Optional email server. Unset: no email (links copied by hand)                                                                                 |
-| `SMTP_SECURITY`                             | `starttls` (default, port 587, TLS required), `tls` (port 465) or `none` (local relay only)                                                   |
-| `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Port (default from `SMTP_SECURITY`) and credentials (both or neither)                                                                         |
-| `SMTP_FROM`                                 | Sender, e.g. `CookIt <cookit@example.com>` (required with `SMTP_HOST`)                                                                        |
-
-Generate the VAPID keys once, with the image (or `npx web-push generate-vapid-keys`):
-
-```sh
-docker run --rm --entrypoint node shiyamii/cookit:latest -e "console.log(require('web-push').generateVAPIDKeys())"
-```
-
-In a running container, `node dist/cli.js push:vapid-keys` prints a new pair too.
-
-With SMTP set, check it from **Invitations → Send me a test email**. Locally, `docker-compose.dev.yml` sends every email to a Mailpit running on your machine (ports 1025 and 8025, not started by the compose: `docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit`); read them at http://localhost:8025. The email templates are MJML (`apps/server/src/modules/mail/templates/`), compiled with the web theme's colors by `bun run emails`.
+The server serves both the API (`/api/v1/*`) and the SPA from a single origin and a single Docker image.
 
 ## Releases
 
@@ -250,39 +392,6 @@ Images are published to Docker Hub as [`shiyamii/cookit`](https://hub.docker.com
 | `release` | stable release, e.g. `v0.2.0` → image tags `0.2.0`, `0.2`, `latest` |
 
 To release: merge `main` into `next` to publish a release candidate, then into `release` for the stable version (which also publishes the [online demo](https://shiyamii.github.io/CookIt/) to GitHub Pages; the **Demo (GitHub Pages)** workflow can also be run by hand). The full CI (including end-to-end tests against the image) must pass before anything is tagged or published. To republish the image of an existing version, run the **Release** workflow manually with that version.
-
-## Deployment
-
-CookIt ships as a single image ([`shiyamii/cookit`](https://hub.docker.com/r/shiyamii/cookit)) plus PostgreSQL. Migrations are applied automatically on startup; no application volume is needed, all state lives in PostgreSQL.
-
-### Docker Compose
-
-```sh
-cd deploy
-cp .env.example .env   # set ORIGIN, BETTER_AUTH_SECRET, POSTGRES_PASSWORD (URL-safe, e.g. `openssl rand -hex 24`), COOKIT_VERSION
-docker compose -f docker-compose.yml -f docker-compose.ports.yml up -d
-```
-
-`docker-compose.yml` publishes no host port (made for a reverse proxy routing to the `app` service on port 3000); `docker-compose.ports.yml` additionally publishes it on `COOKIT_PORT` (default 3000) and sets `TRUST_PROXY=false` (without a proxy, `X-Forwarded-For` could be forged to dodge rate limiting). Put it behind HTTPS. Then look for the first-admin link in the logs: `docker compose logs app`. To upgrade, change `COOKIT_VERSION` (or pull `latest`) and run `docker compose up -d` again.
-
-### Coolify
-
-Either:
-
-- **Docker Compose resource** pointing to `deploy/docker-compose.yml`: set the variables in the UI, then give the `app` service a domain such as `https://cookit.example.com:3000` (`:3000` is the container port); or
-- **Docker image** `shiyamii/cookit:<version>` plus a separate **PostgreSQL** resource, with `DATABASE_URL` set to that database, `ORIGIN`, `BETTER_AUTH_SECRET`, `TRUST_PROXY=true` and the VAPID keys.
-
-Use `/healthz` as the healthcheck path (port 3000). HTTPS is handled by Coolify's proxy.
-
-### Backups
-
-Back up the PostgreSQL database, for example with Coolify's built-in backups. Users can also export all their recipes as a zip of `.md` files. A detailed restore procedure will be documented in the deployment phase.
-
-### Notes
-
-- Passkeys are bound to the domain of `ORIGIN`: moving CookIt to another domain makes existing passkeys unusable (users sign in with their password and add new ones).
-- iOS only delivers Web Push notifications when the app is installed on the home screen (iOS 16.4+).
-- With the app closed, notifications use the system's sound (a web app cannot choose it); they come back every 30 s, 10 times at most, until the timer is stopped. With the app open, the alarm rings with the sound chosen in **Alarm**.
 
 ## License
 
