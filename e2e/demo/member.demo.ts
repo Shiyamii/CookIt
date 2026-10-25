@@ -21,10 +21,11 @@ test('the member finds the demo recipes, edits one, and the change stays after a
   await expect(page.getByText('Demo: your changes stay in this browser.')).toBeVisible();
   const cards = page.getByTestId('recipe-card');
   await expect(cards).toHaveCount(6);
-  // Added by link (a bookmark), copied, translated (shown in the interface language).
+  // Added by link (a bookmark), copied; every recipe is shown in the interface language.
   await expect(
-    cards.filter({ hasText: 'Gulyásleves' }).getByLabel('Added to my recipes'),
+    cards.filter({ hasText: 'Goulash soup' }).getByLabel('Added to my recipes'),
   ).toBeVisible();
+  await expect(cards.filter({ hasText: 'Yogurt cake' })).toBeVisible();
   await cards.filter({ hasText: 'Salted butter crêpes' }).click();
   await expect(page.getByRole('heading', { name: 'Salted butter crêpes', level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Français' }).click();
@@ -32,15 +33,20 @@ test('the member finds the demo recipes, edits one, and the change stays after a
     page.getByRole('heading', { name: 'Crêpes au beurre salé', level: 1 }),
   ).toBeVisible();
 
-  // A recipe in French only: edited, saved, still there after a reload.
+  // The editor works on the base language (French): edited, saved, still there after a reload.
   await page.goto('recipes');
-  await cards.filter({ hasText: 'Bœuf bourguignon' }).click();
-  await page.getByRole('link', { name: 'Edit' }).click();
+  await cards.filter({ hasText: 'Beef bourguignon' }).click();
+  await page.getByRole('link', { name: 'Edit the original (Français)' }).click();
+  await expect(page.getByLabel('Title')).toHaveValue('Bœuf bourguignon');
   await page.getByLabel('Title').fill('Bourguignon de la démo');
   await page.getByRole('button', { name: 'Save' }).click();
+  // Shown in English (its translation), the French version has the new title.
+  await expect(page.getByRole('heading', { name: 'Beef bourguignon', level: 1 })).toBeVisible();
   const edited = page.getByRole('heading', { name: 'Bourguignon de la démo', level: 1 });
+  await page.getByRole('button', { name: 'Français' }).click();
   await expect(edited).toBeVisible();
   await page.reload();
+  await page.getByRole('button', { name: 'Français' }).click();
   await expect(edited).toBeVisible();
 
   // A search runs in the page too.
@@ -67,7 +73,7 @@ test('cooking with a timer, then the shopping list', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Step 2 of 5' })).toBeVisible();
 
   await page.goto('recipes');
-  await page.getByTestId('recipe-card').filter({ hasText: 'Bœuf bourguignon' }).click();
+  await page.getByTestId('recipe-card').filter({ hasText: 'Beef bourguignon' }).click();
   await page.getByRole('button', { name: 'Add to the shopping list' }).click();
   await page
     .getByRole('dialog')

@@ -93,7 +93,8 @@ export type DemoState = {
   invites: StoredInvite[];
 };
 
-export const STATE_VERSION = 3;
+/** Raised when the shape or the starting data changes: older saved demos start again. */
+export const STATE_VERSION = 4;
 
 export function emptyState(): DemoState {
   return {

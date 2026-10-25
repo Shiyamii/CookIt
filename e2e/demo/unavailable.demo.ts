@@ -28,7 +28,7 @@ test('security, pictures, URL import and notifications show a note instead', asy
   await expect(page.getByText('Add a picture')).toHaveCount(0);
 
   await page.goto('recipes');
-  await page.getByTestId('recipe-card').filter({ hasText: 'Bœuf bourguignon' }).click();
+  await page.getByTestId('recipe-card').filter({ hasText: 'Beef bourguignon' }).click();
   await expect(page.getByRole('note')).toHaveText(NOTE);
   await expect(page.getByText('Add photos')).toHaveCount(0);
 
