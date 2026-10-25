@@ -65,6 +65,29 @@ export const passwordConfirmInputSchema = z
   .object({ password: z.string().min(1).max(PASSWORD_MAX_LENGTH) })
   .strict();
 
+// Sign-in, password change and session revocation: only the shape (no unknown field such as
+// `callbackURL` or `rememberMe`). Better Auth checks the values and answers with its own errors
+// (wrong credentials, password too short), which the UI translates.
+const credential = z.string().min(1).max(1000);
+
+export const signInEmailInputSchema = z
+  .object({ email: z.string().min(1).max(254), password: credential })
+  .strict();
+
+export const signInUsernameInputSchema = z
+  .object({ username: z.string().min(1).max(254), password: credential })
+  .strict();
+
+export const changePasswordInputSchema = z
+  .object({
+    currentPassword: credential,
+    newPassword: credential,
+    revokeOtherSessions: z.boolean().optional(),
+  })
+  .strict();
+
+export const revokeSessionInputSchema = z.object({ token: z.string().min(1).max(256) }).strict();
+
 /** A code from an authenticator app (6 digits, spaces removed by the UI). */
 export const totpCodeInputSchema = z.object({ code: z.string().regex(/^\d{6}$/) }).strict();
 

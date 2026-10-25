@@ -18,7 +18,12 @@ export function startPushScheduler(push: PushService, intervalMs = SCHEDULER_INT
       // A full batch: there may be more, go on at once.
       while (!stopped && (await push.notifyDue()) >= 50);
     } catch (error) {
-      console.error('Push scheduler run failed:', error instanceof Error ? error.message : error);
+      // Never the message: a failed query carries its parameters.
+      const code = (error as { cause?: { code?: unknown } }).cause?.code;
+      const name = error instanceof Error ? error.name : 'error';
+      console.error(
+        `Push scheduler run failed: ${name}${typeof code === 'string' ? ` ${code}` : ''}`,
+      );
     }
     if (!stopped) timer = setTimeout(tick, intervalMs);
   };

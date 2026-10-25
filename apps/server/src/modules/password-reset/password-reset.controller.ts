@@ -6,6 +6,7 @@ import {
 import { Hono } from 'hono';
 import { env } from '../../env';
 import type { AppEnv } from '../../http/app-env';
+import { clientIp } from '../../http/client-ip';
 import { parseJson } from '../../http/validate';
 import { rateLimit, RATE_LIMITS } from '../rate-limit/rate-limit.middleware';
 import type { RateLimitService } from '../rate-limit/rate-limit.service';
@@ -54,14 +55,16 @@ export function createPasswordResetController(deps: {
       const input = await parseJson(c, forgotPasswordInputSchema);
       if (!input.ok) return input.response;
       // Over a limit for this account: nothing more is sent, and the answer stays the same.
+      const client = clientIp(c);
       const allow = async (accountId: string) => {
-        for (const rule of [
-          RATE_LIMITS.passwordForgotPerAccount,
-          RATE_LIMITS.passwordForgotPerAccountDay,
-        ]) {
+        for (const [rule, subject] of [
+          [RATE_LIMITS.passwordForgotPerAccount, `${accountId}|${client}`],
+          [RATE_LIMITS.passwordForgotPerAccountDay, `${accountId}|${client}`],
+          [RATE_LIMITS.passwordForgotPerAccountCeiling, accountId],
+        ] as const) {
           const { allowed } = await deps.rateLimits.check(
             { ...rule, limit: rule.limit * env.RATE_LIMIT_FACTOR },
-            accountId,
+            subject,
           );
           if (!allowed) return false;
         }

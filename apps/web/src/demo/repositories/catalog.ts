@@ -201,6 +201,10 @@ export function createMemoryRateLimitRepository(): RateLimitRepository {
       counters.set(key, counter);
       return counter;
     },
+    async refund(key) {
+      const counter = counters.get(key);
+      if (counter) counter.count = Math.max(0, counter.count - 1);
+    },
     async deleteOlderThan(date) {
       for (const [key, counter] of counters) {
         if (counter.resetAt < date) counters.delete(key);

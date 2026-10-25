@@ -47,11 +47,16 @@ describe('push scheduler', () => {
     expect(max).toBe(1);
   });
 
-  test('keeps going after a failing run, and logs the message only', async () => {
+  test('keeps going after a failing run, and logs its name and code, never its message', async () => {
     let calls = 0;
     const scheduler = startPushScheduler(
       fake(async () => {
-        if (++calls === 1) throw new Error('db down');
+        if (++calls === 1) {
+          // A failed query: its message holds the parameters.
+          throw new Error('Failed query: select … params: someone@example.com', {
+            cause: { code: '57P01' },
+          });
+        }
         return 0;
       }),
       10,
@@ -59,7 +64,8 @@ describe('push scheduler', () => {
     await wait(80);
     await scheduler.stop();
     expect(calls).toBeGreaterThan(1);
-    expect(errors).toHaveBeenCalledWith('Push scheduler run failed:', 'db down');
+    expect(errors).toHaveBeenCalledWith('Push scheduler run failed: Error 57P01');
+    expect(JSON.stringify(errors.mock.calls)).not.toContain('example.com');
   });
 
   test('stop waits for the current run and nothing runs afterwards', async () => {

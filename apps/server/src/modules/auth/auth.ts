@@ -25,6 +25,36 @@ function requireUserVerification(verified: boolean | undefined) {
   }
 }
 
+/** Name and database code of an error: never its message, which can hold query parameters. */
+function errorSummary(error: unknown): string {
+  if (!(error instanceof Error)) return typeof error === 'string' ? 'error' : '';
+  const cause = (error as { cause?: { code?: unknown } }).cause;
+  const code = (error as { status?: unknown }).status ?? cause?.code;
+  return [error.name, typeof code === 'string' ? code : undefined].filter(Boolean).join(' ');
+}
+
+/**
+ * Better Auth logs failed calls with the error object, and a failed SQL query carries its
+ * parameters (emails, password hashes, session tokens): only fixed texts, error names and codes
+ * reach the logs, like `http/errors.ts`.
+ */
+const authLogger = {
+  level: 'warn' as const,
+  log: (level: 'debug' | 'info' | 'warn' | 'error', message: unknown, ...args: unknown[]) => {
+    // Better Auth sometimes passes the error itself as the message.
+    const text =
+      typeof message !== 'string'
+        ? errorSummary(message) || 'error'
+        : message.includes('Failed query')
+          ? 'database error'
+          : message.split('\n')[0];
+    const details = args.map(errorSummary).filter(Boolean).join(', ');
+    const line = `Auth ${level}: ${text}${details ? ` (${details})` : ''}`;
+    if (level === 'error') console.error(line);
+    else console.warn(line);
+  },
+};
+
 /**
  * Better Auth: sessions, sign-in (email or username, then a TOTP or backup code when 2FA is on;
  * or a passkey alone), sign-out, password change, 2FA and passkey management. Sign-up is
@@ -100,6 +130,15 @@ export function createAuth(db: Database) {
     verification: { storeIdentifier: 'hashed' },
     rateLimit: { enabled: false },
     telemetry: { enabled: false },
+    logger: authLogger,
+    onAPIError: {
+      onError: (error) => {
+        // Wrong passwords, bad codes…: answers, not failures of the server.
+        if (error instanceof APIError && error.status !== 'INTERNAL_SERVER_ERROR') return;
+        const summary = errorSummary(error);
+        if (summary) console.error(`Auth error: ${summary}`);
+      },
+    },
     advanced: {
       useSecureCookies: secureCookies,
       // `'uuid'` would leave the id to a database default; our ids are generated in code everywhere.

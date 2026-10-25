@@ -84,7 +84,10 @@ export function createPasswordResetService(deps: {
     },
 
     async reset(input: PasswordResetInput): Promise<boolean> {
-      // Hashing first keeps the transaction short; a bad token only wastes one hash.
+      // A link that cannot work costs no password hash (argon2id: memory and CPU for anyone who
+      // sends random tokens). Hashed before the transaction to keep it short; `consume` checks
+      // the link again.
+      if (!(await this.linkKind(input.token))) return false;
       const passwordHash = await deps.hashPassword(input.password);
       return deps.repository.consume(hashToken(input.token), passwordHash, now());
     },

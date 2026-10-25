@@ -28,6 +28,10 @@ function setup(options: { now?: () => Date } = {}) {
         resetAt: new Date(next.windowStart.getTime() + windowSeconds * 1000),
       };
     },
+    async refund(key) {
+      const current = counters.get(key);
+      if (current) current.count = Math.max(0, current.count - 1);
+    },
     async deleteOlderThan(date) {
       deletedBefore.push(date);
     },
@@ -78,11 +82,25 @@ describe('rate limit service: check', () => {
   test('retryAfter is at least 1 second, even when the window already ended', async () => {
     const repository: RateLimitRepository = {
       hit: async () => ({ count: 10, resetAt: new Date(NOW.getTime() - 5000) }),
+      refund: async () => {},
       deleteOlderThan: async () => {},
       deleteAll: async () => {},
     };
     const service = createRateLimitService({ repository, now: () => NOW });
     expect(await service.check(RULE, 'a')).toEqual({ allowed: false, retryAfterSeconds: 1 });
+  });
+
+  test('a refunded hit does not count (rate limits on failures only)', async () => {
+    const { service, keys } = setup();
+    // Ten successes, each refunded: still allowed.
+    for (let i = 0; i < 10; i++) {
+      expect((await service.check(RULE, 'a')).allowed).toBe(true);
+      await service.refund(RULE, 'a');
+    }
+    // Failures are kept: refused past the limit.
+    for (let i = 0; i < 3; i++) await service.check(RULE, 'a');
+    expect((await service.check(RULE, 'a')).allowed).toBe(false);
+    expect(new Set(keys)).toEqual(new Set(['sign-in:ip:a']));
   });
 
   test('allows again once the window has passed', async () => {

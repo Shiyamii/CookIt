@@ -18,6 +18,7 @@ export function createImportController(deps: {
     '/api/v1/import/url',
     requireUser,
     rateLimit(deps.rateLimits, RATE_LIMITS.importUrlPerIp),
+    rateLimit(deps.rateLimits, RATE_LIMITS.importUrlPerAccount, (c) => c.var.user?.id),
     async (c) => {
       const input = await parseJson(c, importUrlInputSchema);
       if (!input.ok) return input.response;

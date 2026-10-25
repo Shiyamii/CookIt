@@ -1,10 +1,14 @@
 import {
   backupCodeInputSchema,
+  changePasswordInputSchema,
   passkeyAuthenticationInputSchema,
   passkeyDeleteInputSchema,
   passkeyRegistrationInputSchema,
   passkeyRenameInputSchema,
   passwordConfirmInputSchema,
+  revokeSessionInputSchema,
+  signInEmailInputSchema,
+  signInUsernameInputSchema,
   totpCodeInputSchema,
   updateProfileInputSchema,
 } from '@cookit/shared';
@@ -12,7 +16,8 @@ import { Hono, type Context, type MiddlewareHandler } from 'hono';
 import type { ZodType } from 'zod';
 import type { AppEnv } from '../../http/app-env';
 import type { AccountSecurityService } from '../account-security/account-security.service';
-import { rateLimit, RATE_LIMITS } from '../rate-limit/rate-limit.middleware';
+import { clientIp } from '../../http/client-ip';
+import { rateLimit, rateLimitFailures, RATE_LIMITS } from '../rate-limit/rate-limit.middleware';
 import type { RateLimitService } from '../rate-limit/rate-limit.service';
 import type { Auth } from './auth';
 
@@ -61,6 +66,10 @@ const ANONYMOUS = new Set([
  * Better Auth sees them (e.g. `trustDevice`, `issuer`, `method`, or `username` on update-user).
  */
 const BODY_SCHEMAS: Record<string, ZodType> = {
+  'POST /sign-in/email': signInEmailInputSchema,
+  'POST /sign-in/username': signInUsernameInputSchema,
+  'POST /change-password': changePasswordInputSchema,
+  'POST /revoke-session': revokeSessionInputSchema,
   'POST /update-user': updateProfileInputSchema,
   'POST /two-factor/enable': passwordConfirmInputSchema,
   'POST /two-factor/disable': passwordConfirmInputSchema,
@@ -130,7 +139,12 @@ export function createAuthController(deps: {
   app.post(
     '/api/v1/auth/sign-in/*',
     rateLimit(deps.rateLimits, RATE_LIMITS.signInPerIp),
-    rateLimit(deps.rateLimits, RATE_LIMITS.signInPerAccount, signInAccount),
+    rateLimitFailures(
+      deps.rateLimits,
+      RATE_LIMITS.signInPerAccountIp,
+      async (c) => `${await signInAccount(c)}|${clientIp(c)}`,
+    ),
+    rateLimitFailures(deps.rateLimits, RATE_LIMITS.signInPerAccount, signInAccount),
   );
   // Routes that check the password: a stolen session must not allow guessing it.
   for (const path of [
@@ -141,7 +155,18 @@ export function createAuthController(deps: {
     'passkey/generate-register-options',
     'passkey/delete-passkey',
   ]) {
-    app.post(`/api/v1/auth/${path}`, rateLimit(deps.rateLimits, RATE_LIMITS.passwordCheckPerIp));
+    app.post(
+      `/api/v1/auth/${path}`,
+      rateLimit(deps.rateLimits, RATE_LIMITS.passwordCheckPerIp),
+      rateLimitFailures(deps.rateLimits, RATE_LIMITS.passwordCheckPerAccountIp, (c) =>
+        c.var.user ? `${c.var.user.id}|${clientIp(c)}` : undefined,
+      ),
+      rateLimitFailures(
+        deps.rateLimits,
+        RATE_LIMITS.passwordCheckPerAccount,
+        (c) => c.var.user?.id,
+      ),
+    );
   }
   // Better Auth also allows 5 codes per sign-in challenge and locks 2FA for an hour after
   // 5 failures (auth.ts); this limits one IP across accounts.

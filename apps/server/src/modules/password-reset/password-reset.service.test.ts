@@ -158,15 +158,33 @@ describe('password reset service: isValid', () => {
 
 describe('password reset service: reset', () => {
   const input = { token: TOKEN, password: 'new long password' };
+  /** A usable link for TOKEN. */
+  const usable = () => {
+    const ready = setup();
+    ready.rows.push(row());
+    return ready;
+  };
+
+  test('a link that cannot work is refused before the password is hashed', async () => {
+    const unknown = setup();
+    expect(await unknown.service.reset(input)).toBe(false);
+    expect(unknown.events).toEqual([]);
+    for (const overrides of [{ usedAt: NOW }, { expiresAt: NOW }]) {
+      const { service, rows, events } = setup();
+      rows.push(row(overrides));
+      expect(await service.reset(input)).toBe(false);
+      expect(events).toEqual([]);
+    }
+  });
 
   test('hashes the password before consuming the link', async () => {
-    const { service, events } = setup();
+    const { service, events } = usable();
     await service.reset(input);
     expect(events).toEqual(['hash', 'consume']);
   });
 
   test('passes the token hash, the password hash and the injected time', async () => {
-    const { service, consumed } = setup();
+    const { service, consumed } = usable();
     await service.reset(input);
     expect(consumed).toEqual([
       { tokenHash: hashToken(TOKEN), passwordHash: 'hashed(new long password)', now: NOW },
@@ -174,9 +192,9 @@ describe('password reset service: reset', () => {
   });
 
   test('returns the repository outcome', async () => {
-    const ok = setup();
+    const ok = usable();
     expect(await ok.service.reset(input)).toBe(true);
-    const ko = setup();
+    const ko = usable();
     ko.state.consumeResult = false;
     expect(await ko.service.reset(input)).toBe(false);
   });

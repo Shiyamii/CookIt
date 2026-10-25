@@ -91,5 +91,13 @@ function appHeaders(): MiddlewareHandler {
     },
     referrerPolicy: 'strict-origin-when-cross-origin',
     strictTransportSecurity: hsts(),
+    // Features the app never uses (the screen wake lock of the cooking mode stays allowed).
+    permissionsPolicy: {
+      camera: false,
+      microphone: false,
+      geolocation: false,
+      payment: false,
+      usb: false,
+    },
   });
 }

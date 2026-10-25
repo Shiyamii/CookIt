@@ -403,9 +403,15 @@ describe('invites service: accept', () => {
     password: 'long enough password',
     locale: 'en',
   };
+  /** A pending invite for TOKEN. */
+  const pending = () => {
+    const ready = setup();
+    ready.rows.push(row());
+    return ready;
+  };
 
   test('passes the token hash, the injected id and time to the repository', async () => {
-    const { service, accepted } = setup();
+    const { service, accepted } = pending();
     await service.accept(input);
     expect(accepted).toHaveLength(1);
     expect(accepted[0]?.tokenHash).toBe(hashToken(TOKEN));
@@ -415,7 +421,7 @@ describe('invites service: accept', () => {
   });
 
   test('lowercases username and email, keeps the typed username for display', async () => {
-    const { service, accepted } = setup();
+    const { service, accepted } = pending();
     await service.accept(input);
     expect(accepted[0]?.account).toMatchObject({
       username: 'alice.dupont',
@@ -426,7 +432,7 @@ describe('invites service: accept', () => {
   });
 
   test('trims the username and email', async () => {
-    const { service, accepted } = setup();
+    const { service, accepted } = pending();
     await service.accept({ ...input, username: '  Alice  ', email: ' alice@example.com ' });
     expect(accepted[0]?.account).toMatchObject({
       username: 'alice',
@@ -436,25 +442,25 @@ describe('invites service: accept', () => {
   });
 
   test('uses the typed username as display name when no name is given', async () => {
-    const { service, accepted } = setup();
+    const { service, accepted } = pending();
     await service.accept(input);
     expect(accepted[0]?.account.name).toBe('Alice.Dupont');
   });
 
   test('uses the username as display name when the name is blank', async () => {
-    const { service, accepted } = setup();
+    const { service, accepted } = pending();
     await service.accept({ ...input, name: '   ' });
     expect(accepted[0]?.account.name).toBe('Alice.Dupont');
   });
 
   test('keeps a given display name, trimmed', async () => {
-    const { service, accepted } = setup();
+    const { service, accepted } = pending();
     await service.accept({ ...input, name: '  Alice D.  ' });
     expect(accepted[0]?.account.name).toBe('Alice D.');
   });
 
   test('stores the hash from the injected hasher, never the password', async () => {
-    const { service, accepted, hashed } = setup();
+    const { service, accepted, hashed } = pending();
     await service.accept(input);
     expect(hashed).toEqual(['long enough password']);
     expect(accepted[0]?.account.passwordHash).toBe('hashed(long enough password)');
@@ -462,7 +468,7 @@ describe('invites service: accept', () => {
   });
 
   test('returns the created user with the lowercased username on success', async () => {
-    const { service, state } = setup();
+    const { service, state } = pending();
     state.acceptResult = { ok: true, userId: 'id-1', role: 'admin' };
     expect(await service.accept(input)).toEqual({
       ok: true,
@@ -474,9 +480,23 @@ describe('invites service: accept', () => {
 
   test('returns repository errors unchanged, without a username', async () => {
     for (const error of ['invalid_token', 'username_taken', 'email_taken'] as const) {
-      const { service, state } = setup();
+      const { service, state } = pending();
       state.acceptResult = { ok: false, error };
       expect(await service.accept(input)).toEqual({ ok: false, error });
+    }
+  });
+
+  test('a link that cannot work is refused before the password is hashed', async () => {
+    const unknown = setup();
+    expect(await unknown.service.accept(input)).toEqual({ ok: false, error: 'invalid_token' });
+    expect(unknown.hashed).toEqual([]);
+    expect(unknown.accepted).toEqual([]);
+    for (const overrides of [{ usedAt: NOW }, { revokedAt: NOW }, { expiresAt: NOW }]) {
+      const { service, rows, hashed, accepted } = setup();
+      rows.push(row(overrides));
+      expect(await service.accept(input)).toEqual({ ok: false, error: 'invalid_token' });
+      expect(hashed).toEqual([]);
+      expect(accepted).toEqual([]);
     }
   });
 });

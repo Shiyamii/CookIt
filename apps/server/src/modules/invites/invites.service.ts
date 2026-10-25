@@ -120,6 +120,9 @@ export function createInvitesService(deps: {
       // Only an address the link was emailed to is verified (the person got the email): a reset
       // link is only ever emailed to a verified address.
       const invite = await deps.repository.findByTokenHash(hashToken(input.token));
+      // A link that cannot work costs no password hash (argon2id: memory and CPU for anyone who
+      // sends random tokens). Checked again, under a lock, by the repository's transaction.
+      if (!invite || status(invite) !== 'pending') return { ok: false, error: 'invalid_token' };
       const result = await deps.repository.accept(
         hashToken(input.token),
         {

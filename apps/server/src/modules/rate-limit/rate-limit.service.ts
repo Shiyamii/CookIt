@@ -32,6 +32,11 @@ export function createRateLimitService(deps: {
       return { allowed: count <= rule.limit, retryAfterSeconds };
     },
 
+    /** Takes back a hit counted by `check` (see `rateLimitFailures`). */
+    refund(rule: RateLimitRule, subject: string): Promise<void> {
+      return deps.repository.refund(`${rule.name}:${subject}`);
+    },
+
     /** Lifts every current limit (rescue CLI: someone locked out, test runs). */
     clearAll(): Promise<void> {
       return deps.repository.deleteAll();

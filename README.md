@@ -184,7 +184,7 @@ COOKIT_VERSION=latest                       # or a fixed version: 1.0.0, a minor
 
 - **`ORIGIN`** is used for the cookies, the CSRF checks, the links in emails and the passkeys (bound to its domain: changing the domain later makes existing passkeys unusable).
 - **`BETTER_AUTH_SECRET`** signs the sessions and encrypts the two-step verification secrets: generate it once and **keep it** (a new one signs everybody out and turns two-step verification off in practice).
-- **`TRUST_PROXY`**: `true` (the default of `docker-compose.yml`) when exactly one reverse proxy is in front, so the rate limits see the real client address; `docker-compose.ports.yml` sets it to `false` (port published directly: `X-Forwarded-For` could be forged).
+- **`TRUST_PROXY`**: `true` (the default of `docker-compose.yml`) when exactly one reverse proxy is in front, so the rate limits see the real client address; `docker-compose.ports.yml` sets it to `false` (port published directly: `X-Forwarded-For` could be forged). CookIt reads the **last** address of `X-Forwarded-For`: the proxy must append the client's address to that header (the default of Caddy and Traefik; `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for` with nginx), not pass the client's own header through.
 - **`ADMIN_EMAIL`** (optional) is pre-filled on the first-admin page and used as the push contact.
 
 **Notifications** (optional, recommended): generate a VAPID key pair once and keep it (new keys make every device turn notifications on again):
